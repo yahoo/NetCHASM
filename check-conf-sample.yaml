@@ -1,0 +1,190 @@
+# Sample Check Configuration
+-   name hostGroup1.hm.foo.com
+    check-type http
+    check-info /status.html
+    host:
+        - host1.hm.foo.com
+        - host2.hm.foo.com
+
+-   name hostGroup2.hm.foo.com
+    check-type https-no-peer-check
+    check-info /health.html
+    host:
+       - host2.hm.foo.com
+       - host3.hm.foo.com
+
+       
+# Config options
+
+
+# name: <hostname>
+#
+# Specifies the name of the hostGroup used to store the check results.
+# Results for each host for the specified check parameters will be stored using this name as the key.
+
+
+# host: <hostname>[:<port>]
+#
+# Specifies the actual DNS name(s) to be checked (can also be an IP address to skip resolution.
+#
+# If a port is specified for a host, it will override the "check-port" specified
+# for the current name and the health-check will connect to that port.  
+
+
+# ttl: <msec>
+# default: 30000
+#
+# Specifies how often healthMon will resolve and health-check a given name.
+
+
+# check-type: <type>
+# values: http, https, tcp, ftp, dns, none
+#
+# Specifies the type of health-check to perform against each of the hosts.  
+#
+# The "http" and "https" checks do a GET of the uri specified by the "check-info" option
+# (default is "/status.html").  The "check-port" option may be used to override
+# the default port (80 for http, 443 for https).  A 200 OK response is treated as
+# a successful health check.  All other responses (or a timeout) are treated as
+# failures.  A "https-no-peer-check" type is also available which connects over
+# SSL but does not verify the peer's cert.
+#
+# The "tcp" check simply connects to the port specified by the "check-port" option
+# (default is 80).  A completed socket connection is considered successful.
+#
+# The "ftp" check attempts to do an FTP GET of the file specified by the "check-info"
+# option.  The "check-port" option may be used to override the default ftp port.
+#
+# The "dns" check attempts to lookup the hostname specified by the "check-info"
+# option.  The "check-port" option may be used to override the default domain port.
+#
+# If no health-check is specified (or specified as "none"), healthMon only resolves the
+# hosts using DNS but does not test them for health.
+
+
+# check-port: <port>
+#
+# Specifies the port to use for the health-check.  If not specified, http uses 80,
+# https uses 443, and tcp uses 80.
+
+
+# check-info: <uri>
+#
+# Specifies the uri to GET when using the "http" or "https" health-check.  A 200 OK
+# response is the only response treated as successful.  A "Host" header can be
+# added to the request using this syntax:
+#
+# check-info: //<host header>/<uri path>
+#
+# If the specified host header is literally "<host>", healthMon will insert a Host
+# header using the name of the host the request is being sent.  If the specified
+# host header is null (e.g., check-info ///status.html), the hostname (as
+# specified using "name") is used in the Host header.  If specified host header
+# is "<host:port>", healthMon will use the name of the host and the port of the host
+# being contacted.
+#
+# Specifies the pathname to the file to retrieve when doing an "ftp" check.
+# The username/password can also be optionally specified using this syntax:
+#
+# check-info: <username>:<password>@/<path>
+#
+# Specifies a hello test to use when doing a "tcp" check.  A value of "mysql-hello"
+# tests that a valid MySQL hello packet is received from the server after the
+# connection is completed.  A value of "ssh-hello" expects an SSH hello packet.
+# Any other value is matched directly against the initial bytes received from
+# the server.
+#
+# Specifies the hostname to lookup when doing a "dns" check.
+#
+
+
+# check-retries: <num>
+# default: 0 (no retries)
+#
+# Specifies the number of times a failing host check is retried before the host is
+# marked down.  The check-retry-delay setting must be specified as well.
+
+
+# check-retry-delay: <msec>
+# default: 0 (no retries>
+#
+# Specifies the interval between failing host check retries.  This setting is usually
+# used to specify a smaller delay between checks than the normal ttl for the name
+# when checks are being retried.
+
+
+# timeout: <msec>
+# default: 30000
+#
+# Specifies how long healthMon will wait for a successful health-check response.
+
+
+# group-threshold: <msec>
+# default: 20
+#
+# Specifies the maximum difference in response time between the fastest and
+# slowest host that will be marked up.  When healthMon is checking
+# the health of the hosts configured for a certain name, it waits for the first
+# host response and then waits an additional interval (specified by this
+# option).  The first host and any hosts from which a response is received within
+# the group-threshold interval are considered healthy.
+
+
+# slow-threshold: <msec>
+# default: 20
+#
+# Specifies the maximum difference in response time(RT) between the previous smoothed
+# response time(SRT) and current RT. If current RT is slower than
+# sum of the previous SRT and slow-threshold, healthMon will check again
+# until either retries count hit check-retries counts or the RT is not slower
+# than (previous SRT + slow-threshold). If given slow-threshold is smaller than group-threshold,
+# healthMon will use value of group-threshold instead of given value.
+
+
+# smoothing-window: <num>
+# default: 10
+#
+# Specifies the width of the window over which the moving-average response time
+# of an individual host is computed.
+
+
+# rt-mode: <mode>
+# modes: connect, smoothed-connect, total, smoothed-total
+# default: connect
+#
+# Specifies whether the last connect time, the smoothed connect time, the
+# total response time, or the smoothed total response time is used
+# when comparing host response times.
+
+
+# flap-threshold: <msec>
+# default: 60000
+#
+# Specifies the interval during which a up/down status transition is considered
+# a "flap".  If a host changes status (up-to-down or down-to-up) and less time
+# than the "flap-threshold" has elapsed since the last status change, a flap
+# is charged against the host.  Once the host flaps "max-flaps" times, it will
+# not be used even if the host is reporting an "up" status.
+#
+# The per-host flap counter is reset to zero any time the status changes and
+# more time than the "flap-threshold" specifies has elapsed.
+
+
+# max-flaps: <num>
+# default: 4
+#
+# Specifies the maximum number of times a host may flap (change status within the
+# "flap-threshold" interval) before it is considered down.
+
+
+# dual-stack-mode: <mode>
+# values: ipv4-only, ipv6-preferred, ipv6-only
+# default: ipv4-only
+#
+# Specifies whether the name supports ipv6 addresses.  The default value, "ipv4-only",
+# only resolves IPv4 addresses even if the hostname has both A and AAAA records.
+# "ipv6-preferred" queries each hostname for  both AAAA and A records simultaneously.
+# If the host has a AAAA record, healthMon will use it exclusively for health-checking.
+# "ipv6-only" queries each hostname for only AAAA records even if the host has both
+# A and AAAA records.  There is no mode which health-checks both IPv4 and IPv6
+# and selects between them.

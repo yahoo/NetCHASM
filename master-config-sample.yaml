@@ -1,0 +1,90 @@
+# threads: <num>
+# Creates a maximum <num> worker threads to do the healthchecks.
+threads: 20
+
+# connectiontimeout: <timeout in milliseconds>
+# modifies the connection timeout for every healthcheck.
+
+# config.load-directory: <directory>
+# Path containing check configs.
+# The path should be a absolute path.
+
+# config.load-file: <file>
+# Path of individual check config files.
+# The path should be a absolute path.
+
+# dns.type: <ares>
+# Plugin to use for DNS resolution.
+# Default is ares.
+
+# dns.lookup-timeout: <num>
+# Timeout for the dns server to respond.
+# Time is in milliseconds
+
+# dns.host: <ipaddress>
+# Specify the dns server.
+# The server can be ipv4 or ipv6 address.
+
+# http.type: <curl>
+# Plugin to use for HTTP HealthCheck. 
+# Default is curl.
+
+# ftp.type: <curl>
+# Plugin to use for ftp HealthCheck.
+# Default is curl.
+
+# tcp.type: <rawsocket>
+# Plugin to use for tcp HealthCheck. 
+# Default is rawsocket.
+
+# dnscheck.type: <ares>
+# Plugin to use for dns HealthCheck. 
+# Default is ares.
+
+# none.type: <none>
+# Plugin to use for none healthcheck.
+# Default is none.
+
+# db.type: <mdbm/text>
+# Backend database to use.
+# Default is mdbm.
+
+# db.path: <path>
+# Path of the database file.
+# The path should be a absolute path.
+
+# db.healthCheckCommitPolicy: <policy>
+# db.auxCommitPolicy: <policy>
+# The policy used to update the backend in the host group storage type
+# Options are:
+# always - always update the storage on every host check.
+# first - update the group when the first host in the group is checked.
+# fullcycle - update the group each time every host in the group is checked at least once.
+# ttl - update the group after the ttl for the group expires.
+
+# log.path: <path>
+# Path of the log file.
+# The path should be a absolute path.
+
+# log.type: <text>
+# Plugin to use for logging
+
+# log.verbosity: <1-9> or <error, none, off, emerg, alert, critical, error, warning, notice, info, debug, debug2, debug3>
+# Verbosity level of logging.
+
+# log.timeFormat: <format>
+# The log time format used. Default %Y%m%d.%Hh%Mm%Ss
+
+# log.maxQueue: <max>
+# The max size of the log queue. If it exceeds this value, logs will be dropped 
+# Default 2056
+
+
+# socket.path: <path>
+# Path where the unix socket should be establised.
+# Default path is /var/run/netchasm/controlsocket
+# The path should be a absolute path.
+
+# aux.path: <path>
+# Path where the load feedback files should be stored.
+# The path should be a absolute path.
