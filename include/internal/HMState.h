@@ -79,6 +79,13 @@ public:
      */
     bool setupDaemonstate();
 
+    //! Computes Hash and stores the config info.
+    /*
+         Computes hash  for the entire config and stores in the config Info.
+         \return true if the successful.
+     */
+    bool storeConfigInfo();
+
     //! Get the current master config loaded.
     /*!
          Get the current master config loaded.
