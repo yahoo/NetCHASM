@@ -16,7 +16,7 @@ class TestConfigParser : public HMConfigParserBase
 {
 public:
     ~TestConfigParser() {}
-    uint32_t parseConfig(const std::string& fileName, HMState& state) { return 0; }
+    uint32_t parseConfig(const std::string& fileName, HMState& state, HMConfigParams& configParam) { return 0; }
     bool writeConfigs(HMState& state, std::string outFile)
     {
         return true;

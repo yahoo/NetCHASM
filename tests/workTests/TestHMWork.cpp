@@ -93,7 +93,7 @@ TESTNAME::test_HMWorkReloadState()
     CPPUNIT_ASSERT(hmWorkState->m_aresLoaded);
     ares_destroy(hmWorkState->m_channel);
 
-    currentState->m_dnsCache.init(HM_CHECK_PLUGIN_DNS_ARES);
+    currentState->m_dnsCache.init();
     hmWorkState->reloadState(&state, threadID);
     CPPUNIT_ASSERT(hmWorkState->m_aresLoaded);
     ares_destroy(hmWorkState->m_channel);

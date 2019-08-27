@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
-
 include(ExternalProject)
-project(bkln_netchasm)
+project(netchasm)
 
 file(GLOB SOURCES "./*.cpp")
 add_executable(worktests ${SOURCES} ../shared/common.cpp ../shared/TestStorage.cpp ../CppUnitTestRunner.cc)

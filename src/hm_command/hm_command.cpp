@@ -50,220 +50,92 @@ void handleError(char *prog, string &name)
     exit(-3);
 }
 
-void printError(string msg)
+string printWorkState(HM_API_WORK_STATE state)
 {
-    cerr << msg << ":" << strerror(errno) << endl;
-}
-
-bool createSocket(int& s)
-{
-    if ((s = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
+    switch(state)
     {
-        printError("Failed to create socket, error: ");
-        return false;
-    }
-    return true;
-}
-
-void closeSocket(int s)
-{
-    if (s != -1)
-    {
-        close(s);
+    case HM_CHECK_INACTIVE:
+        return "INACTIVE";
+    case HM_CHECK_QUEUED:
+        return "QUEUED";
+    case HM_CHECK_IN_PROGRESS:
+        return "IN PROGRESS";
+    case HM_CHECK_FAILED:
+        return "FAILED";
+    default:
+        return "Invalid Response";
     }
 }
-
-bool connectSocket(int sock, string& server_path)
-{
-    int len;
-    struct sockaddr_un remote;
-    remote.sun_family = AF_UNIX;
-    strcpy(remote.sun_path, server_path.c_str());
-    len = strlen(remote.sun_path) + sizeof(remote.sun_family);
-    if (connect(sock, (struct sockaddr *) &remote, len) == -1)
-    {
-        printError("Failed to connect socket to " + server_path + ", error: ");
-        closeSocket(sock);
-        return false;
-    }
-    return true;
-}
-
-bool sendMessage(int s, string cmd)
-{
-    if (send(s, cmd.c_str(), cmd.length(), 0) == -1)
-    {
-        printError("failed to send msg " + cmd + " on socket, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
-bool recvWorkQueue(int s,  uint32_t &workQLen)
-{
-    int n = read(s, &workQLen, sizeof(workQLen));
-    if (n < 0)
-    {
-        printError("Failed to recv on socket for hm_hostcheck_t, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
-bool recvHostSchd(int s,  hm_dns_sched_t &dns, vector<hm_hc_sched_t> &hcs)
-{
-    int n = read(s, &dns, sizeof(dns));
-    if (n < 0)
-    {
-        printError("Failed to recv on socket for hm_dns_sched_t, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    for (uint64_t i = 0; i < dns.count; i++)
-    {
-        hm_hc_sched_t hc;
-        int n = read(s, &hc, sizeof(hc));
-        if(n < 0)
-        {
-            printError("Failed to recv on socket for hm_hc_sched_t, error desc: ");
-            closeSocket(s);
-            return false;
-        }
-        hcs.push_back(hc);
-    }
-    return true;
-}
-
-bool recvSchQueue(int s,  uint64_t &schQLen)
-{
-    int n = read(s, &schQLen, sizeof(schQLen));
-    if (n < 0)
-    {
-        printError("Failed to recv on socket for hm_hostcheck_t, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
-bool recvThreadInfo(int s,  hm_threadInfo_s& threadInfo)
-{
-    int n = read(s, &threadInfo, sizeof(threadInfo));
-    if (n < 0)
-    {
-        printError("Failed to recv on socket for hm_hostcheck_t, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
 
 bool runCommand(const vector<string> &strArgs)
 {
-    string strCommand;
-    bool bRemoveLastWS = false;
-    for (size_t i = 0; i < strArgs.size(); i++)
-    {
-        strCommand += strArgs[i];
-        strCommand += " ";
-        bRemoveLastWS = true;
-    }
-
-    if (bRemoveLastWS)
-    {
-        strCommand.erase(strCommand.size()-1);
-    }
-
-    int s;
-    createSocket (s);
-    if (!connectSocket(s, server_path))
-    {
-        return false;
-    }
-
-    if (!sendMessage(s, strCommand))
-    {
-        return false;
-    }
-
+    HMControlLinuxSocketClient socketAPI(server_path);
     if (strArgs[0] == HM_CMD_THREADINFO)
     {
-        hm_threadInfo_t threadInfo;
-        recvThreadInfo(s, threadInfo);
-        cout << "Number of threads  = "  << threadInfo.numThreads << endl;
-        cout << "Number of idle threads  = "  << threadInfo.numIdleThreads << endl;
+        HMAPIThreadInfo threadInfo;
+        bool status = socketAPI.getThreadInfo(threadInfo);
+        cout << "Number of threads  = "  << threadInfo.m_numThreads << endl;
+        cout << "Number of idle threads  = "  << threadInfo.m_numIdleThreads << endl;
+        return status;
     }
     else if (strArgs[0] == HM_CMD_WORKQUEUEINFO)
     {
         uint32_t workQueueLen = 0;
-        recvWorkQueue(s, workQueueLen);
+        bool status = socketAPI.getWorkQueue(workQueueLen);
         cout << "Work queue length = " << workQueueLen << endl;
+        return status;
     }
     else if (strArgs[0] == HM_CMD_SCHDQUEUEINFO)
     {
         uint64_t schQueueLen = 0;
-        recvSchQueue(s, schQueueLen);
+        bool status = socketAPI.getSchQueue(schQueueLen);
         cout << "Schedule queue length = " << schQueueLen << endl;
+        return status;
     }
     else if (strArgs[0] == HM_CMD_HOSTSCHDINFO)
     {
-        hm_dns_sched_t dns;
-        vector<hm_hc_sched_t> hcs;
-        dns.hasv4 = false;
-        dns.hasv6 = false;
-        recvHostSchd(s, dns, hcs);
-        if(!dns.hasv4 && !dns.hasv6)
+        HMAPIDNSSchedInfo dns;
+        dns.m_hasv4 = false;
+        dns.m_hasv6 = false;
+        socketAPI.getHostScheduleInfo(strArgs[1], strArgs[2], dns);
+        if(!dns.m_hasv4 && !dns.m_hasv6)
         {
             cout<<"No results found.\nCheck Hostgroup name and host name"<<endl;
             return false;
         }
-        if(dns.hasv4)
+        if(dns.m_hasv4)
         {
             cout<<"===========DNS IPv4==========="<<endl;
             HMTimeStamp lastCheck, nextCheck;
-            lastCheck.setTime(dns.v4LastCheckTime);
-            nextCheck.setTime(dns.v4NextCheckTime);
-            cout<<"\tState : " << printWorkState(dns.v4State)<<endl;
+            lastCheck.setTime(dns.m_v4LastCheckTime);
+            nextCheck.setTime(dns.m_v4NextCheckTime);
+            cout<<"\tState : " << printWorkState(dns.m_v4State)<<endl;
             cout<<"\tLast check time : " << lastCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
             cout<<"\tNext check time : " << nextCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
         }
-        if(dns.hasv6)
+        if(dns.m_hasv6)
         {
             cout<<"===========DNS IPv6==========="<<endl;
             HMTimeStamp lastCheck, nextCheck;
-            lastCheck.setTime(dns.v6LastCheckTime);
-            nextCheck.setTime(dns.v6NextCheckTime);
-            cout<<"\tState : " << printWorkState(dns.v6State)<<endl;
+            lastCheck.setTime(dns.m_v6LastCheckTime);
+            nextCheck.setTime(dns.m_v6NextCheckTime);
+            cout<<"\tState : " << printWorkState(dns.m_v6State)<<endl;
             cout<<"\tLast check time : " << lastCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
             cout<<"\tNext check time : " << nextCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
         }
-        cout << "=============Total #IPs : " << dns.count << "=============" << endl;
-        for (size_t i = 0; i < hcs.size(); i++)
+        cout << "=============Total #IPs : " << dns.m_hostScheduleInfo.size() << "=============" << endl;
+        for (size_t i = 0; i < dns.m_hostScheduleInfo.size(); i++)
         {
             cout<<"===========Health Checks IP:"<< (i+1) <<"==========="<<endl;
-            HMIPAddress ip(hcs[i].addrtype);
-            if(hcs[i].addrtype == AF_INET)
-            {
-                ip.set(hcs[i].addr.s_addr);
-            }
-            if(hcs[i].addrtype == AF_INET6)
-            {
-                ip.set(hcs[i].addr.s_addr6);
-            }
-            cout<<"\t"<<ip.toString()<<endl;
+            cout<<"\t"<<dns.m_hostScheduleInfo[i].m_address.toString()<<endl;
             HMTimeStamp lastCheck, nextCheck;
-            lastCheck.setTime(hcs[i].lastCheckTime);
-            nextCheck.setTime(hcs[i].nextCheckTime);
-            cout<<"\t\tState : " << printWorkState(hcs[i].state)<<endl;
+            lastCheck.setTime(dns.m_hostScheduleInfo[i].m_lastCheckTime);
+            nextCheck.setTime(dns.m_hostScheduleInfo[i].m_nextCheckTime);
+            cout<<"\t\tState : " << printWorkState(dns.m_hostScheduleInfo[i].m_state)<<endl;
             cout<<"\t\tLast check time : " << lastCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
             cout<<"\t\tNext check time : " << nextCheck.print("(%a %b %d %H:%M:%S %Y)")<<endl;
         }
     }
-
-    closeSocket(s);
     return true;
 }
 
@@ -349,7 +221,14 @@ int main(int argc, char* argv[])
     case GETTTLTRESH:
     case GETWORKPERTHREAD:
     case GETRECYCLE:
+    case GETREMOTEQUERY:
+    case SETREMOTEQUERY:
         cerr << "This command is supported in hm_configure" << endl;
+        return -1;
+    case ADDDNSADDRESSES:
+    case REMOVEDNSADDRESSES:
+    case GETDNSADDRESSES:
+        cerr << "This command is supported in hm_staticdns" << endl;
         return -1;
     case RELOAD:
     case HOSTGROUPINFO:
@@ -359,6 +238,9 @@ int main(int argc, char* argv[])
     case HOSTCHECK:
     case HOSTGROUPPARAMS:
     case HOSTLIST:
+    case HOSTRESULTS:
+    case HOSTIPRESULTS:
+    case LOADFBINFOIP:
     case UNDEFINED:
         cerr << "Not all commands are supported at this time" << endl;
         return -3;

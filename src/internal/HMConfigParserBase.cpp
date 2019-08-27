@@ -15,7 +15,7 @@ using namespace std;
 
 
 uint32_t
-HMConfigParserBase::parseConfigFile(const string& fileName, HMState& state)
+HMConfigParserBase::parseConfigFile(const string& fileName, HMState& state, HMConfigParams& configParam)
 {
     unique_ptr<HMConfigParserBase> parser;
     HMLog(HM_LOG_INFO, "[CORE] Parse file %s", fileName.c_str());
@@ -23,13 +23,12 @@ HMConfigParserBase::parseConfigFile(const string& fileName, HMState& state)
     {
         parser = make_unique<HMConfigParserYAML>();
     }
-    uint32_t nErrors =  parser->parseConfig(fileName, state);
-
+    uint32_t nErrors =  parser->parseConfig(fileName, state, configParam);
     return nErrors;
 }
 
 uint32_t
-HMConfigParserBase::parseDirectory(const string& folderName, HMState& state)
+HMConfigParserBase::parseDirectory(const string& folderName, HMState& state, HMConfigParams& configParam)
 {
     uint32_t nErrors = 0;
     DIR* dp;
@@ -58,7 +57,7 @@ HMConfigParserBase::parseDirectory(const string& folderName, HMState& state)
         {
             string fullpath = folderName + "/" + d->d_name;
             uint32_t errorCnt;
-            if((errorCnt = parseConfigFile(fullpath, state)) > 0)
+            if((errorCnt = parseConfigFile(fullpath, state, configParam)) > 0)
             {
                 nErrors+=errorCnt;
             }
@@ -66,7 +65,7 @@ HMConfigParserBase::parseDirectory(const string& folderName, HMState& state)
         else if(d->d_type == IS_FOLDER)
         {
             string fullpath = folderName + "/" + d->d_name;
-            nErrors += parseDirectory(fullpath, state);
+            nErrors += parseDirectory(fullpath, state, configParam);
         }
     }
     closedir(dp);

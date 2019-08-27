@@ -13,7 +13,7 @@ using namespace std;
 HM_WORK_STATUS
 HMWorkHealthCheckNone::healthCheck()
 {
-    if (m_hostCheck.getCheckType() == HM_CHECK_NONE)
+    if (m_hostCheck.getCheckType() == HM_CHECK_NONE || m_hostCheck.getCheckType() == HM_CHECK_DEFAULT)
     {
 
         HMLog(HM_LOG_DEBUG3, "[NONECHECK]  Checking %s at %s for check type  None ",

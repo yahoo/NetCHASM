@@ -16,17 +16,48 @@ class HMDataHostCheck;
 class HMDNSResult;
 class HMThreadWorker;
 class HMDataCheckParams;
+class HMDNSTypeMap;
+
+//! The supported types of DNS lookup classes.
+enum HM_DNS_PLUGIN_CLASS : uint8_t
+{
+    HM_DNS_PLUGIN_ARES,
+    HM_DNS_PLUGIN_LIBEVENT,
+    HM_DNS_PLUGIN_STATIC,
+    HM_DNS_PLUGIN_NONE
+};
+
+struct CompareCheckList
+{
+    bool operator()(const std::pair<std::string,HMDataHostCheck>& lhs,
+            const std::pair<std::string,HMDataHostCheck>& rhs) const;
+};
+
 
 //! STL Definition of the mapping between host group names and host group data.
 typedef std::map<std::string,HMDataHostGroup> HMDataHostGroupMap;
-//! STL Definitino of the mapping between the hostname and the associated checks.
-typedef std::multimap<std::string,HMDataHostCheck> HMWaitList;
+//! STL Definition of the mapping between the hostname and the associated checks.
+typedef std::multimap<HMDNSTypeMap, HMDataHostCheck> HMWaitList;
+//! STL Definition of the mapping between the <hostname , hostcheck> and the associated check params.
+typedef std::multimap<std::pair<std::string,HMDataHostCheck>,HMDataCheckParams, CompareCheckList> HMCheckList;
 
 //! The Current Version of the NetCHASM mdbm structure. Used to verify backend database compatibility.
-const uint8_t HM_MDBM_VERSION = 2;
+const uint8_t HM_MDBM_VERSION = 3;
+
+//! The Current Version of the Socket data structure. Used to verify data parsing and packing database compatibility.
+const uint8_t HM_CONTROL_SOCKET_VERSION = 1;
 
 //! The default path to create the log file.
 const std::string HM_DEFAULT_LOG_PATH = "/home/y/logs/HM.log";
+
+//! The default port(v4) for remote check mode.
+const uint16_t HM_CONTROL_SOCKET_DEFAULT_PORTV4 = 10053;
+
+//! The default port(v6) for remote check mode.
+const uint16_t HM_CONTROL_SOCKET_DEFAULT_PORTV6 = 10054;
+
+//! The master health check command.
+const std::string HM_MASTER_HEALTH_CHECK_COMMAND = "netchasm_status";
 
 //! The default time to live of the DNS resolutions in the DNS cache.
 #define HM_DEFAULT_DNS_TTL 360000
@@ -54,10 +85,13 @@ const std::string HM_DEFAULT_LOG_PATH = "/home/y/logs/HM.log";
 //! The default smoothing window for the smoothed health check measurement.
 #define HM_DEFAULT_SMOOTHING_WINDOW 10
 
-// TODO Ragha we need doxygen for these constants.
+//! Default Threshold TTL value to decide if the Health check is nearly of schedule
 #define HM_DEFAULT_TTL_THRESHOLD 10
+//! The Default Percent by which we decide when and number of idle threads we shut
 #define HM_DEFAULT_STRIDE_PERCENT 10
+//! The Default frequency in seconds on when we monitor the thread pool
 #define HM_DEFAULT_MONITOR_FREQUENCY 2
+//! The Default work to thread ratio. How many healthchecks(work) needs a thread.
 #define HM_WORK_PER_THREAD_RATIO 4
 
 // We need to use milliseconds for group-threshold and milliseconds for
@@ -80,21 +114,19 @@ enum HM_EVENT_PLUGIN_CLASS : uint8_t
     HM_EVENT_LIBEVENT
 };
 
+//! The supported remote check types.
+enum HM_REMOTE_CHECK_TYPE : uint8_t
+{
+    HM_REMOTE_CHECK_NONE,
+    HM_REMOTE_CHECK_TCP,
+    HM_REMOTE_CHECK_TCPS
+};
+
+
 enum HM_LOG_PLUGIN_CLASS : uint8_t
 {
     HM_LOG_PLUGIN_DEFAULT,
-    HM_LOG_PLUGIN_TEXT,
-    HM_LOG_PLUGIN_STDOUT,
-    HM_LOG_PLUGIN_SYSLOG
-};
-
-//! The supported types of DNS lookup classes.
-enum HM_DNS_PLUGIN_CLASS : uint8_t
-{
-    HM_DNS_PLUGIN_DEFAULT,
-    HM_DNS_PLUGIN_ARES,
-    HM_DNS_PLUGIN_LIBEVENT,
-    HM_DNS_PLUGIN_NONE
+    HM_LOG_PLUGIN_TEXT
 };
 
 //! The supported types of backend storage classes.
@@ -131,7 +163,8 @@ enum HM_CHECK_PLUGIN_CLASS : uint8_t
     HM_CHECK_PLUGIN_FTP_CURL,
     HM_CHECK_PLUGIN_TCP_RAW,
     HM_CHECK_PLUGIN_AUX_CURL,
-    HM_CHECK_PLUGIN_HTTP_LIBEVENT
+    HM_CHECK_PLUGIN_HTTP_LIBEVENT,
+    HM_CHECK_PLUGIN_TCPS_RAW
 };
 
 //! The supported health check types.
@@ -152,7 +185,9 @@ enum HM_CHECK_TYPE : uint8_t
     HM_CHECK_FTPS_IMPLICIT_NO_PEER_CHECK,
     HM_CHECK_AUX_HTTP,
     HM_CHECK_AUX_HTTPS,
-    HM_CHECK_AUX_HTTPS_NO_PEER_CHECK
+    HM_CHECK_AUX_HTTPS_NO_PEER_CHECK,
+    HM_CHECK_TCPS,
+    HM_CHECK_INVALID
 };
 
 //! The status of the configuration loading.
@@ -170,6 +205,15 @@ enum HM_DUALSTACK : uint8_t
     HM_DUALSTACK_IPV4_ONLY = 0x01,
     HM_DUALSTACK_IPV6_ONLY = 0x02,
     HM_DUALSTACK_BOTH  = 0x03
+};
+
+//! The type of fallback mode for distributed health check.
+enum HM_DISTRIBUTED_FALLBACK : uint8_t
+{
+    HM_DISTRIBUTED_FALLBACK_NONE = 0x00,
+    HM_DISTRIBUTED_FALLBACK_LOCAL = 0x01,
+    HM_DISTRIBUTED_FALLBACK_REMOTE = 0x02,
+    HM_DISTRIBUTED_FALLBACK_BOTH  = 0x03
 };
 
 //! The current status of the host from the health check.
@@ -210,6 +254,22 @@ enum HM_SCHEDULE_STATE : uint8_t
     HM_SCHEDULE_IGNORE
 };
 
+//! The socket data fetch return type
+enum HM_SOCK_DATA_STATUS : uint8_t
+{
+    HM_SOCK_DATA_OK,
+    HM_SOCK_DATA_EMPTY,
+    HM_SOCK_DATA_FAILED
+};
+
+//! The socket data fetch return type
+enum HM_RETURN_STATUS : uint8_t
+{
+    HM_RETURN_STATUS_SUCCESS,
+    HM_RETURN_STATUS_EMPTY,
+    HM_RETURN_STATUS_FAILED
+};
+
 //! The supported types of measurement aggregation.
 enum HM_MEASUREMENT_OPTIONS : uint16_t
 {
@@ -226,7 +286,8 @@ enum HM_RESPONSE : uint8_t
     HM_RESPONSE_NONE = 0,
     HM_RESPONSE_CONNECTED = 1,
     HM_RESPONSE_FAILED = 2,
-    HM_RESPONSE_DNS_FAILED = 3
+    HM_RESPONSE_DNS_FAILED = 3,
+    HM_RESPONSE_REMOTE_FAILED = 4
 };
 
 //! The detailed reason code after the health check.
@@ -248,7 +309,8 @@ enum HM_REASON : uint8_t
     HM_REASON_RESPONSE_403 = 13,
     HM_REASON_RESPONSE_3XX = 14,
     HM_REASON_RESPONSE_5XX = 15,
-    HM_REASON_INTERNAL_ERROR = 16
+    HM_REASON_INTERNAL_ERROR = 16,
+    HM_REASON_REMOTE_NODATA = 17
 };
 
 //! The commands supported by the control API.
@@ -257,6 +319,7 @@ enum HM_COMMAND_TASKS
     RELOAD,
     HOSTGROUPINFO,
     LOADFBINFO,
+    LOADFBINFOIP,
     THREADINFO,
     WORKQUEUEINFO,
     SCHDQUEUEINFO,
@@ -282,6 +345,13 @@ enum HM_COMMAND_TASKS
     SETWORKPERTHREAD,
     GETRECYCLE,
     SETRECYCLE,
+    HOSTRESULTS,
+    HOSTIPRESULTS,
+    SETREMOTEQUERY,
+    GETREMOTEQUERY,
+    ADDDNSADDRESSES,
+    REMOVEDNSADDRESSES,
+    GETDNSADDRESSES,
     UNDEFINED
 };
 
@@ -290,14 +360,33 @@ enum HM_WORK_STATUS : uint8_t
 {
     HM_WORK_IDLE = 0,
     HM_WORK_COMPLETE = 1,
-    HM_WORK_IN_PROGRESS = 2
+    HM_WORK_IN_PROGRESS = 2,
+    HM_WORK_REMOTE_FALLBACK = 3,
+    HM_WORK_COMPLETE_REMOTE = 4
 };
 
 //! Config format
 enum HM_CONFIG_PLUGIN_CLASS : uint8_t
 {
     HM_CONFIG_DEFAULT,
+    HM_CONFIG_YFOR,
     HM_CONFIG_YAML
+};
+
+//! The type of control sockets for daemon.
+enum HM_CONTROL_SOCKET : uint8_t
+{
+    HM_CONTROL_SOCKET_LINUX = 0,
+    HM_CONTROL_SOCKET_TCP_V4 = 1,
+    HM_CONTROL_SOCKET_TCP_V6 = 2,
+    HM_CONTROL_SOCKET_TLS_V4 = 3,
+    HM_CONTROL_SOCKET_TLS_V6 = 4
+};
+
+//! The handling versions of control sockets for daemon.
+enum HM_CONTROL_SOCKET_VERSIONS : uint8_t
+{
+    HM_CONTROL_SOCKET_VERSION1 = 1
 };
 
 //! Print the config parser readable check type .
@@ -308,6 +397,8 @@ std::string printCheckType(HM_CHECK_TYPE ct);
 std::string printWorkType(HM_WORK_TYPE work);
 //! Print the human readable measurement options.
 std::string printMeasurementOptions(uint16_t);
+//! Print the human readable DNS type.
+std::string printDnsType(HM_DNS_PLUGIN_CLASS dt);
 //! Print the human readable dual stack.
 std::string printDualStack(HM_DUALSTACK ds);
 //! Print the human readable mode.
@@ -318,7 +409,5 @@ std::string printReason(HM_REASON reason);
 std::string printStatus(HM_HOST_STATUS status);
 //! Print the human readable version of the response code.
 std::string printResponse(HM_RESPONSE response);
-//! Print the human readable version of the work state code.
-std::string printWorkState(HM_WORK_STATE state);
 
 #endif /* HMCONSTANTS_H_ */

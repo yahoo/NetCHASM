@@ -283,13 +283,14 @@ class HMStorage
 {
 public:
 
-    HMStorage(HMDataHostGroupMap* hostGroupMap) :
+    HMStorage(HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
         m_shutdown(true),
         m_readonly(false),
         m_auxCommitPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_healthCheckCommitPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_lockPolicy(HM_STORAGE_RW_LOCKS),
-        m_hostGroupMap(hostGroupMap) {}
+        m_hostGroupMap(hostGroupMap),
+        m_dnsCache(dnsCache){}
 
     virtual ~HMStorage() {};
 
@@ -597,6 +598,7 @@ protected:
     HM_STORAGE_LOCK_POLICY m_lockPolicy;
 
     HMDataHostGroupMap* m_hostGroupMap;
+    HMDNSCache* m_dnsCache;
 };
 
 #endif /* HMSTORAGEBASE_H_ */

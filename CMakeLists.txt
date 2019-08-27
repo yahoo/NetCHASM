@@ -1,31 +1,24 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.14)
 
 include(ExternalProject)
 enable_testing()
 set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 set(OBJECT_DIR ${CMAKE_BINARY_DIR})
 set(CMAKE_INSTALL_PREFIX "/bin")
 set(MAJOR_VERSION 1)
 
 option(ASAN "enable ASAN options" OFF)
 option(COV "enable CODE COVERAGE options" OFF)
+option(SKIP-LIBEVENT "skip LIBEVENT library and related code" OFF)
+option(SKIP-ARES "skip ARES library and related code" OFF)
+option(SKIP-MDBM "skip MDBM library and related code" OFF)
 
-include_directories(include/NetCHASM)
-include_directories(include/internal)
+#needs to be removed before shipped
+include_directories(/tmp/install/include/)
+link_directories(/tmp/install/lib64)
 
 link_directories(/lib64)
-
-link_libraries(curl)
-link_libraries(ssl)
-link_libraries(crypto)
-link_libraries(cares)
-link_libraries(mdbm)
-link_libraries(yaml-cpp)
-link_libraries(cppunit)
-link_libraries(pthread)
-link_libraries(event)
-link_libraries(event_openssl)
-link_libraries (gcov)
 
 add_custom_target(build
     COMMAND ${CMAKE_MAKE_PROGRAM}
@@ -50,6 +43,7 @@ add_custom_command(TARGET testbuild
     COMMAND genhtml netchasm.info -o report
     )
 
+add_subdirectory(proto)
 add_subdirectory(src/internal)
 add_subdirectory(src/api)
 add_subdirectory(src/NetCHASMDaemon)
@@ -57,4 +51,6 @@ add_subdirectory(src/hm_command)
 add_subdirectory(src/hm_configure)
 add_subdirectory(src/hm_reload)
 add_subdirectory(src/hm_set)
+add_subdirectory(src/hm_remote)
+add_subdirectory(src/hm_staticdns)
 add_subdirectory(tests EXCLUDE_FROM_ALL)

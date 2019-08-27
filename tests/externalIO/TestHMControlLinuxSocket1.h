@@ -20,7 +20,6 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr8);
     CPPUNIT_TEST(test_cmdlstnr9);
     CPPUNIT_TEST(test_cmdlstnr10);
-    CPPUNIT_TEST(test_cmdlstnr10);
     CPPUNIT_TEST(test_cmdlstnr11);
     CPPUNIT_TEST(test_cmdlstnr12);
     CPPUNIT_TEST(test_cmdlstnr13);
@@ -42,6 +41,5 @@ protected:
     void test_cmdlstnr13();
     HMStateManager *sm;
     std::thread sm_thr;
-    int sock_fd;
 };
 #endif /* TESTS_STORETESTS_TESTHMSTORAGE_H_ */

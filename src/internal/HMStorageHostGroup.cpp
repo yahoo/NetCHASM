@@ -79,8 +79,8 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
     // Set of rotations that need pushed from the internal data
     set<string> healthCheckUpdateList;
     set<string> auxInfoUpdateList;
-    map<string,set<HMIPAddress>> dnsMap;
-    map<pair<string, bool>,HMTimeStamp> dnsResTimeMap;
+    map<pair<string, HMDNSLookup>,set<HMIPAddress>> dnsMap;
+    map<pair<string, HMDNSLookup>,HMTimeStamp> dnsResTimeMap;
 
     // first we purge rotations that don't exist in the current backend
     for (auto it = backendChecks.begin(); it != backendChecks.end();)
@@ -113,10 +113,10 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
                     {
                         continue;
                     }
-
-                    auto res = dnsMap.insert(make_pair(it->second.m_hostName, set<HMIPAddress>()));
+                    HMDNSLookup dnsHostCheck(hostGroup->second.getDnsCheckPlugin(), it->second.m_address.getType() == AF_INET6);
+                    pair<string, HMDNSLookup> key = make_pair(it->second.m_hostName,  dnsHostCheck);
+                    auto res = dnsMap.insert(make_pair(key, set<HMIPAddress>()));
                     res.first->second.insert(it->second.m_address);
-                    pair<string, bool> key = make_pair(it->second.m_hostName, it->second.m_address.getType() == AF_INET6 ? true : false);
                     if(dnsResTimeMap.find(key) == dnsResTimeMap.end())
                     {
                         dnsResTimeMap.insert(make_pair(key, it->second.m_result.m_checkTime));
@@ -146,9 +146,10 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
         HMLog(HM_LOG_DEBUG, "[STORE] %s - %s reloaded into DNS cache and checklist", it->first.c_str(), it->second.m_hostName.c_str());
 
         // Cache the DNS mapping
-        auto res = dnsMap.insert(make_pair(it->second.m_hostName, set<HMIPAddress>()));
+        HMDNSLookup dnsHostCheck(hostGroup->second.getDnsCheckPlugin(), it->second.m_address.getType() == AF_INET6);
+        pair<string, HMDNSLookup> key = make_pair(it->second.m_hostName, dnsHostCheck);
+        auto res = dnsMap.insert(make_pair(key, set<HMIPAddress>()));
         res.first->second.insert(it->second.m_address);
-        pair<string, bool> key = make_pair(it->second.m_hostName, it->second.m_address.getType() == AF_INET6 ? true : false);
         if(dnsResTimeMap.find(key) == dnsResTimeMap.end())
         {
             dnsResTimeMap.insert(make_pair(key, it->second.m_result.m_checkTime));
@@ -198,17 +199,16 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
     {
         HMDNSResult v4Result;
         HMDNSResult v6Result;
-        auto res = dnsResTimeMap.find(make_pair(it->first, false));
-        if (res != dnsResTimeMap.end())
+        auto res = dnsResTimeMap.find(it->first);
+        if (res != dnsResTimeMap.end() && !res->first.second.isIpv6())
         {
             v4Result.setResultTime(res->second);
         }
-        res = dnsResTimeMap.find(make_pair(it->first, true));
-        if (res != dnsResTimeMap.end())
+        else if (res != dnsResTimeMap.end() && res->first.second.isIpv6())
         {
             v6Result.setResultTime(res->second);
         }
-        dnsCache.updateReloadDNSEntry(it->first, it->second, v4Result, v6Result);
+        dnsCache.updateReloadDNSEntry(it->first.first, it->second, v4Result, v6Result, res->first.second.getPlugin());
     }
 
     // Now update the internal checkList
@@ -822,12 +822,23 @@ HMStorageHostGroup::commitHealthCheck()
     {
         return false;
     }
+    else
+    {
+        HMDNSLookup dnsHostCheck(it->second.getDnsCheckPlugin(), update.m_address.getType() == AF_INET6);
+        bool isValidAddress = m_dnsCache->isValidAddress(update.m_hostName,
+                it->second.getDualstack(), dnsHostCheck, update.m_address);
+        if (!isValidAddress)
+        {
+            return true;
+        }
+    }
     ttl = it->second.getCheckTTL();
 
     set<string> hosts;
     bool coldStart = false;
     bool allStale = true;
     HMTimeStamp oldest = HMTimeStamp::now();
+
 
     // Check to see if we already have an entry for this ip address
     { // establish scope for our lock
@@ -929,6 +940,17 @@ HMStorageHostGroup::commitAuxInfo()
     {
         return false;
     }
+    else
+    {
+        HMDNSLookup dnsHostCheck(it->second.getDnsCheckPlugin(), update.m_address.getType() == AF_INET6);
+        bool isValidAddress = m_dnsCache->isValidAddress(update.m_hostName,
+                it->second.getDualstack(), dnsHostCheck, update.m_address);
+        if (!isValidAddress)
+        {
+            return true;
+        }
+    }
+
     ttl = it->second.getCheckTTL();
 
     set<string> hosts;

@@ -5,7 +5,8 @@
 
 #include <memory>
 #include <vector>
-
+#include <openssl/ossl_typ.h>
+#include <openssl/ssl.h>
 #include "HMConstants.h"
 #include "HMStorage.h"
 #include "HMDataCheckList.h"
@@ -21,10 +22,12 @@
      This class also contains all check information, the DNS cache and host group information.
      All configuration parsing and reload logic is inside this class.
  */
+class HMStorageHostGroupMDBM;
 class HMState
 {
 public:
     HMState() :
+        m_ctx(NULL),
         m_useBackendConfigs(false),
         m_masterConfigLoaded(false),
         m_configsLoaded(false),
@@ -34,10 +37,10 @@ public:
         m_httpDefaultCheckClass(HM_CHECK_PLUGIN_HTTP_CURL),
         m_ftpDefaultCheckClass(HM_CHECK_PLUGIN_FTP_CURL),
         m_tcpDefaultCheckClass(HM_CHECK_PLUGIN_TCP_RAW),
+        m_tcpsDefaultCheckClass(HM_CHECK_PLUGIN_TCPS_RAW),
         m_dnsDefaultCheckClass(HM_CHECK_PLUGIN_DNS_ARES),
         m_noneDefaultCheckClass(HM_CHECK_PLUGIN_DEFAULT),
         m_auxDefaultCheckClass(HM_CHECK_PLUGIN_AUX_CURL),
-        m_dnsLookupClass(HM_DNS_PLUGIN_ARES),
         m_dnsLookupTimeout(HM_DEFAULT_DNS_RESOLUTION_TIMEOUT),
         m_dnsRetries(HM_DEFAULT_DNS_RETRIES),
         m_nMaxThreads(1),
@@ -50,11 +53,22 @@ public:
         m_maxLogQueue(0),
         m_auxPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_healthCheckPolicy(HM_STORAGE_COMMIT_ALWAYS),
-        m_storageLockPolicy(HM_STORAGE_RW_LOCKS){}
-
+        m_storageLockPolicy(HM_STORAGE_RW_LOCKS),
+        m_controlSocketCheckPortv4(HM_CONTROL_SOCKET_DEFAULT_PORTV4),
+        m_controlSocketCheckPortv6(HM_CONTROL_SOCKET_DEFAULT_PORTV6),
+        m_enableSecureRemote(false),
+        m_enableMutualAuth(true),
+        m_libEventEnabled(false)
+    {
+        m_control_socket.push_back(HM_CONTROL_SOCKET_LINUX);
+    }
     HMState(HMState&) = delete;
 
-    ~HMState() { closeBackend(); m_datastore.reset();  };
+    ~HMState()
+    {
+        closeBackend(); m_datastore.reset();
+        SSL_CTX_free(m_ctx);
+     }
 
     //! Check the configurations to make sure they are valid.
     /*!
@@ -107,13 +121,6 @@ public:
      */
     HM_LOG_PLUGIN_CLASS  getDefaultLogType() const;
 
-    //! Get the current DNS resolution class.
-    /*!
-        Get the current DNS resolution class.
-        \return the current DNS resolution class.
-     */
-    HM_DNS_PLUGIN_CLASS getDefaultDNSLookupType() const;
-
     //! Get the current event loop class.
     /*!
         Get the current event loop class.
@@ -141,6 +148,14 @@ public:
         \return the current TCP check class.
      */
     HM_CHECK_PLUGIN_CLASS getDefaultTCPCheckype() const;
+
+    //! Get the current TCPS check class.
+    /*!
+        Get the current TCPS check class.
+        \return the current TCPS check class.
+     */
+    HM_CHECK_PLUGIN_CLASS getDefaultTCPSCheckype() const;
+
 
     //! Get the current DNS check class.
     /*!
@@ -322,6 +337,17 @@ public:
      */
     void forceDNSCheck(const std::string& hostGroup, const std::string& hostName, HMWorkQueue& workQueue);
 
+    //! Force a DNS resolution for a specific host.
+    /*!
+         Force a DNS resolution for a specific host.
+         \param the host to force DNS resolutions now.
+         \param the DNS plugin type.
+         \param set of addresses added
+         \param the work queue to schedule the check.
+     */
+    void forceDNSCheck(const std::string &hostName,  HM_DNS_PLUGIN_CLASS dnsPlugin, const std::set<HMIPAddress>& addresses, HMWorkQueue& workQueue);
+
+
     //! Open the backend storage.
     /*!
          Open the backend storage.
@@ -396,6 +422,36 @@ public:
      */
     void setHash(const HMHash& hash);
 
+    //! Get the current(v4) check-port of control-socket.
+    uint16_t getControlSocketCheckPortv4() const;
+
+    //! Get the current(v6) check-port of control-socket.
+    uint16_t getControlSocketCheckPortv6() const;
+
+    //! Get all the control sockets enabled
+    const std::vector<HM_CONTROL_SOCKET>& getControlSocket() const;
+
+    //! Get the host certificate file
+    const std::string& getCertFile() const;
+
+    //! Get the host key file
+    const std::string& getKeyFile() const;
+
+    //! Get the CA certificate file
+    const std::string& getCaFile() const;
+
+    //! Enable encrypted data transfer
+    bool isEnableSecureRemote() const;
+
+    //! Enable tls mutual authentication
+    bool isEnableMutualAuth() const;
+
+    //! check if lib-event type check used in DNS checks
+    bool isLibEventEnabled() const;
+
+    //! Enable/Disbale lib-event type DNS check
+    void setLibEventEnabled(bool libEventEnabled);
+
     //! The main DNS cache.
     HMDNSCache m_dnsCache;
     //! Master Structure of health check information
@@ -408,7 +464,8 @@ public:
     HMAuxCache m_auxCache;
     //! Back end data store class
     std::unique_ptr<HMStorage> m_datastore;
-
+    //! SSL context
+    SSL_CTX* m_ctx;
     
 private:
 
@@ -435,11 +492,11 @@ private:
     HM_CHECK_PLUGIN_CLASS m_httpDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_ftpDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_tcpDefaultCheckClass;
+    HM_CHECK_PLUGIN_CLASS m_tcpsDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_dnsDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_noneDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_auxDefaultCheckClass;
 
-    HM_DNS_PLUGIN_CLASS m_dnsLookupClass;
     uint32_t m_dnsLookupTimeout;
     uint32_t m_dnsRetries;
 
@@ -459,8 +516,17 @@ private:
     HM_STORAGE_COMMIT_POLICY m_auxPolicy;
     HM_STORAGE_COMMIT_POLICY m_healthCheckPolicy;
     HM_STORAGE_LOCK_POLICY m_storageLockPolicy;
+    uint16_t m_controlSocketCheckPortv4;
+    uint16_t m_controlSocketCheckPortv6;
     HMHash m_hash;
     std::string m_masterConfig;
+    std::vector<HM_CONTROL_SOCKET> m_control_socket;
+    bool m_enableSecureRemote;
+    std::string m_certFile;
+    std::string m_keyFile;
+    std::string m_caFile;
+    bool m_enableMutualAuth;
+    bool m_libEventEnabled;
 };
 
 #endif /* INCLUDE_HMSTATE_H_ */

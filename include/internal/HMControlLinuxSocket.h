@@ -1,7 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
-#ifndef HMCONTROLLINUXSOCKET_H_
-#define HMCONTROLLINUXSOCKET_H_
+#ifndef HMCOMMANDTCPLISTENER_H_
+#define HMCOMMANDTCPLISTENER_H_
 
 #include <inttypes.h>
 #include <string>
@@ -14,6 +14,7 @@
 const std::string HM_DEFAULT_USD_PATH = "/home/y/var/run/netchasm/controlsocket";
 
 class HMStateManager;
+//! Class to handle linux socket based external communications
 class HMControlLinuxSocket : public HMCommandListenerBase
 {
 public:
@@ -24,17 +25,25 @@ public:
     HMControlLinuxSocket& operator=(const HMControlLinuxSocket&) = delete;        // Disallow copying
     HMControlLinuxSocket(const HMControlLinuxSocket&) = delete;
 
+    //!  Function to initialize sockets
     void init();
+    //!  Function to handle connections
     void run();
+    //! Shutdown listeners
     void listernerShutDown();
-    void handleClient(int clientSock);
+    /*!
+         Handle client communications
+         \param pointer of client socket.
+     */
+    void handleClient(char* client);
+    //! Handle client connections
     void handleConnections();
-
-    void responseMessage(int clinetSock , const void* buffer, size_t size);
-    void responseMessageVarLen(int clinetSock, const char* buffer, size_t size);
 
 private:
     int m_socket;
+    std::string m_socketPath;
+    //! unlink socket path
+    void unlinkSocket(std::string& socketPath);
 };
 
-#endif /* HMCONTROLLINUXSOCKET_H_ */
+#endif /* HMCOMMANDTCPLISTENER_H_ */

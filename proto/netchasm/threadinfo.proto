@@ -1,0 +1,6 @@
+syntax = "proto3";
+package netchasm;
+message ThreadInfo {
+  uint64 numThreads = 1;
+  uint64 numIdleThreads = 2;
+}

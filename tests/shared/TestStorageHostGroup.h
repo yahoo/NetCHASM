@@ -9,8 +9,8 @@
 class TestStorageHostGroup : public HMStorageHostGroup
 {
 public:
-    TestStorageHostGroup(HMDataHostGroupMap* hostMap) :
-        HMStorageHostGroup(hostMap) {}
+    TestStorageHostGroup(HMDataHostGroupMap* hostMap, HMDNSCache *dnsCache) :
+        HMStorageHostGroup(hostMap, dnsCache) {}
 
     bool test_getInternalHostGroupInfo(const std::string& hostGroupName, const HMDataHostGroup* &hostGroup)
         { return getInternalHostGroupInfo(hostGroupName, hostGroup); }

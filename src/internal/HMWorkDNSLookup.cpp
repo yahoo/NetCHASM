@@ -5,6 +5,7 @@
 #include "HMWork.h"
 #include "HMLogBase.h"
 #include "HMStateManager.h"
+#include "HMDNSCache.h"
 
 using namespace std;
 
@@ -17,8 +18,7 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     shared_ptr<HMState> currentState;
     m_stateManager->updateState(currentState);
 
-    bool ipv6 = (m_ipAddress.getType() == AF_INET6);
-    currentState->m_dnsCache.startDNSQuery(m_hostname, ipv6);
+    currentState->m_dnsCache.startDNSQuery(m_hostname, m_dnsHostCheck);
 
     result = dnsLookup();
 
@@ -26,14 +26,14 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     m_stateManager->updateState(currentState);
 
     // Make sure we completed the query with success and don't need another
-    HMTimeStamp checkTime = currentState->m_dnsCache.nextQueryTime(m_hostname, ipv6);
+    HMTimeStamp checkTime = currentState->m_dnsCache.nextQueryTime(m_hostname, m_dnsHostCheck);
     if(checkTime <= HMTimeStamp::now())
     {
-        currentState->m_dnsCache.queueDNSQuery(m_hostname, ipv6, m_stateManager->m_workQueue);
+        currentState->m_dnsCache.queueDNSQuery(m_hostname, m_dnsHostCheck, m_stateManager->m_workQueue);
     }
     else
     {
-        m_eventLoop->addDNSTimeout(m_hostname, ipv6, checkTime);
+        m_eventLoop->addDNSTimeout(m_hostname, m_dnsHostCheck, checkTime);
     }
 
     if(!result)
@@ -44,7 +44,7 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     // Now kick all the health checks waiting for this DNS lookup
     set<HMIPAddress> ips;
     set<HMIPAddress> expiredIps;
-    auto range = currentState->m_dnsWaitList.equal_range(m_hostname);
+    auto range = currentState->m_dnsWaitList.equal_range(HMDNSTypeMap(m_hostname, m_dnsHostCheck.getPlugin()));
     for(auto it = range.first; it != range.second; ++it)
     {
         uint8_t dualStack;
@@ -68,8 +68,8 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
             }
         }
 
-        currentState->m_dnsCache.getAddresses(m_hostname, dualStack, ips);
-        bool status = currentState->m_dnsCache.getExpiredAddresses(m_hostname, dualStack, expiredIps);
+        currentState->m_dnsCache.getAddresses(m_hostname, dualStack, m_dnsHostCheck, ips);
+        bool status = currentState->m_dnsCache.getExpiredAddresses(m_hostname, dualStack, m_dnsHostCheck, expiredIps);
         if(status)
         {
             for (auto iit = expiredIps.begin(); iit != expiredIps.end(); ++iit)

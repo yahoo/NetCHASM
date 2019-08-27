@@ -36,7 +36,8 @@ void TESTNAME::tearDown()
 void TESTNAME::test_basic_DNS_eventqueue()
 {
     string dummy = "dummy.hm.com";
-    m_currentState->m_dnsCache.insertDNSEntry(dummy,false,300,3000);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    m_currentState->m_dnsCache.insertDNSEntry(dummy,dnsHostCheckF,300,3000);
     m_eventQueue->addDNSTimeout(dummy, false, HMTimeStamp::now());
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());
@@ -59,9 +60,17 @@ void TESTNAME::test_basic_HC_eventqueue()
     params.setCheckParameters(0, 0, 0, HM_DEFAULT_SMOOTHING_WINDOW,
             HM_DEFAULT_GROUP_THRESHOLD, HM_DEFAULT_SLOW_THRESHOLD, HM_DEFAULT_MAX_FLAPS,
             300, 3000, HM_DEFAULT_FLAP_THRESHOLD, 0);
-    check1.setCheckParams(HM_CHECK_HTTP,
-    HM_CHECK_PLUGIN_HTTP_CURL, 80,
-    HM_DUALSTACK_IPV4_ONLY, checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     m_currentState->m_checkList.insertCheck("HostGroup1", dummy, check1,
             params,ips);
@@ -107,9 +116,17 @@ void TESTNAME::test_ordering_HC_eventqueue()
     params2.setCheckParameters(0, 0, 0, HM_DEFAULT_SMOOTHING_WINDOW,
     HM_DEFAULT_GROUP_THRESHOLD, HM_DEFAULT_SLOW_THRESHOLD, HM_DEFAULT_MAX_FLAPS, 500,
             5000, HM_DEFAULT_FLAP_THRESHOLD, 0);
-    check1.setCheckParams(HM_CHECK_HTTP,
-    HM_CHECK_PLUGIN_HTTP_CURL, 80,
-    HM_DUALSTACK_IPV4_ONLY, checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     HMTimeStamp t1 = HMTimeStamp::now() + 1000;
     HMTimeStamp t2 = t1 - 500;
@@ -158,9 +175,17 @@ void TESTNAME::test_delay_HC_eventqueue()
     params1.setCheckParameters(0, 0, 0, HM_DEFAULT_SMOOTHING_WINDOW,
     HM_DEFAULT_GROUP_THRESHOLD, HM_DEFAULT_SLOW_THRESHOLD, HM_DEFAULT_MAX_FLAPS, 400,
             4000, HM_DEFAULT_FLAP_THRESHOLD, 0);
-    check1.setCheckParams(HM_CHECK_HTTP,
-    HM_CHECK_PLUGIN_HTTP_CURL, 80,
-    HM_DUALSTACK_IPV4_ONLY, checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
     HMTimeStamp t1 = HMTimeStamp::now() + 1000;
     HMTimeStamp t2 = t1 + 4000;
 

@@ -3,6 +3,7 @@
 #ifndef HMWORKDNSLOOKUP_H_
 #define HMWORKDNSLOOKUP_H_
 
+#include "HMDNSLookup.h"
 #include "HMWork.h"
 
 //! Base class for the work classes that conduct DNS resolutions.
@@ -16,11 +17,12 @@
      dnsLookup - do the actual DNS lookup and update the hostname/IP Addresses.
      Return the appropriate HM_WORK_STATUS (IDLE or COMPLETE for done or IN PROGRESS if it needs a continuation)
  */
+
 class HMWorkDNSLookup: public HMWork
 {
 public:
-    HMWorkDNSLookup(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
-        HMWork(hostname, ip, hostcheck) {};
+    HMWorkDNSLookup(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck, const HMDNSLookup& dnsHostCheck) :
+        HMWork(hostname, ip, hostcheck), m_dnsHostCheck(dnsHostCheck) {};
 
     virtual ~HMWorkDNSLookup() {}
 
@@ -57,6 +59,7 @@ public:
 protected:
     std::set<std::string> m_hostnames;
     std::set<HMIPAddress> m_ips;
+    HMDNSLookup m_dnsHostCheck;
 };
 
 #endif /* HMWORKDNSLOOKUP_H_ */

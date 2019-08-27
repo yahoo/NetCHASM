@@ -171,3 +171,4 @@ bool HMHash::operator !=(const HMHash& k) const
 {
     return !(*this == k);
 }
+

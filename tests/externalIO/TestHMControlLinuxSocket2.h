@@ -32,6 +32,5 @@ protected:
     HMStateManager *sm;
     std::thread sm_thr;
     HMTimeStamp now;
-    int sock_fd;
 };
 #endif /* TESTS_STORETESTS_TESTHMSTORAGE_H_ */

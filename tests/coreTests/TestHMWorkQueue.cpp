@@ -25,7 +25,8 @@ void TESTNAME::test_basic_workqueue() {
     const string hostname = "dummy.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check, dnsHostCheckF);
     std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
             dns_lookup);
     HMWorkQueue work_queue;
@@ -44,9 +45,10 @@ void TESTNAME::test_workqueue() {
     const string hostname3 = "dummy3.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check);
-    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check);
-    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
     std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
             dns_lookup3);
     work_queue.insertWork(work);
@@ -72,7 +74,8 @@ void TESTNAME::test_notify_workqueue() {
     const string hostname = "dummy.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check, dnsHostCheckF);
     std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
             dns_lookup);
     std::unique_ptr<HMWork> work_temp;
@@ -104,9 +107,10 @@ void TESTNAME::test_multi_insert() {
     const string hostname3 = "dummy3.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check);
-    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check);
-    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
     std::unique_ptr<HMWork> work1 = std::make_unique<HMWorkDNSLookupAres>(
             dns_lookup1);
     std::unique_ptr<HMWork> work2 = std::make_unique<HMWorkDNSLookupAres>(

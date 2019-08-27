@@ -19,13 +19,6 @@
 
 using namespace std;
 
-void
-HMWorkHealthCheckTCP::errorMsg(string strBuf)
-{
-    error_code ec (errno,generic_category());
-    throw system_error(ec, strBuf);
-}
-
 HM_WORK_STATUS
 HMWorkHealthCheckTCP::healthCheck()
 {
@@ -34,206 +27,114 @@ HMWorkHealthCheckTCP::healthCheck()
         shared_ptr<HMState> currentState;
         m_stateManager->updateState(currentState);
 
-        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Raw Socket check TCP for %s", printCheckType(m_hostCheck.getCheckType()).c_str());
-
+        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Raw Socket check TCP for %s",
+                printCheckType(m_hostCheck.getCheckType()).c_str());
 
         string url;
-        int sock;
         string checkInfo = m_hostCheck.getCheckInfo();
-
-        struct sockaddr_storage ss;
-        socklen_t salen = sizeof(ss);
-
-        struct sockaddr* sa = m_ipAddress.getSockaddr(&ss,&salen,m_hostCheck.getPort());
-
         //Check if tcp connected successfully, if check-info is present check for returned data to match
         m_start = HMTimeStamp::now();
         m_end = HMTimeStamp::now();
         m_reason = HM_REASON_NONE;
         m_response = HM_RESPONSE_FAILED;
-        sock = socket(m_ipAddress.getType(),SOCK_STREAM,0);
-        try
+        timeval tv, tv_checkinfo;
+        tv.tv_sec = currentState->getConnectionTimeout() / 1000;
+        tv.tv_usec = 0;
+        tv_checkinfo.tv_sec = 30;
+        tv_checkinfo.tv_usec = 0;
+        HMSocketUtilTCP socketApi(m_ipAddress, m_hostCheck.getPort(), tv, m_hostCheck.getSourceAddress(), m_hostCheck.getTOSValue());
+        m_reason = socketApi.getReason();
+        switch (m_reason)
         {
-            if(sock < 0)
+        case HM_REASON_INTERNAL_ERROR:
+            HMLog(HM_LOG_ERROR, "[TCPCHECK] %s - HostName = %s(%s), checkInfo = %s",
+                    socketApi.getErrorMsg().c_str(), m_hostname.c_str(), m_ipAddress.toString().c_str(),
+                    checkInfo.c_str());
+            break;
+        case HM_REASON_CONNECT_TIMEOUT:
+            HMLog(HM_LOG_DEBUG3,
+                    "[TCPCHECK] TCP connect timeout for host:%s(%s), port:%hu",
+                    m_hostname.c_str(), m_ipAddress.toString().c_str(), m_hostCheck.getPort());
+            break;
+        case HM_REASON_CONNECT_FAILURE:
+            HMLog(HM_LOG_DEBUG3,
+                    "[TCPCHECK] TCP connect failed for host:%s(%s), port:%hu",
+                    m_hostname.c_str(), m_ipAddress.toString().c_str(), m_hostCheck.getPort());
+            break;
+        case HM_REASON_SUCCESS:
+            m_response = HM_RESPONSE_CONNECTED;
+            m_reason = HM_REASON_SUCCESS;
+            m_end = socketApi.getConnectTime();
+            HMLog(HM_LOG_DEBUG3,
+                    "[TCPCHECK] Connection successful to host:%s(%s), port:%hu",
+                    m_hostname.c_str(), m_ipAddress.toString().c_str(), m_hostCheck.getPort());
+            if (checkInfo.empty())
             {
-                m_reason = HM_REASON_INTERNAL_ERROR;
-                errorMsg("[TCPCHECK] tcp check socket() ");
+                HMLog(HM_LOG_DEBUG3,
+                        "[TCPCHECK] Health check successful for host:%s(%s), port:%hu",
+                        m_hostname.c_str(), m_ipAddress.toString().c_str(), m_hostCheck.getPort());
+                break;
             }
-            if(fcntl(sock,F_SETFL,O_NONBLOCK) < 0)//NON-BLOCKING
+            else if (checkInfo == HM_MASTER_HEALTH_CHECK_COMMAND)
             {
-                m_reason = HM_REASON_INTERNAL_ERROR;
-                errorMsg("[TCPCHECK] tcp check fcntl() ");
-            }
-
-            if((connect(sock,sa,salen)) < 0
-                           && errno != EINPROGRESS)
-            {
-                HMLog(HM_LOG_ERROR,"[TCPCHECK] tcp check connect");
-                m_reason = HM_REASON_CONNECT_FAILURE;
-                errorMsg("[TCPCHECK] tcp check connect ");
-            }
-            int ret,tret ;
-            timeval tv, tv_checkinfo;
-
-            tv.tv_sec = currentState->getConnectionTimeout() / 1000;
-            tv.tv_usec = 0;
-            tv_checkinfo.tv_sec = 30;
-            tv_checkinfo.tv_usec = 0;
-
-            fd_set fds;
-            FD_ZERO(&fds);
-            FD_SET(sock,&fds);
-            // either connected or in progress
-
-            // using a write file descriptor to control the timeout
-            ret = select(sock + 1, NULL, (&fds), NULL, &tv);
-
-            if(ret < 0)
-            {
-                m_reason = HM_REASON_CONNECT_FAILURE;
-                errorMsg("[TCPCHECK] select error ");
-            }
-            else if(ret == 0)
-            {
-                m_reason = HM_REASON_CONNECT_TIMEOUT;
-                HMLog(HM_LOG_DEBUG3, "[TCPCHECK] TCP connect timeout for host:%s, post:%hu", m_hostname.c_str(), m_hostCheck.getPort());
+                m_reason = HM_REASON_REQUEST_FAILURE;
+                m_response = HM_RESPONSE_FAILED;
+                if (socketApi.pingRemoteHost(tv_checkinfo))
+                {
+                    HMLog(HM_LOG_DEBUG3,
+                            "[TLSCHECK] Health check successful for host:%s(%s), port:%hu",
+                            m_hostname.c_str(), m_ipAddress.toString().c_str(),
+                            m_hostCheck.getPort());
+                    m_response = HM_RESPONSE_CONNECTED;
+                }
+                m_reason = socketApi.getReason();
             }
             else
             {
-                int v =0;
-                socklen_t vlen = sizeof(v);
-                int size_buf = checkInfo.length();
-                unique_ptr<char[]> buf = unique_ptr<char[]>(new char [size_buf]);
-
-                if(FD_ISSET(sock, &fds))
+                m_reason = HM_REASON_NONE;
+                m_response = HM_RESPONSE_FAILED;
+                HMLog(HM_LOG_DEBUG3,
+                        "[TCPCHECK] checkInfo is present and Ready to read");
+                string recvCheckInfo;
+                recvCheckInfo.resize(m_hostCheck.getCheckInfo().length());
+                socketApi.getCheckInfo(recvCheckInfo,
+                        m_hostCheck.getCheckInfo().length(), tv_checkinfo);
+                m_reason = socketApi.getReason();
+                switch (m_reason)
                 {
-                    if(getsockopt(sock, SOL_SOCKET, SO_ERROR, &v, &vlen) < 0)
+                case HM_REASON_INTERNAL_ERROR:
+                    HMLog(HM_LOG_ERROR, "[TCPCHECK] %s - HostName = %s(%s), checkInfo = %s",
+                            socketApi.getErrorMsg().c_str(), m_hostname.c_str(), m_ipAddress.toString().c_str(),
+                            recvCheckInfo.c_str());
+                    break;
+                case HM_REASON_RESPONSE_TIMEOUT:
+                    HMLog(HM_LOG_DEBUG,
+                            "[TCPCHECK] TCP connect timeout for host:%s(%s), port:%hu",
+                            m_hostname.c_str(), m_ipAddress.toString().c_str(),m_hostCheck.getPort());
+                    break;
+                case HM_REASON_SUCCESS:
+                    if (recvCheckInfo == m_hostCheck.getCheckInfo())
                     {
-                        m_reason = HM_REASON_INTERNAL_ERROR;
-                        errorMsg("[TCPCHECK] tcp check getsockopt ");
-                    }
-                    else if(v == ETIMEDOUT)
-                    {
-                        m_reason = HM_REASON_CONNECT_TIMEOUT;
-                        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] TCP connect timeout in select for host:%s, post:%hu",
-                                m_hostname.c_str(),
-                                m_hostCheck.getPort());
-                    }
-                    else if(!v)
-                    {
+                        HMLog(HM_LOG_DEBUG3,
+                                "[TCPCHECK] Health check successful for host:%s(%s), port:%hu, checkInfo:%s",
+                                m_hostname.c_str(), m_ipAddress.toString().c_str(), m_hostCheck.getPort(),
+                                m_hostCheck.getCheckInfo().c_str());
                         m_response = HM_RESPONSE_CONNECTED;
-                        m_reason = HM_REASON_SUCCESS;
-                        m_end = HMTimeStamp::now();
-                        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Connection successful to host:%s, post:%hu",
-                                m_hostname.c_str(),
-                                m_hostCheck.getPort());
                     }
                     else
                     {
-                        m_reason = HM_REASON_CONNECT_FAILURE;
-                        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] TCP connect failed for host:%s, post:%hu",
-                                m_hostname.c_str(),
-                                m_hostCheck.getPort());
-                    }
-
-                    if((m_response == HM_RESPONSE_CONNECTED) && checkInfo.empty())
-                    {
-                        HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Health check successful for host:%s, post:%hu",
-                                m_hostname.c_str(),
-                                m_hostCheck.getPort());
-                    }
-                    else if((m_response == HM_RESPONSE_CONNECTED) && !checkInfo.empty())
-                    {
-                        // We need to reset the reason and response for checkinfo matching
+                        HMLog(HM_LOG_DEBUG3,
+                                "[TCPCHECK] tcp response for %s(%s) did not match CheckInfo %s",
+                                m_hostname.c_str(), m_ipAddress.toString().c_str(), recvCheckInfo.c_str());
                         m_reason = HM_REASON_NONE;
-                        m_response = HM_RESPONSE_FAILED;
-                        HMLog(HM_LOG_DEBUG3,"[TCPCHECK] checkInfo is present and Ready to read");
-
-                        ret = 0;
-
-                        /*
-                         * TCP socket doesn't read the full data in one shot
-                         * keep reading until we read desired number of bytes(checkInfo size)
-                         */
-
-                        while (ret < size_buf)
-                        {
-                            fd_set fdsr;
-                            FD_ZERO(&fdsr);
-                            FD_SET(sock,&fdsr);
-                            // either connected or in progress
-                            int s_ret = select(sock+1,(&fdsr),NULL,NULL,&tv_checkinfo);
-
-                            if(s_ret < 0)
-                            {
-                                m_reason = HM_REASON_INTERNAL_ERROR;
-                                errorMsg("[TCPCHECK] select error ");
-                                break;
-                            }
-                            else if(s_ret == 0)
-                            {
-                                m_reason = HM_REASON_RESPONSE_TIMEOUT;
-                                HMLog(HM_LOG_DEBUG, "[TCPCHECK] TCP connect timeout for host:%s, post:%hu",
-                                        m_hostname.c_str(),
-                                        m_hostCheck.getPort());
-                                break;
-                            }
-                            else if(FD_ISSET(sock, &fdsr))
-                            {
-                                HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Ready to read");
-                                if((tret = read(sock,buf.get()+ret,size_buf-ret)) < 0)
-                                {
-                                    m_reason = HM_REASON_INTERNAL_ERROR;
-                                    errorMsg("[TCPCHECK] read failure ");
-                                }
-                                else if(tret == 0)
-                                {
-                                    HMLog(HM_LOG_DEBUG3, "[TCPCHECK] TCP read - No more data to send ,shutdown on other end");
-                                    break;
-                                }
-                                else
-                                {
-                                    ret += tret;
-                                    HMLog(HM_LOG_DEBUG3, "[TCPCHECK] TCP bytes %d received", tret);
-                                }
-                            }
-                            else
-                            {
-                                HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Not ready to read");
-                            }
-                        }
-
-                        if(ret >= (int)checkInfo.length()
-                            && !strncmp(buf.get(),checkInfo.c_str(),size_buf))
-                        {
-                            HMLog(HM_LOG_DEBUG3, "[TCPCHECK] Health check successful for host:%s, post:%hu, checkInfo:%s",
-                                    m_hostname.c_str(),
-                                    m_hostCheck.getPort(),
-                                    m_hostCheck.getCheckInfo().c_str());
-                            m_reason = HM_REASON_SUCCESS;
-                            m_response = HM_RESPONSE_CONNECTED;
-                        }
-                        else
-                        {
-                            HMLog(HM_LOG_DEBUG3, "[TCPCHECK] tcp response for %s did not match CheckInfo %s",
-                                    m_hostname.c_str(),
-                                    checkInfo.c_str());
-                        }
                     }
-                }
+                default:
+                    break;
+                };
             }
+        default:
+            break;
         }
-
-        catch (system_error& ex)
-        {
-            string what((ex.what()));
-            HMLog(HM_LOG_ERROR, "%s for %s with checkinfo %s : %d",
-                    what.c_str(),
-                    m_hostname.c_str(),
-                    checkInfo.c_str(),
-                    ex.code().value());
-        }
-        close(sock);
     }//tcp ends
     else
     {
