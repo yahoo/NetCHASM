@@ -14,10 +14,6 @@ option(SKIP-LIBEVENT "skip LIBEVENT library and related code" OFF)
 option(SKIP-ARES "skip ARES library and related code" OFF)
 option(SKIP-MDBM "skip MDBM library and related code" OFF)
 
-#needs to be removed before shipped
-include_directories(/tmp/install/include/)
-link_directories(/tmp/install/lib64)
-
 link_directories(/lib64)
 
 add_custom_target(build

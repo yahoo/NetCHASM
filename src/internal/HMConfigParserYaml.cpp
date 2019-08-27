@@ -320,7 +320,6 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                 }
 		else if(val == "http-auxfetch")
 		{
-                     cout<<"asdasdasdajdshkashdjajskhdkahsdhkjahsdkjahdjsh"<<endl;
                      currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTP);
                      if(!currentHostGroup->second.getCheckPort())
                      {
