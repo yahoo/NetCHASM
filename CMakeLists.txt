@@ -14,10 +14,6 @@ option(SKIP-LIBEVENT "skip LIBEVENT library and related code" OFF)
 option(SKIP-ARES "skip ARES library and related code" OFF)
 option(SKIP-MDBM "skip MDBM library and related code" OFF)
 
-#needs to be removed before shipped
-include_directories(/tmp/install/include/)
-link_directories(/tmp/install/lib64)
-
 link_directories(/lib64)
 
 add_custom_target(build
@@ -27,12 +23,12 @@ add_custom_target(build
 
 add_custom_target(testbuild
     COMMAND ${CMAKE_MAKE_PROGRAM}
-#    COMMAND ${CMAKE_MAKE_PROGRAM} configparsertests
+    COMMAND ${CMAKE_MAKE_PROGRAM} configparsertests
     COMMAND ${CMAKE_MAKE_PROGRAM} coretests
-#    COMMAND ${CMAKE_MAKE_PROGRAM} externalio
-#    COMMAND ${CMAKE_MAKE_PROGRAM} logtests
-#    COMMAND ${CMAKE_MAKE_PROGRAM} storetests
-#    COMMAND ${CMAKE_MAKE_PROGRAM} worktests
+    COMMAND ${CMAKE_MAKE_PROGRAM} externalio
+    COMMAND ${CMAKE_MAKE_PROGRAM} logtests
+    COMMAND ${CMAKE_MAKE_PROGRAM} storetests
+    COMMAND ${CMAKE_MAKE_PROGRAM} worktests
     COMMAND ${CMAKE_MAKE_PROGRAM} test ARGS="-V"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )

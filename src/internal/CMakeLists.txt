@@ -33,10 +33,7 @@ if(COV)
     set_target_properties(netchasm_core PROPERTIES LINK_FLAGS "${COV_FLAGS}")
 endif(COV)
 
-target_include_directories(netchasm_core PUBLIC ${CMAKE_SOURCE_DIR}/include/internal ${CMAKE_SOURCE_DIR}/include/NetCHASM ${OPENSSL_PATH}/include)
-target_include_directories(netchasm_core PUBLIC ${ARES_PATH}/src/c-ares ${ARES_PATH}/src/c-ares-build)
-target_include_directories(netchasm_core PUBLIC ${LIBEVENT_PATH}/include)
-target_include_directories(netchasm_core PUBLIC ${CURL_PATH}/include)
+target_include_directories(netchasm_core PUBLIC ${CMAKE_SOURCE_DIR}/include/internal ${CMAKE_SOURCE_DIR}/include/NetCHASM)
 
 target_link_libraries (netchasm_core PUBLIC netchasm_proto)  
 target_link_libraries (netchasm_core PUBLIC curl ssl crypto pthread gcov protobuf)
