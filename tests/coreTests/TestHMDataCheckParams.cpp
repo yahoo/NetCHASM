@@ -60,8 +60,17 @@ void TESTNAME::test_basic_result()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
     params.emptyQuery(ip);
@@ -89,8 +98,17 @@ void TESTNAME::test_dns_failed_result()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = start;
@@ -119,8 +137,17 @@ void TESTNAME::test_basic_result1()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -143,8 +170,17 @@ void TESTNAME::test_basic_result2()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -167,8 +203,17 @@ void TESTNAME::test_basic_result3()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -195,8 +240,17 @@ void TESTNAME::test_basic_result4()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -228,8 +282,17 @@ void TESTNAME::test_basic_result5()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -259,8 +322,17 @@ void TESTNAME::test_basic_result6()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test" );
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -286,8 +358,17 @@ void TESTNAME::test_basic_retry()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -345,8 +426,17 @@ void TESTNAME::test_basic_flaps()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;
@@ -501,8 +591,17 @@ void TESTNAME::test_response_200()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 11000;
@@ -534,8 +633,17 @@ void TESTNAME::test_retry_200()
     string host_name = "dummy.hm.com";
     HMDataCheckResult result;
     HMDataHostCheck dataHost;
-    dataHost.setCheckParams(HM_CHECK_HTTP, HM_CHECK_PLUGIN_HTTP_CURL, 801,
-            HM_DUALSTACK_IPV4_ONLY, "test");
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(801);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo("test");
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	dataHost.setCheckParams(hostGroup);
 
     HMTimeStamp start = HMTimeStamp::now();
     HMTimeStamp end = HMTimeStamp::now() + 1000;

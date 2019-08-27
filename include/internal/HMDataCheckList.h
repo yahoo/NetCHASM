@@ -19,7 +19,7 @@ class HMStorage;
 class HMDataHostCheck;
 class HMCheckHeader;
 class HMAuxCache;
-
+class HMAuxInfo;
 //! Class to hold the list of health checks to perform
 /*!
  * This is the main class that holds all health checks that NetCHASM will perform.
@@ -37,7 +37,7 @@ class HMAuxCache;
 class HMDataCheckList
 {
 public:
-    HMDataCheckList() {};
+    HMDataCheckList() : m_guard(false) {};
     HMDataCheckList(HMDataCheckList& k) = delete;
 
     //! CheckNeeded determines if the specific check in question should be conducted now.
@@ -78,8 +78,9 @@ public:
          \param ip to check.
          \param hostCheck data to be used for the check.
          \param the work queue to insert the check.
+         \param enable remote check(default is false)
      */
-    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue);
+    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue, bool remote = true);
 
     //! This function is called by the worker thread when the check is removed from the work queue and is executed.
     /*
@@ -109,6 +110,15 @@ public:
          \return true if the result was inserted successfully.
      */
     bool updateCheck(const HMCheckHeader& header, const HMDataCheckResult& result);
+
+    //! This function updates the result based on a reload from the backend data store.
+    /*
+         This function updates the result based on a reload from the backend data store.
+         \param work pointer to the work base class that contains the results of the check and parameters of the check conducted.
+         \param the result to directly insert into the map of check params and check results.
+         \return true if the result was inserted successfully.
+    */
+    void updateCheck(HMWork* work, std::map<HMDataCheckParams, HMDataCheckResult>& results);
 
     //! This function is called by the work thread updating the internal check information.
     /*
@@ -144,6 +154,19 @@ public:
      */
     void storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, std::string auxData, HMStorage* store, HMAuxCache& aux);
 
+    //! This function is called by the worker thread to commit the aux information to the backend data store.
+    /*
+         This function is called by the worker thread to commit the aux information to the backend data store and internal cache.
+         It takes care of updating all results associated with the check including all affected host groups.
+        \param work pointer to the work base class defining the check parameters that need updated.
+        \param hostCheck to update.
+        \param ip address to update.
+        \param the aux Info data structure.
+        \param pointer to the current backend data storage class.
+        \param the current aux cache.
+     */
+    void storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMAuxInfo& auxInfo, HMStorage* store, HMAuxCache& aux);
+
     //! Returns all the current health checks loaded in the core.
     /*
         Returns all the current health checks in the core.
@@ -162,7 +185,7 @@ public:
          \param vector of pairs of check params and check results to fill with all associated check params and correlated results.
          \return true if the results vector is filled with all check params results pairs.
      */
-    bool getCheckResults(std::string& hostname, HMDataHostCheck& check, const HMIPAddress& address, std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>>& results);
+    bool getCheckResults(const std::string& hostname, const HMDataHostCheck& check, const HMIPAddress& address, std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>>& results);
 
     //! Retrieves the check result for the given check header
     /*
@@ -244,9 +267,15 @@ public:
      */
     std::string printChecks(bool printCheckInfo) const;
 
+    //!Sets the value for m_guard, to prevent insetring checks in the middle of run.
+    void setGuard (bool guard);
+
 
 private:
-    std::multimap<std::pair<std::string,HMDataHostCheck>,HMDataCheckParams> m_checklist;
+    bool m_guard;
+    HMCheckList m_checklist;
+    // Contains reference to m_checklist entries without the remoteCheck set in DataHostCheck
+    std::multimap<std::pair<std::string,HMDataHostCheck>, HMCheckList::iterator> m_checklistReference;
 };
 
 #endif /* HMDATACHECKLIST_H_ */

@@ -25,8 +25,8 @@ class HMStorageHostText : public HMStorageHost
 {
 
 public:
-    HMStorageHostText(std::string filename, HMDataHostGroupMap* hostGroupMap) :
-        HMStorageHost(hostGroupMap),
+    HMStorageHostText(std::string filename, HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
+        HMStorageHost(hostGroupMap, dnsCache),
         m_outputfile(filename) {}
 
     ~HMStorageHostText(){ closeStore(); }

@@ -20,9 +20,15 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_set_state);
     CPPUNIT_TEST(test_config_parse);
     CPPUNIT_TEST(test_config_parse1);
+    CPPUNIT_TEST(test_indirect_host);
+    CPPUNIT_TEST(test_indirect_host1);
     CPPUNIT_TEST(test_master_yaml_conf_parse);
     CPPUNIT_TEST(test_master_yaml_conf_parse1);
+    CPPUNIT_TEST(test_indirect_host2);
+    CPPUNIT_TEST(test_indirect_host3);
     CPPUNIT_TEST(test_load_configs_backend);
+    CPPUNIT_TEST(test_childhostgroup_1);
+    CPPUNIT_TEST(test_childhostgroup_2);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -37,9 +43,16 @@ public:
     void test_config_parse();
     void test_config_parse1();
     void test_base_reload();
+    void test_indirect_host();
+    void test_indirect_host1();
     void test_master_yaml_conf_parse();
     void test_master_yaml_conf_parse1();
+    void test_indirect_host2();
+    void test_indirect_host3();
     void test_load_configs_backend();
+    void test_childhostgroup_1();
+    void test_childhostgroup_2();
+    
 protected:
 
 };

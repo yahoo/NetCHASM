@@ -9,7 +9,7 @@
 #include "HMDataHostCheck.h"
 #include "HMIPAddress.h"
 #include "HMTimeStamp.h"
-
+#include "HMDNSCache.h"
 //! The Base class for the Event Loop.
 /*!
      The Base class for the Event Loop.
@@ -56,10 +56,10 @@ public:
     /*!
          Add a new DNS timeout to the event loop.
          \param the hostname to resolve.
-         \param true to resolve an IPv6 address.
+         \param structure holding DNS type and address type(v4 or v6).
          \param the time Stamp of when the DNS resolution should take place.
      */
-    virtual void addDNSTimeout(const std::string& hostname, bool ipv6, HMTimeStamp timeStamp) = 0;
+    virtual void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp) = 0;
 
     //! Add a new health check timeout.
     /*!

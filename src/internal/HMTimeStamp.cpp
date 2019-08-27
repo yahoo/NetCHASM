@@ -105,7 +105,7 @@ HMTimeStamp::printTimeSinceNow() const
     }
     else
     {
-        st = to_string(mins) + ':' + to_string(secs);
+        st = to_string(mins) + "m:" + to_string(secs);
     }
     return st;
 }

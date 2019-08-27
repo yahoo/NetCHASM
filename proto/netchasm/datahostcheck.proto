@@ -1,0 +1,12 @@
+syntax = "proto3";
+import "netchasm/ipaddress.proto";
+package netchasm;
+message DataHostCheck {
+    uint32 dualstack = 1;
+    uint32 checkType = 2;
+    uint32 port = 3;
+    string checkInfo = 4;
+    IPAddress sourceAddress = 5;
+    uint32 TOSValue = 6;
+    uint32 dnsType = 7;
+}

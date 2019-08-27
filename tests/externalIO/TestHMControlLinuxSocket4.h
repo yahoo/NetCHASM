@@ -18,6 +18,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr1);
     CPPUNIT_TEST(test_cmdlstnr2);
     CPPUNIT_TEST(test_cmdlstnr3);
+    CPPUNIT_TEST(test_cmdlstnr4);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -29,9 +30,13 @@ protected:
     void test_cmdlstnr1();
     void test_cmdlstnr2();
     void test_cmdlstnr3();
+    void test_cmdlstnr4();
     HMStateManager *sm;
     std::thread sm_thr;
     HMTimeStamp now;
-    int sock_fd;
+    std::string host1 = "test.hm.com";
+    std::string host2 = "test2.hm.com";
+    std::string host3 = "test3.hm.com";
+
 };
 #endif /* TEST_HMCONTROLLINUXSOCKET4_H_ */

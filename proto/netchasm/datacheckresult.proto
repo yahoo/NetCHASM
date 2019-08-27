@@ -1,0 +1,35 @@
+syntax = "proto3";
+import "netchasm/ipaddress.proto";
+
+package netchasm;
+message DataCheckResult {
+        IPAddress address = 1;
+        uint64 start = 2;
+        uint64 end = 3;
+        uint32 responseTime = 4;
+        uint32 totalResponseTime = 5;
+        uint32 minResponseTime = 6;
+        uint32 maxResponseTime = 7;
+        uint32 smoothedResponseTime = 8;
+        uint64 sumResponseTime = 9;
+        uint32 numChecks = 10;
+        uint32 numResponses = 11;
+        uint32 numConnectFailures = 12;
+        uint32 numFailures = 13;
+        uint32 numTimeouts = 14;
+        uint32 numFlaps = 15;
+        uint32 status = 16;
+        uint32 response = 17;
+        uint32 reason = 18;
+        uint32 numFailedChecks = 19;
+        uint32 numSlowResponses = 20;
+        uint32 port = 21;
+        uint64 changeTime = 22;
+        bool forceHostDown = 23;
+        uint64 queueCheckTime = 24;
+        uint64 checkTime = 25;
+}
+
+message DataCheckResults {
+    repeated DataCheckResult results = 1;
+}

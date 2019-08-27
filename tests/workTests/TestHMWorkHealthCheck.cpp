@@ -31,7 +31,8 @@ TESTNAME::setUp()
     setupCommon();
     HMDataHostGroupMap hostGroupMap;
     m_currentState = make_shared<HMState>();
-    m_currentState->m_datastore = make_unique<TestStorage>(&hostGroupMap);
+    HMDNSCache dnsCache;
+    m_currentState->m_datastore = make_unique<TestStorage>(&hostGroupMap, &dnsCache);
     m_state.setState(m_currentState);
     m_eventQueue = new HMEventLoopQueue(&m_state);
     m_eventThread = new std::thread(&HMEventLoopQueue::runThread, m_eventQueue);
@@ -59,12 +60,18 @@ TESTNAME::test_HMWorkHealthCheck_IPV4()
 
     string checkParams = "/check.html";
     HMDataHostCheck hostCheck;
-    hostCheck.setCheckParams(HM_CHECK_HTTP,
-            HM_CHECK_PLUGIN_HTTP_CURL,
-            80,
-            HM_DUALSTACK_IPV4_ONLY,
-            checkParams);
-
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	hostCheck.setCheckParams(hostGroup);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
     HMDataCheckParams paramsNormal;
     HMDataCheckParams paramsTimedout;
 
@@ -113,14 +120,14 @@ TESTNAME::test_HMWorkHealthCheck_IPV4()
 
     m_currentState->m_checkList.insertCheck("HostGroup1", error, hostCheck, paramsNormal, ips);
     m_currentState->m_checkList.insertCheck("HostGroup2", error, hostCheck, paramsTimedout, ips);
-    m_currentState->m_dnsCache.updateDNSEntry(basic, false, ips1);
-    m_currentState->m_dnsCache.updateDNSEntry(success, false, ips);
-    m_currentState->m_dnsCache.updateDNSEntry(failure, false, ips);
-    m_currentState->m_dnsCache.updateDNSEntry(error, false, ips);
-    m_currentState->m_dnsCache.finishQuery(basic, false, true);
-    m_currentState->m_dnsCache.finishQuery(success, false, true);
-    m_currentState->m_dnsCache.finishQuery(failure, false, true);
-    m_currentState->m_dnsCache.finishQuery(error, false, true);
+    m_currentState->m_dnsCache.updateDNSEntry(basic, dnsHostCheckF, ips1);
+    m_currentState->m_dnsCache.updateDNSEntry(success, dnsHostCheckF, ips);
+    m_currentState->m_dnsCache.updateDNSEntry(failure, dnsHostCheckF, ips);
+    m_currentState->m_dnsCache.updateDNSEntry(error, dnsHostCheckF, ips);
+    m_currentState->m_dnsCache.finishQuery(basic, dnsHostCheckF, true);
+    m_currentState->m_dnsCache.finishQuery(success, dnsHostCheckF, true);
+    m_currentState->m_dnsCache.finishQuery(failure, dnsHostCheckF, true);
+    m_currentState->m_dnsCache.finishQuery(error, dnsHostCheckF, true);
     std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>> getResults;
 
     storage->m_writeCount = 0;
@@ -429,14 +436,20 @@ void
 TESTNAME::test_HMWorkHealthCheck_IPV6()
 {
     TestStorage* storage = dynamic_cast<TestStorage*>(m_currentState->m_datastore.get());
-
+    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     string checkParams = "/check.html";
     HMDataHostCheck hostCheck;
-    hostCheck.setCheckParams(HM_CHECK_HTTP,
-            HM_CHECK_PLUGIN_HTTP_CURL,
-            80,
-            HM_DUALSTACK_IPV6_ONLY,
-            checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	hostCheck.setCheckParams(hostGroup);
 
     HMDataCheckParams paramsNormal;
     HMDataCheckParams paramsTimedout;
@@ -488,14 +501,14 @@ TESTNAME::test_HMWorkHealthCheck_IPV6()
     m_currentState->m_checkList.insertCheck("HostGroup1", error, hostCheck, paramsNormal, ips);
     m_currentState->m_checkList.insertCheck("HostGroup2", error, hostCheck, paramsTimedout, ips);
 
-    m_currentState->m_dnsCache.updateDNSEntry(basic, true, ips1);
-    m_currentState->m_dnsCache.updateDNSEntry(success, true, ips);
-    m_currentState->m_dnsCache.updateDNSEntry(failure, true, ips);
-    m_currentState->m_dnsCache.updateDNSEntry(error, true, ips);
-    m_currentState->m_dnsCache.finishQuery(basic, true, true);
-    m_currentState->m_dnsCache.finishQuery(success, true, true);
-    m_currentState->m_dnsCache.finishQuery(failure, true, true);
-    m_currentState->m_dnsCache.finishQuery(error, true, true);
+    m_currentState->m_dnsCache.updateDNSEntry(basic, dnsHostCheckT, ips1);
+    m_currentState->m_dnsCache.updateDNSEntry(success, dnsHostCheckT, ips);
+    m_currentState->m_dnsCache.updateDNSEntry(failure, dnsHostCheckT, ips);
+    m_currentState->m_dnsCache.updateDNSEntry(error, dnsHostCheckT, ips);
+    m_currentState->m_dnsCache.finishQuery(basic, dnsHostCheckT, true);
+    m_currentState->m_dnsCache.finishQuery(success, dnsHostCheckT, true);
+    m_currentState->m_dnsCache.finishQuery(failure, dnsHostCheckT, true);
+    m_currentState->m_dnsCache.finishQuery(error, dnsHostCheckT, true);
 
     std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>> getResults;
 

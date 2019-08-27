@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <string.h>
 
+class HMAPIIPAddress;
 class HMIPAddress
 {
 public:
@@ -52,6 +53,14 @@ public:
          \return true if the address was set successfully.
      */
     bool set(struct in6_addr &addr);
+
+    //! Set the IPAddress
+    /*!
+         Set the IPAddress
+         \param API IP address class .
+         \return true if the address was set successfully.
+     */
+    void set(const HMAPIIPAddress &addr);
 
     //! Set the IPAddress
     /*!

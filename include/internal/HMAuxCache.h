@@ -272,6 +272,21 @@ public:
             const HMIPAddress& address,
             std::string& auxInfo);
 
+    //! Store the aux info read from an xml string
+    /*
+         Store aux info
+         \param hostname the hostname of the source of the aux info string.
+         \param sourceURL the URL used to retrieve the aux info string
+         \param address the ip address of the host that provided the aux info string.
+         \param auxInfo the actual aux info.
+         \return bool true if successful.
+     */
+
+    bool storeAuxInfo(const std::string& hostname,
+            const std::string& sourceURL,
+            const HMIPAddress& address,
+            HMAuxInfo& auxInfo);
+
     //! Update a current aux info entry
     /*
       Update the aux info to the provided auxInfo to the function.

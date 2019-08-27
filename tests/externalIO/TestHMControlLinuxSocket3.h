@@ -20,8 +20,6 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr3);
     CPPUNIT_TEST(test_cmdlstnr4);
     CPPUNIT_TEST(test_cmdlstnr5);
-    CPPUNIT_TEST(test_cmdlstnr6);
-    CPPUNIT_TEST(test_cmdlstnr7);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -35,8 +33,6 @@ protected:
     void test_cmdlstnr3();
     void test_cmdlstnr4();
     void test_cmdlstnr5();
-    void test_cmdlstnr6();
-    void test_cmdlstnr7();
     HMStateManager *sm;
     std::thread sm_thr;
     int sock_fd;

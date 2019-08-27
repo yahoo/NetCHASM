@@ -10,6 +10,7 @@
 #include "HMDataHostCheck.h"
 #include "HMIPAddress.h"
 #include "HMTimeStamp.h"
+#include "HMAuxCache.h"
 
 class HMStateManager;
 class HMEventLoop;
@@ -45,6 +46,12 @@ public:
          \param the current threadID.
      */
     void reloadState(HMStateManager* state, uint64_t threadID);
+
+    //! Destroy the ares channel.
+    /*!
+         Destroy ares channel before closing daemon.
+     */
+    void destroyAres();
 };
 
 //! Base class for all work classes
@@ -118,13 +125,14 @@ public:
     std::string m_hostname;
     HMIPAddress m_ipAddress;
     HMDataHostCheck m_hostCheck;
-
     HM_RESPONSE m_response;
     HM_REASON m_reason;
     HMTimeStamp m_start;
     HMTimeStamp m_end;
     uint64_t m_ID;
     HM_WORK_STATUS m_workStatus;
+    std::map<HMDataCheckParams, HMDataCheckResult> m_hostResults;
+    HMAuxInfo m_auxInfo;
 
 protected:
     HMTimeStamp m_timeout;

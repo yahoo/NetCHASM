@@ -1,0 +1,13 @@
+syntax = "proto3";
+package netchasm;
+message IPAddress {
+    uint32 type = 1;
+    uint32 addr0 = 2;
+    uint32 addr1 = 3;
+    uint32 addr2 = 4;
+    uint32 addr3 = 5;
+}
+
+message IPAddresses {
+    repeated IPAddress addresses = 1;
+}

@@ -13,13 +13,11 @@
 #include "HMStateManager.h"
 #include "HMControlLinuxSocket.h"
 #include "HMStorageHostGroupMDBM.h"
-
 using namespace std;
 CPPUNIT_TEST_SUITE_REGISTRATION(TESTNAME);
 
 void TESTNAME::setUp()
 {
-    sock_fd = 0;
     mkdir("conf", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     mkdir("conf/hm", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
@@ -38,13 +36,27 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: netchasm.mdbm\n\
+db.path: healthmon.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
+enable-secure-remote : off\n\
 socket.path: test_sock" << endl;
 
-    fout3 << "-   name: config.parse1.netchasm.net\n\
+    fout3 << "-   name: config.parse1.healthmon.net\n\
+    allow-hosts: any\n\
+    ttl: 60000\n\
+    failure-response: dns\n\
+    check-type: none\n\
+    check-port: 123\n\
+    check-info: hm-hello\n\
+    group-threshold: 12\n\
+    host-group:\n\
+        - config.parse2.healthmon.net\n\
+    host:\n\
+        - lfb3.hm1.com\n\
+        - lfb3.hm2.com\n\
+-   name: config.parse2.healthmon.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -60,14 +72,14 @@ socket.path: test_sock" << endl;
     fout3.close();
 
     setupCommon();
-    string mdbm = "netchasm.mdbm";
+    string mdbm = "healthmon.mdbm";
     remove(mdbm.c_str());
-    string hostGroupName = "config.parse1.netchasm.net";
+    string hostGroupName = "config.parse1.healthmon.net";
     string host1 = "lfb3.hm1.com";
     string host2 = "lfb3.hm2.com";
     HMDataHostGroupMap groupMap;
     string checkInfo = "hm-hello";
-
+    string hostgroup1 = "config.parse2.healthmon.net";
 
     HMIPAddress address;
     address.set("192.168.1.3");
@@ -88,6 +100,7 @@ socket.path: test_sock" << endl;
     hostGroup.setCheckInfo(checkInfo);
     hostGroup.addHost(host1);
     hostGroup.addHost(host2);
+    hostGroup.addHostGroup(hostgroup1);
     groupMap.insert(make_pair(hostGroupName, hostGroup));
     HMDataHostCheck hostCheck;
     hostGroup.getHostCheck(hostCheck);
@@ -133,7 +146,17 @@ socket.path: test_sock" << endl;
 
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(mdbm, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address);
+    addresses.insert(address3);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address2);
+    dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
+
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(mdbm, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
     CPPUNIT_ASSERT(
@@ -155,21 +178,21 @@ socket.path: test_sock" << endl;
     sm_thr = std::thread(&HMStateManager::healthCheck, std::ref(*sm),
             master_config, HM_LOG_ERROR);
     std::this_thread::sleep_for(1s);
+    shared_ptr<HMState> state;
+    sm->updateState(state);
+    CPPUNIT_ASSERT(state);
+    state.reset();
 }
 
 void TESTNAME::tearDown()
 {
-    if(sock_fd != 0)
-    {
-        close(sock_fd);
-    }
     remove("conf/hm/testconf.yaml");
     remove("conf/dummy_master.yaml");
     remove("conf/dummy_master2.yaml");
     remove("conf/dummy_master3.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("netchasm.mdbm");
+    remove("healthmon.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -179,7 +202,6 @@ void TESTNAME::tearDown()
 
 void TESTNAME::test_cmdlstnr1()
 {
-    char buffer[65535];
     in_addr addr;
     inet_aton("192.168.1.3", &addr);
     in_addr addr2;
@@ -187,111 +209,91 @@ void TESTNAME::test_cmdlstnr1()
     in_addr addr3;
     inet_pton(AF_INET, "192.168.1.5", &addr3);
 
-    struct sockaddr_un server;
-    string cmd = "hostgroup config.parse1.netchasm.net";
-
-    sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    server.sun_family = AF_UNIX;
-    strcpy(server.sun_path, "test_sock");
-    if (connect(sock_fd, (struct sockaddr *) &server,
-            sizeof(struct sockaddr_un)) < 0)
-    {
-        close(sock_fd);
-        CPPUNIT_FAIL("connecting error");
-    }
-    if (write(sock_fd, cmd.c_str(), cmd.length()) < 0)
-        CPPUNIT_FAIL("writing on stream socket");
-
-    std::this_thread::sleep_for(1s);
-    read(sock_fd, buffer, sizeof(buffer));
-    close(sock_fd);
-    sock_fd = 0;
-    hm_nameinfo_sock_t* ni = (hm_nameinfo_sock_t*) buffer;
-    CPPUNIT_ASSERT_EQUAL(true, ni->ni_check_status);
-    CPPUNIT_ASSERT_EQUAL(12, (int )ni->ni_group_threshold);
-    CPPUNIT_ASSERT_EQUAL(0, (int )ni->ni_mode);
-    CPPUNIT_ASSERT_EQUAL(3, (int )ni->ni_numhost);
-    CPPUNIT_ASSERT_EQUAL(60000, (int )ni->ni_ttl);
-    hm_hostinfo2_t* infop = (hm_hostinfo2_t*) (buffer + ni->ni_size);
+    string hostGroupName = "config.parse1.healthmon.net";
+    string socketPath = "test_sock";
+    string hostgroup1 = "config.parse2.healthmon.net";
+    HMControlLinuxSocketClient socketAPI(socketPath);
+    HMAPICheckInfo checkInfo;
+    vector<HMAPICheckResult> hostResults;
+    CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, hostResults));
+    CPPUNIT_ASSERT_EQUAL(12, (int)checkInfo.m_groupThreshold);
+    CPPUNIT_ASSERT_EQUAL(1, (int)checkInfo.m_hostGroups.size());
+    CPPUNIT_ASSERT_EQUAL(hostgroup1, checkInfo.m_hostGroups[0]);
+    CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
+    CPPUNIT_ASSERT_EQUAL(60000, (int )checkInfo.m_checkTTL);
+    CPPUNIT_ASSERT_EQUAL(3, (int )hostResults.size());
+    HMAPICheckResult infop = hostResults[0];
     CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS,
-            (unsigned int )infop->hi_reason);
+            (unsigned int )infop.m_reason);
     CPPUNIT_ASSERT_EQUAL((unsigned int)AF_INET,
-            (unsigned int )infop->hi_addrtype);
-    CPPUNIT_ASSERT(!(strcmp(infop->hi_hostname, "lfb3.hm1.com")));
-    CPPUNIT_ASSERT_EQUAL(addr.s_addr, infop->hi_addr.s_addr);
-    hm_hostinfo2_t* infop1 = (hm_hostinfo2_t*) (buffer + ni->ni_size
-            + infop->hi_size);
+            (unsigned int )infop.m_address.m_type);
+    CPPUNIT_ASSERT("lfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT_EQUAL(addr.s_addr, infop.m_address.m_ip.addr);
+    HMAPICheckResult infop1 = hostResults[1];
     CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS,
-            (unsigned int )infop1->hi_reason);
+            (unsigned int )infop1.m_reason);
     CPPUNIT_ASSERT_EQUAL((unsigned int)AF_INET,
-            (unsigned int )infop1->hi_addrtype);
-    CPPUNIT_ASSERT(
-            !(strcmp(infop1->hi_hostname, "lfb3.hm1.com")));
-    CPPUNIT_ASSERT_EQUAL(addr3.s_addr, infop1->hi_addr.s_addr);
-    hm_hostinfo2_t* infop2 = (hm_hostinfo2_t*) (buffer + ni->ni_size
-            + infop->hi_size + infop1->hi_size);
-
+            (unsigned int )infop1.m_address.m_type);
+    CPPUNIT_ASSERT("lfb3.hm1.com" == infop1.m_host);
+    CPPUNIT_ASSERT_EQUAL(addr3.s_addr, infop1.m_address.m_ip.addr);
+    HMAPICheckResult infop2 = hostResults[2];
+    CPPUNIT_ASSERT("lfb3.hm2.com" == infop2.m_host);
     CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS,
-            (unsigned int )infop2->hi_reason);
+            (unsigned int )infop2.m_reason);
     CPPUNIT_ASSERT_EQUAL((unsigned int)AF_INET,
-            (unsigned int )infop2->hi_addrtype);
-    CPPUNIT_ASSERT(
-            !(strcmp(infop2->hi_hostname, "lfb3.hm2.com")));
-    CPPUNIT_ASSERT_EQUAL(addr2.s_addr, infop2->hi_addr.s_addr);
+            (unsigned int )infop2.m_address.m_type);
+    CPPUNIT_ASSERT_EQUAL(addr2.s_addr, infop2.m_address.m_ip.addr);
 }
 
 
 void TESTNAME::test_cmdlstnr2()
 {
-    char buffer[65535];
-    struct sockaddr_un server;
-    string cmd = "hostgroup config.parse2.netchasm.net";
+    string hostGroupName = "config.parse3.healthmon.net";
+    string socketPath = "test_sock";
+    HMControlLinuxSocketClient socketAPI(socketPath);
+    HMAPICheckInfo checkInfo;
+    vector<HMAPICheckResult> hostResults;
+    CPPUNIT_ASSERT(!
+            socketAPI.getHostGroupResults(hostGroupName, checkInfo,
+                    hostResults));
 
-    sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    server.sun_family = AF_UNIX;
-    strcpy(server.sun_path, "test_sock");
-    if (connect(sock_fd, (struct sockaddr *) &server,
-            sizeof(struct sockaddr_un)) < 0)
-    {
-        close(sock_fd);
-        CPPUNIT_FAIL("connecting error");
-    }
-    if (write(sock_fd, cmd.c_str(), cmd.length()) < 0)
-        CPPUNIT_FAIL("writing on stream socket");
-
-    std::this_thread::sleep_for(1s);
-    read(sock_fd, buffer, sizeof(buffer));
-    close(sock_fd);
-    sock_fd = 0;
-    hm_nameinfo_sock_t* ni = (hm_nameinfo_sock_t*) buffer;
-    CPPUNIT_ASSERT_EQUAL(false, ni->ni_check_status);
-    CPPUNIT_ASSERT_EQUAL(ENOENT, (int )ni->ni_errno);
 }
 
 void TESTNAME::test_cmdlstnr3()
 {
-    struct sockaddr_un server;
-    string cmd = "hostcheck config.parse1.netchasm.net lfb3.hm1.com";
-    sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    server.sun_family = AF_UNIX;
-    strcpy(server.sun_path, "test_sock");
-    if (connect(sock_fd, (struct sockaddr *) &server,
-            sizeof(struct sockaddr_un)) < 0)
-    {
-        close(sock_fd);
-        CPPUNIT_FAIL("connecting error");
-    }
-    if (write(sock_fd, cmd.c_str(), cmd.length()) < 0)
-            CPPUNIT_FAIL("writing on stream socket");
-    std::this_thread::sleep_for(2s);
-    hm_hostcheck_t hostcheck;
-    read(sock_fd,&hostcheck,sizeof(hostcheck));
-    CPPUNIT_ASSERT_EQUAL(true, hostcheck.check_status);
-    CPPUNIT_ASSERT_EQUAL(34, (int)hostcheck.connect_rt);
-    CPPUNIT_ASSERT_EQUAL(1, (int)hostcheck.reason);
-    CPPUNIT_ASSERT_EQUAL(45, (int)hostcheck.smoothed_connect_rt);
-    CPPUNIT_ASSERT_EQUAL(0, (int)hostcheck.status);
-    CPPUNIT_ASSERT_EQUAL(now.getTimeSinceEpoch()-100, (uint64_t)hostcheck.statustime);
-    close(sock_fd);
-    sock_fd = 0;
+    in_addr addr;
+    inet_aton("192.168.1.3", &addr);
+    in_addr addr3;
+    inet_pton(AF_INET, "192.168.1.5", &addr3);
+    string socketPath = "test_sock";
+    HMControlLinuxSocketClient socketAPI(socketPath);
+    string hostGroupName = "config.parse1.healthmon.net";
+    string hostName = "lfb3.hm1.com";
+    vector<HMAPICheckResult> results;
+    CPPUNIT_ASSERT(socketAPI.getHostResults(hostGroupName, hostName, results));
+    CPPUNIT_ASSERT_EQUAL(2, (int)results.size());
+    HMAPICheckResult infop = results[0];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS,
+            (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT_EQUAL((unsigned int)AF_INET,
+            (unsigned int )infop.m_address.m_type);
+    CPPUNIT_ASSERT("lfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT_EQUAL(addr.s_addr, infop.m_address.m_ip.addr);
+    CPPUNIT_ASSERT_EQUAL(33, (int)infop.m_responseTime);
+    CPPUNIT_ASSERT_EQUAL(44, (int)infop.m_smoothedResponseTime);
+    CPPUNIT_ASSERT_EQUAL(0, (int)infop.m_status);
+    CPPUNIT_ASSERT_EQUAL(now.getTimeSinceEpoch(), (uint64_t)infop.m_checkTime);
+    HMAPICheckResult infop1 = results[1];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS,
+            (unsigned int )infop1.m_reason);
+    CPPUNIT_ASSERT_EQUAL((unsigned int)AF_INET,
+            (unsigned int )infop1.m_address.m_type);
+    CPPUNIT_ASSERT("lfb3.hm1.com" == infop1.m_host);
+    CPPUNIT_ASSERT_EQUAL(34, (int )infop1.m_responseTime);
+    CPPUNIT_ASSERT_EQUAL(45, (int )infop1.m_smoothedResponseTime);
+    CPPUNIT_ASSERT_EQUAL(0, (int )infop1.m_status);
+    CPPUNIT_ASSERT_EQUAL(addr3.s_addr, infop1.m_address.m_ip.addr);
+    CPPUNIT_ASSERT_EQUAL(now.getTimeSinceEpoch() - 100,
+            (uint64_t )infop1.m_checkTime);
+
 }

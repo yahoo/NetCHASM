@@ -13,10 +13,6 @@ threads: 20
 # Path of individual check config files.
 # The path should be a absolute path.
 
-# dns.type: <ares>
-# Plugin to use for DNS resolution.
-# Default is ares.
-
 # dns.lookup-timeout: <num>
 # Timeout for the dns server to respond.
 # Time is in milliseconds

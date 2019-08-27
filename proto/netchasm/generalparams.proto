@@ -1,0 +1,22 @@
+syntax = "proto3";
+package netchasm;
+
+message FixedUint {
+    fixed64 data = 1;
+}
+
+message Uint {
+    uint64 data = 1;
+}
+
+message Bool {
+    bool data = 1;
+}
+
+message Int {
+    int64 data = 1;
+}
+
+message List {
+    repeated string items = 1;
+}

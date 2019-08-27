@@ -20,6 +20,16 @@ curl_Callback(void* ptr, size_t size, size_t nmemb, HMWorkHealthCheckCurl* check
     return size * nmemb;
 }
 
+int
+sockopt_callback(void *sockopt, curl_socket_t curlfd,
+                            curlsocktype purpose)
+{
+  (void)purpose;
+  int val = *(int *)sockopt;
+  setsockopt(curlfd, IPPROTO_IP, IP_TOS, (const char *)&val, sizeof(val));
+  return CURL_SOCKOPT_OK;
+}
+
 void
 HMWorkHealthCheckCurl::updateBuffer(char* buf, uint32_t length)
 {
@@ -133,6 +143,19 @@ HMWorkHealthCheckCurl::healthCheck()
         curl_easy_setopt(curl,CURLOPT_SSL_VERIFYHOST,0);
         curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1);
         curl_easy_setopt(curl,CURLOPT_TCP_NODELAY,1);
+        if (m_hostCheck.getSourceAddress().isSet())
+        {
+            curl_easy_setopt(curl, CURLOPT_INTERFACE,
+                    m_hostCheck.getSourceAddress().toString().c_str());
+        }
+
+        if (m_hostCheck.getTOSValue())
+        {
+            uint8_t tos = m_hostCheck.getTOSValue();
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_callback);
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &tos);
+        }
+
         if(m_hostCheck.getCheckType() == HM_CHECK_HTTPS_NO_PEER_CHECK)
         {
             curl_easy_setopt(curl, CURLOPT_CAINFO, NULL);
@@ -368,6 +391,19 @@ HMWorkHealthCheckCurl::healthCheck()
             break;
         default:
             break;
+        }
+
+        if (m_hostCheck.getSourceAddress().isSet())
+        {
+            curl_easy_setopt(curl, CURLOPT_INTERFACE,
+                    m_hostCheck.getSourceAddress().toString().c_str());
+        }
+
+        if (m_hostCheck.getTOSValue())
+        {
+            uint8_t tos = m_hostCheck.getTOSValue();
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_callback);
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &tos);
         }
 
         if(checkInfo.find("@") != string::npos)

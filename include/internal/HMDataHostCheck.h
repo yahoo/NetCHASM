@@ -9,8 +9,9 @@
 #include <iostream>
 
 #include "HMConstants.h"
+#include "HMAPI.h"
+#include "HMIPAddress.h"
 
-class HMDataHostGroup;
 class HMDataHostCheck
 {
 public:
@@ -18,8 +19,22 @@ public:
         m_checkType(HM_CHECK_DEFAULT),
         m_port(0),
         m_dualstack(HM_DUALSTACK_IPV4_ONLY),
-        m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT) {};
+        m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
+        m_DNSPlugin(HM_DNS_PLUGIN_ARES),
+        m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
+        m_remoteCheckType(HM_REMOTE_CHECK_NONE),
+        m_TOSValue(0){};
 
+    HMDataHostCheck(HM_DNS_PLUGIN_CLASS dnsPlugin) :
+            m_checkType(HM_CHECK_DEFAULT),
+            m_port(0),
+            m_dualstack(HM_DUALSTACK_IPV4_ONLY),
+            m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
+            m_DNSPlugin(dnsPlugin),
+            m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
+            m_remoteCheckType(HM_REMOTE_CHECK_NONE),
+            m_TOSValue(0){};
+	HMDataHostCheck(const HMAPIDataHostCheck&);
 	bool operator<(const HMDataHostCheck& k) const;
 	bool operator!=(const HMDataHostCheck& k) const;
 	bool operator==(const HMDataHostCheck& k) const;
@@ -27,17 +42,9 @@ public:
 	//! Set the check params.
 	/*!
 	     Set the check params.
-	     \param the HM_CHECK_TYPE.
-	     \param HM_CHECK_PLUGIN_CLASS the plugin class to service the check.
-	     \param the port to use for the check.
-	     \param HM_DUALSTACK to specify whether to check IPv4, IPv6 or both.
-	     \param the check info to use for the check.
+	     \param structure containing host group params.
 	 */
-	void setCheckParams(HM_CHECK_TYPE checkType,
-	                    HM_CHECK_PLUGIN_CLASS checkPlugin,
-	                    uint16_t port,
-	                    HM_DUALSTACK dualstack,
-	                    const std::string& checkInfo);
+	void setCheckParams(const HMDataHostGroup& dataHostGroup);
 
 	//! Get the host check type code.
 	/*!
@@ -45,6 +52,13 @@ public:
 	     \return HM_CHECK_TYPE the check type.
 	 */
 	HM_CHECK_TYPE getCheckType() const;
+
+    //! Get the host remote check type code.
+    /*!
+         Get the host remote check type code (HM_REMOTE_CHECK_TYPE)
+         \return HM_REMOTE_CHECK_TYPE the check type.
+     */
+    HM_REMOTE_CHECK_TYPE getRemoteCheckType() const;
 
 	//! Get the port used for this check.
 	/*!
@@ -67,6 +81,13 @@ public:
 	 */
 	std::string getCheckInfo() const;
 
+    //! Check mode of fallback for the remote check.
+    /*!
+         Fallback mechanism mode for remote check.
+         \return retruns the mode of fallback.
+     */
+	HM_DISTRIBUTED_FALLBACK getDistributedFallBack() const;
+
 	//! Get the plugin class used for this check.
 	/*!
 	     Get the plugin class used for this check.
@@ -86,25 +107,6 @@ public:
 	 */
 	std::string parseCheckInfo(const std::string& host, uint32_t& port, std::string& checkInfoHost);
 
-	//! Function to serialize the current check result info into a raw buffer.
-	/*!
-	     The serialize function supports two types of calls designed to be called consecutively.
-	     When called with a null buf and size 0 serialize will return the required size of the buf to store the host check.
-	     When called with a non-null buf and the correct size, serialize will store the host check info into the buf.
-	     \param buf pass nullptr to get the required size or a raw buffer to fill.
-	     \param size pass 0 to get the required size or the required size to fill the buffer.
-	     \return The required size of the buf or the number of bytes saved to the buffer.
-	 */
-	uint32_t serialize(char* buf, uint32_t size) const;
-	//! De-serialize the raw buffer.
-	/*!
-	     This function is called to deserialize a host check info. It fills in the class data from the raw buffer.
-	     \param buf raw buffer to deserialize.
-	     \param size the size of the raw buffer.
-	     \return true if the deserialize was a success.
-	 */
-	bool deserialize(char* buf, uint32_t size);
-
 	//! Output the host check parameters to a human readable string.
 	/*!
 	     Output the host check parameters to a human readable string.
@@ -114,21 +116,53 @@ public:
 	 */
 	std::string printEntry(char delim, bool label) const;
 
+	//! Get the remote host used for the check.
+    /*!
+         Get the remote host used for the check.
+         \return the remote host string.
+     */
+    const std::string& getRemoteCheck() const;
+
+    //! Set the remote host used for the check.
+    /*!
+         Set the remote host used for the check.
+         \param the remote host string.
+     */
+    void setRemoteCheck(const std::string& remoteCheck);
+
+    //! Get the source ip specified for the check.
+    /*!
+         Get the source ip specified for the check.
+         \return the IP address.
+     */
+    const HMIPAddress& getSourceAddress() const;
+
+    //! Get the type of service value.
+    /*!
+         Get the type of service specified for the check.
+         \return the TOS value.
+     */
+    uint8_t getTOSValue() const;
+
+    //! Get the type of DNS check.
+    /*!
+         Get the type of DNS check for the health check.
+         \return the DNS check type.
+     */
+    HM_DNS_PLUGIN_CLASS getDnsPlugin() const;
 
 private:
-	HM_CHECK_TYPE m_checkType;
-	uint16_t m_port;
-	HM_DUALSTACK m_dualstack;
-	std::string m_checkInfo;
-	HM_CHECK_PLUGIN_CLASS m_checkPlugin;
-
-	struct SerStruct
-	{
-	    uint8_t m_checkType;
-	    uint16_t m_port;
-	    uint8_t m_dualStack;
-	    uint32_t m_stringSize;
-	};
+    HM_CHECK_TYPE m_checkType;
+    uint16_t m_port;
+    HM_DUALSTACK m_dualstack;
+    std::string m_checkInfo;
+    std::string m_remoteCheck;
+    HM_DISTRIBUTED_FALLBACK m_distributedFallback;
+    HM_DNS_PLUGIN_CLASS m_DNSPlugin;
+    HM_CHECK_PLUGIN_CLASS m_checkPlugin;
+    HM_REMOTE_CHECK_TYPE m_remoteCheckType;
+    HMIPAddress m_sourceAddress;
+    uint8_t m_TOSValue;
 };
 
 #endif /* HMDATAHOSTCHECK_H_ */

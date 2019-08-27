@@ -36,15 +36,17 @@ TESTNAME::test_HMStorageText_StoreRetrieve()
     string filename = "";
     set<HMIPAddress> addresses;
     addresses.insert(address);
-    HMStorageHostText* store = new HMStorageHostText(filename, &groupmap);
+    HMDNSCache dnsCache;
+    HMStorageHostText* store = new HMStorageHostText(filename, &groupmap, &dnsCache);
 
     // First test with a bad filename
     CPPUNIT_ASSERT(!store->openStore(false));
     delete store;
-    checkState.m_dnsCache.updateDNSEntry(hostname, false, addresses);
+    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    checkState.m_dnsCache.updateDNSEntry(hostname, dnsHostCheck, addresses);
     filename  = "testfile";
     remove(filename.c_str());
-    store = new HMStorageHostText(filename, &groupmap);
+    store = new HMStorageHostText(filename, &groupmap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
@@ -79,7 +81,8 @@ TESTNAME::test_HMStorageText_ConfigStoreRetrieve()
     string filename  = "testfile";
     remove(filename.c_str());
     HMDataHostGroupMap hostGroup;
-    HMStorageHostText* store = new HMStorageHostText(filename, &hostGroup);
+    HMDNSCache dnsCache;
+    HMStorageHostText* store = new HMStorageHostText(filename, &hostGroup, &dnsCache);
     HMConfigInfo configInfo;
     HMTimeStamp now;
     now.now();
@@ -120,7 +123,8 @@ TESTNAME::test_HMStorageText_AuxStoreRetrieve()
     remove(filename.c_str());
     HMDataHostGroupMap groupMap;
 
-    HMStorageHostText* store = new HMStorageHostText(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMStorageHostText* store = new HMStorageHostText(filename, &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
 
@@ -158,7 +162,7 @@ TESTNAME::test_HMStorageText_AuxStoreRetrieve()
     store->closeStore();
     delete store;
 
-    store = new HMStorageHostText(filename1, &groupMap);
+    store = new HMStorageHostText(filename1, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
 
     std::unique_ptr<HMAuxOOB> r2 = make_unique<HMAuxOOB>();

@@ -34,7 +34,7 @@ public:
          \param true to resolve an IPv6 address.
          \param the time Stamp of when the DNS resolution should take place.
      */
-    void addDNSTimeout(const std::string& hostname, bool ipv6, HMTimeStamp timeStamp);
+    void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp);
 
     //! Add a new health check timeout.
     /*!
@@ -106,13 +106,15 @@ private:
         HMDataHostCheck m_hostCheck;
         HMTimeStamp m_timeout;
         TimeoutType m_type;
+        HM_DNS_PLUGIN_CLASS m_dnsPlugin;
         HMIPAddress m_address;
 
-        Timeout(const std::string& host, bool ipv6, const HMTimeStamp expiration)
+        Timeout(const std::string& host, HM_DNS_PLUGIN_CLASS plugin, bool ipv6, const HMTimeStamp expiration)
         {
             m_hostname = host;
             m_timeout = expiration;
             m_type = ipv6?DNSV6_TIMEOUT:DNS_TIMEOUT;
+            m_dnsPlugin = plugin;
         }
 
         Timeout(const std::string& host, const HMIPAddress& address, const HMDataHostCheck check, const HMTimeStamp expiration)
@@ -122,6 +124,7 @@ private:
             m_timeout = expiration;
             m_type = HEALTHCHECK_TIMEOUT;
             m_address = address;
+            m_dnsPlugin = check.getDnsPlugin();
         }
 
         bool operator< (const Timeout& t) const

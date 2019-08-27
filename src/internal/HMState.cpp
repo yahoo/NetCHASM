@@ -10,8 +10,8 @@
 #include "HMStorageHostText.h"
 #include "HMLogBase.h"
 
-
 using namespace std;
+
 
 // I am changing this function to assume the logging is setup before calling
 bool
@@ -70,27 +70,35 @@ HMState::setupDaemonstate()
     }
 
     bool bConfigLoadOk = loadAllConfigs();
-
-    HMConfigInfo configInfo;
-    HMHashMD5 configHash;
-    configInfo.m_version = HM_MDBM_VERSION;
-    configInfo.m_configLoadTime = HMTimeStamp::now();
-    configInfo.m_configStatus = (bConfigLoadOk) ? HM_CONFIG_STATUS_OK : HM_CONFIG_STATUS_ERROR;
-    if(configHash.init())
-    {
-        HashHostGroupMap(configHash, configInfo.m_hash);
-    }
     if(!bConfigLoadOk)
     {
        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading configs");
        return false;
     }
-    setHash(configInfo.m_hash);
-    m_datastore->storeConfigInfo(configInfo);
-
     generateHostCheckList();
     generateDNSCheckList();
+
+    //To avoid inserting checks in the middle of the run
+    m_checkList.setGuard(true);
     return true;
+}
+
+bool
+HMState::storeConfigInfo()
+{
+    HMConfigInfo configInfo;
+    HMHashMD5 configHash;
+    configInfo.m_version = HM_MDBM_VERSION;
+    configInfo.m_configLoadTime = HMTimeStamp::now();
+    configInfo.m_configStatus = HM_CONFIG_STATUS_OK;
+    if (!configHash.init())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure Initializing Hashing function");
+        return false;
+    }
+    HashHostGroupMap(configHash, configInfo.m_hash);
+    setHash(configInfo.m_hash);
+    return m_datastore->storeConfigInfo(configInfo);
 }
 
 const std::string&
@@ -109,12 +117,6 @@ HM_LOG_PLUGIN_CLASS
 HMState::getDefaultLogType() const
 {
     return m_logClass;
-}
-
-HM_DNS_PLUGIN_CLASS
-HMState::getDefaultDNSLookupType() const
-{
-    return m_dnsLookupClass;
 }
 
 HM_EVENT_PLUGIN_CLASS
@@ -137,6 +139,12 @@ HMState::getDefaultFTPCheckype() const
 
 HM_CHECK_PLUGIN_CLASS
 HMState::getDefaultTCPCheckype() const
+{
+    return m_tcpDefaultCheckClass;
+}
+
+HM_CHECK_PLUGIN_CLASS
+HMState::getDefaultTCPSCheckype() const
 {
     return m_tcpDefaultCheckClass;
 }
@@ -257,6 +265,7 @@ HMState::setSocketPath(const string& path)
 bool
 HMState::loadAllConfigs()
 {
+    HMConfigParams configParams;
     if (!m_useBackendConfigs)
     {
         // parse directories
@@ -264,7 +273,7 @@ HMState::loadAllConfigs()
         for (auto it = m_configDirs.begin(); it != m_configDirs.end(); ++it)
         {
             HMLog(HM_LOG_INFO, "[CORE] Parse directory %s", it->c_str());
-            if (HMConfigParserBase::parseDirectory(*it, *this)
+            if (HMConfigParserBase::parseDirectory(*it, *this, configParams)
                     > 0)
             {
                 return false;
@@ -274,7 +283,7 @@ HMState::loadAllConfigs()
         // parse files
         for (auto it = m_configFiles.begin(); it != m_configFiles.end(); ++it)
         {
-            if (HMConfigParserBase::parseConfigFile(*it, *this)
+            if (HMConfigParserBase::parseConfigFile(*it, *this, configParams)
                     > 0)
             {
                 return false;
@@ -289,6 +298,41 @@ HMState::loadAllConfigs()
             HMLog(HM_LOG_CRITICAL,
                     "Failure to retrieve config info from backend");
             return false;
+        }
+    }
+    if (!configParams.m_masterMode)
+    {
+        for (auto& it : m_hostGroups)
+        {
+            for( auto remote : configParams.m_remoteChecks)
+            {
+                if (it.first.find(remote.first)
+                        != std::string::npos)
+                {
+                    HMLog(HM_LOG_DEBUG3,
+                                        "Added remote check %s to %s", remote.second.c_str(), it.first.c_str());
+                    it.second.setRemoteCheck(remote.second);
+                }
+            }
+        }
+    }
+    for(auto res = configParams.m_indirectHost.begin(); res!= configParams.m_indirectHost.end(); ++res)
+    {
+        auto indirectHost = m_hostGroups.find(res->first);
+        auto mappedHost = m_hostGroups.find(res->second);
+        if(mappedHost != m_hostGroups.end() && indirectHost != m_hostGroups.end())
+        {
+            indirectHost->second.setHostGroupParameters(mappedHost->second);
+        }
+        else
+        {
+            if(mappedHost == m_hostGroups.end())
+            {
+                HMLog(HM_LOG_WARNING,
+                        "[CORE] Missing Rotation(%s) mentioned in indirect-host checktype for %s file %s",
+                        res->second.c_str(), res->first.c_str());
+                m_hostGroups.erase(indirectHost);
+            }
         }
     }
 
@@ -313,6 +357,7 @@ HMState::loadAllConfigs()
                 it->second.setPort(HM_HTTPS_DEFAULT_PORT);
                 break;
             case HM_CHECK_TCP:
+            case HM_CHECK_TCPS:
                 it->second.setPort(HM_TCP_DEFAULT_PORT);
                 break;
             case HM_CHECK_DNS:
@@ -328,8 +373,33 @@ HMState::loadAllConfigs()
             case HM_CHECK_FTPS_EXPLICIT_NO_PEER_CHECK:
                 it->second.setPort(HM_FTPS_DEFAULT_PORT);
                 break;
+            case HM_CHECK_INVALID:
+                break;
             }
         }
+        
+         //add hosts of child host groups
+        for(auto jt = it->second.getHostGroupList()->begin();jt!= it->second.getHostGroupList()->end(); ++jt)
+        {
+            auto childhostgroup = m_hostGroups.find(jt->c_str());
+            if(childhostgroup != m_hostGroups.end())
+            {
+                for (auto st = childhostgroup->second.getHostList()->begin(); st != childhostgroup->second.getHostList()->end(); ++st)
+                {
+                    string host = *st;
+                    it->second.addHost(host);
+                    HMLog(HM_LOG_DEBUG, "adding host %s of child host group %s in Parent host group %s",
+                                    host.c_str(), jt->c_str(), it->first.c_str());
+                }
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Error %s is not a valid child host group in Parent host group %s",
+                        jt->c_str(), it->first.c_str());
+                return false;
+            }
+        }        
     }
 
     m_configsLoaded = true;
@@ -339,7 +409,11 @@ HMState::loadAllConfigs()
 void
 HMState::generateHostCheckList()
 {
-
+    HM_REMOTE_CHECK_TYPE remoteCheckType = HM_REMOTE_CHECK_TCP;
+    if(isEnableSecureRemote())
+    {
+        remoteCheckType = HM_REMOTE_CHECK_TCPS;
+    }
     for(HMDataHostGroupMap::iterator it = m_hostGroups.begin(); it != m_hostGroups.end(); ++it)
     {
 
@@ -371,6 +445,10 @@ HMState::generateHostCheckList()
         {
            it->second.setCheckPlugin(m_tcpDefaultCheckClass);
         }
+        else if (it->second.getCheckType() == HM_CHECK_TCPS)
+        {
+            it->second.setCheckPlugin(m_tcpsDefaultCheckClass);
+        }
         else if(it->second.getCheckType() == HM_CHECK_DNSVC
                 || it->second.getCheckType() == HM_CHECK_DNS)
         {
@@ -380,15 +458,22 @@ HMState::generateHostCheckList()
         {
            it->second.setCheckPlugin(m_noneDefaultCheckClass);
         }
+        else if (it->second.getCheckType() == HM_CHECK_DEFAULT)
+        {
+            it->second.setCheckPlugin(m_noneDefaultCheckClass);
+        }
+        if(!it->second.getRemoteCheck().empty())
+        {
+            it->second.setRemoteCheckType(remoteCheckType);
+        }
         m_checkList.addHostGroup(it->second);
     }
 }
 
-
 void
 HMState::generateDNSCheckList()
 {
-    m_dnsCache.init(m_dnsLookupClass);
+    m_dnsCache.init();
     m_checkList.initDNSCache(m_dnsCache, m_dnsWaitList);
 }
 
@@ -405,13 +490,23 @@ HMState::forceHealthCheck(const string& hostGroup, HMWorkQueue& workQueue)
             for(auto it = hostGroupInfo->second.getHostList()->begin(); it != hostGroupInfo->second.getHostList()->end(); ++it)
             {
                 set<HMIPAddress> addresses;
-                if(m_dnsCache.getAddresses(*it, dataCheck.getDualStack(), addresses))
+                HMDNSLookup dnsCheck(dataCheck.getDnsPlugin());
+                if(m_dnsCache.getAddresses(*it, dataCheck.getDualStack(), dnsCheck, addresses))
                 {
                     for(auto address = addresses.begin(); address != addresses.end(); ++address)
                     {
                         if(*address == HMIPAddress(AF_INET) || *address == HMIPAddress(AF_INET6))
                         {
-                            m_dnsCache.queueDNSQuery(*it, address->getType() == AF_INET6 ? true : false, workQueue);
+                            if(*address == HMIPAddress(AF_INET))
+                            {
+                                HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), false);
+                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                            }
+                            else if(*address == HMIPAddress(AF_INET6))
+                            {
+                                HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), true);
+                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                            }
                         }
                         else
                         {
@@ -435,13 +530,23 @@ HMState::forceHealthCheck(const string& hostGroup, const string& hostName, HMWor
         if(hostGroupInfo->second.getHostCheck(dataCheck))
         {
             set<HMIPAddress> addresses;
-            if(m_dnsCache.getAddresses(hostName, dataCheck.getDualStack(), addresses))
+            HMDNSLookup dnsCheck(dataCheck.getDnsPlugin());
+            if(m_dnsCache.getAddresses(hostName, dataCheck.getDualStack(), dnsCheck, addresses))
             {
                 for(auto address = addresses.begin(); address != addresses.end(); ++address)
                 {
                     if(*address == HMIPAddress(AF_INET) || *address == HMIPAddress(AF_INET6))
                     {
-                        m_dnsCache.queueDNSQuery(hostName, address->getType() == AF_INET6 ? true : false, workQueue);
+                        if(*address == HMIPAddress(AF_INET))
+                        {
+                            HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), false);
+                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                        }
+                        else if(*address == HMIPAddress(AF_INET6))
+                        {
+                            HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), true);
+                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                        }
                     }
                     else
                     {
@@ -467,11 +572,13 @@ HMState::forceDNSCheck(const string &hostGroup, HMWorkQueue& workQueue)
             {
                 if(dataCheck.getDualStack() & HM_DUALSTACK_IPV4_ONLY)
                 {
-                    m_dnsCache.queueDNSQuery(*it, false, workQueue);
+                    HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), false);
+                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
                 }
                 if(dataCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
                 {
-                    m_dnsCache.queueDNSQuery(*it, true, workQueue);
+                    HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), true);
+                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
                 }
             }
         }
@@ -489,13 +596,43 @@ HMState::forceDNSCheck(const string &hostGroup, const string &hostName, HMWorkQu
         {
             if(dataCheck.getDualStack() & HM_DUALSTACK_IPV4_ONLY)
             {
-                m_dnsCache.queueDNSQuery(hostName, false, workQueue);
+                HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), false);
+                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
             }
             if(dataCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
             {
-                m_dnsCache.queueDNSQuery(hostName, true, workQueue);
+                HMDNSLookup dnsHostCheck(dataCheck.getDnsPlugin(), true);
+                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
             }
         }
+    }
+}
+
+void
+HMState::forceDNSCheck(const string &hostName,  HM_DNS_PLUGIN_CLASS dnsPlugin, const set<HMIPAddress>& addresses, HMWorkQueue& workQueue)
+{
+    bool ipv4=false, ipv6=false;
+    for(const HMIPAddress& address: addresses)
+    {
+        if(address.getType() == AF_INET)
+        {
+            ipv4 = true;
+        }
+        if (address.getType() == AF_INET6)
+        {
+            ipv6 = true;
+        }
+
+    }
+    if (ipv4)
+    {
+        HMDNSLookup dnsHostCheck(dnsPlugin, false);
+        m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+    }
+    if (ipv6)
+    {
+        HMDNSLookup dnsHostCheck(dnsPlugin, true);
+        m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
     }
 }
 
@@ -506,12 +643,16 @@ HMState::openBackend(bool readOnly)
     {
     case HM_STORAGE_MDBM:
     {
-        m_datastore = make_unique<HMStorageHostGroupMDBM>(m_storagePath, &m_hostGroups);
+#ifdef USE_MDBM
+        m_datastore = make_unique<HMStorageHostGroupMDBM>(m_storagePath, &m_hostGroups, &m_dnsCache);
+#else
+        HMLog(HM_LOG_ERROR, "MDBM disabled during build. Please enable it for the storage to work");
+#endif
         break;
     }
     case HM_STORAGE_TEXT:
     default:
-        m_datastore = make_unique<HMStorageHostText>(m_storagePath, &m_hostGroups);
+        m_datastore = make_unique<HMStorageHostText>(m_storagePath, &m_hostGroups, &m_dnsCache);
         break;
     }
     m_datastore->updateAuxCommitPolicy(m_auxPolicy);
@@ -541,13 +682,15 @@ HMState::restoreRunningCheckState(shared_ptr<HMState> src)
         for(auto it = allChecks.begin(); it != allChecks.end(); ++it)
         {
             set<HMIPAddress> addresses;
-            map<pair<string,bool>,HMDNSResult>::const_iterator dnsResultV4;
-            map<pair<string,bool>,HMDNSResult>::const_iterator dnsResultV6;
-            src->m_dnsCache.getAddresses(it->m_hostname, HM_DUALSTACK_IPV4_ONLY, addresses);
-            src->m_dnsCache.getAddresses(it->m_hostname, HM_DUALSTACK_IPV6_ONLY, addresses);
-            src->m_dnsCache.getDNSResult(it->m_hostname, false, dnsResultV4);
-            src->m_dnsCache.getDNSResult(it->m_hostname, true, dnsResultV6);
-            m_dnsCache.updateReloadDNSEntry(it->m_hostname, addresses, dnsResultV4->second, dnsResultV6->second);
+            map<pair<string,HMDNSLookup>,HMDNSResult>::const_iterator dnsResultV4;
+            map<pair<string,HMDNSLookup>,HMDNSResult>::const_iterator dnsResultV6;
+            HMDNSLookup dnsHostCheckV6(it->m_hostCheck.getDnsPlugin(), true);
+            HMDNSLookup dnsHostCheckV4(it->m_hostCheck.getDnsPlugin(), false);
+            src->m_dnsCache.getAddresses(it->m_hostname, HM_DUALSTACK_IPV4_ONLY, dnsHostCheckV4, addresses);
+            src->m_dnsCache.getAddresses(it->m_hostname, HM_DUALSTACK_IPV6_ONLY, dnsHostCheckV6, addresses);
+            src->m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheckV4, dnsResultV4);
+            src->m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheckV6, dnsResultV6);
+            m_dnsCache.updateReloadDNSEntry(it->m_hostname, addresses, dnsResultV4->second, dnsResultV6->second, it->m_hostCheck.getDnsPlugin());
             for(auto address = addresses.begin(); address != addresses.end(); ++address)
             {
                 it->m_address = *address;
@@ -585,6 +728,7 @@ HMState::restoreRunningCheckState(shared_ptr<HMState> src)
             }
         }
     }
+    m_dnsCache.setStaticDns(src->m_dnsCache.getStaticDns());
 }
 
 void
@@ -613,7 +757,8 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                     set<HMIPAddress> addresses;
                     string hostName = *hostname;
                     map<pair<string, bool>, HMDNSResult>::const_iterator result;
-                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), addresses))
+                    HMDNSLookup dnsHostCheck(nDataCheck.getDnsPlugin());
+                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), dnsHostCheck, addresses))
                     {
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
                         {
@@ -635,7 +780,8 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                 {
                     set<HMIPAddress> addresses;
                     map<pair<string, bool>, HMDNSResult>::const_iterator result;
-                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), addresses))
+                    HMDNSLookup dnsHostCheck(nDataCheck.getDnsPlugin());
+                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), dnsHostCheck, addresses))
                     {
                         string hostName = *hostname;
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
@@ -655,7 +801,8 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                     string hostName = *hostname;
                     set<HMIPAddress> addresses;
                     map<pair<string, bool>, HMDNSResult>::const_iterator result;
-                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), addresses))
+                    HMDNSLookup dnsHostCheck(nDataCheck.getDnsPlugin());
+                    if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), dnsHostCheck, addresses))
                     {
                         string hostName = *hostname;
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
@@ -679,7 +826,8 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                 set<HMIPAddress> addresses;
                 string hostName = *hostname;
                 map<pair<string, bool>, HMDNSResult>::const_iterator result;
-                if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), addresses))
+                HMDNSLookup dnsHostCheck(nDataCheck.getDnsPlugin());
+                if(m_dnsCache.getAddresses(*hostname, nDataCheck.getDualStack(), dnsHostCheck, addresses))
                 {
                     for(auto address = addresses.begin(); address != addresses.end(); ++address)
                     {
@@ -702,29 +850,31 @@ HMState::resheduleDNSChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
         {
             if(it->m_hostCheck.getDualStack() & HM_DUALSTACK_IPV4_ONLY)
             {
-                map<pair<string, bool>, HMDNSResult>::const_iterator resultSrcDNS;
-                map<pair<string, bool>, HMDNSResult>::const_iterator resultDestDNS;
+                HMDNSLookup dnsHostCheck(it->m_hostCheck.getDnsPlugin(), false);
+                map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator resultSrcDNS;
+                map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator resultDestDNS;
 
-                if(src->m_dnsCache.getDNSResult(it->m_hostname, false, resultSrcDNS)
-                        && m_dnsCache.getDNSResult(it->m_hostname, false, resultDestDNS))
+                if(src->m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheck, resultSrcDNS)
+                        && m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheck, resultDestDNS))
                 {
                     if(resultSrcDNS->second.getDNSTTL() < resultDestDNS->second.getDNSTTL())
                     {
-                       m_dnsCache.queueDNSQuery(it->m_hostname, false, workQueue);
+                       m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue);
                     }
                 }
             }
             if(it->m_hostCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
             {
-                map<pair<string, bool>, HMDNSResult>::const_iterator resultSrcDNS;
-                map<pair<string, bool>, HMDNSResult>::const_iterator resultDestDNS;
+                HMDNSLookup dnsHostCheck(it->m_hostCheck.getDnsPlugin(), true);
+                map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator resultSrcDNS;
+                map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator resultDestDNS;
 
-                if(src->m_dnsCache.getDNSResult(it->m_hostname, true, resultSrcDNS)
-                        && m_dnsCache.getDNSResult(it->m_hostname, true, resultDestDNS))
+                if(src->m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheck, resultSrcDNS)
+                        && m_dnsCache.getDNSResult(it->m_hostname, dnsHostCheck, resultDestDNS))
                 {
                     if(resultSrcDNS->second.getDNSTTL() < resultDestDNS->second.getDNSTTL())
                     {
-                        m_dnsCache.queueDNSQuery(it->m_hostname, true, workQueue);
+                        m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue);
                     }
                 }
             }
@@ -780,6 +930,24 @@ const HMHash& HMState::getHash() const
 void HMState::setHash(const HMHash& hash)
 {
     m_hash = hash;
+}
+
+uint16_t
+HMState::getControlSocketCheckPortv4() const
+{
+    return m_controlSocketCheckPortv4;
+}
+
+uint16_t
+HMState::getControlSocketCheckPortv6() const
+{
+    return m_controlSocketCheckPortv6;
+}
+
+const std::vector<HM_CONTROL_SOCKET>&
+HMState::getControlSocket() const
+{
+    return m_control_socket;
 }
 
 bool
@@ -854,15 +1022,7 @@ HMState::parseMasterYaml(const string& masterConfig)
         }
         else if(key == "dns.type")
         {
-            if(val == "ares")
-            {
-                m_dnsLookupClass = HM_DNS_PLUGIN_ARES;
-                HMLog(HM_LOG_NOTICE, "[CORE] Using Ares DNS Library");
-            }
-            else
-            {
-                m_dnsLookupClass = HM_DNS_PLUGIN_NONE;
-            }
+            HMLog(HM_LOG_NOTICE, "[CORE] DNS type is no longer a master config parameter. It is configured for each hostgroup as a hostgroup paramater");
         }
         else if(key == "dns.lookup-timeout")
         {
@@ -903,6 +1063,15 @@ HMState::parseMasterYaml(const string& masterConfig)
             {
                 m_tcpDefaultCheckClass = HM_CHECK_PLUGIN_TCP_RAW;
                 HMLog(HM_LOG_NOTICE, "[CORE] Using raw socket for TCP Check Type");
+            }
+        }
+        else if (key == "tcps.type")
+        {
+            if (val == "rawsocket")
+            {
+                m_tcpDefaultCheckClass = HM_CHECK_PLUGIN_TCPS_RAW;
+                HMLog(HM_LOG_NOTICE,
+                        "[CORE] Using raw socket for TCPS Check Type");
             }
         }
         else if(key == "dnscheck.type")
@@ -1002,14 +1171,6 @@ HMState::parseMasterYaml(const string& masterConfig)
             {
                 m_logClass = HM_LOG_PLUGIN_TEXT;
             }
-            else if(val == "stdout")
-            {
-                m_logClass = HM_LOG_PLUGIN_STDOUT;
-            }
-            else if(val == "syslog")
-            {
-                m_logClass = HM_LOG_PLUGIN_SYSLOG;
-            }
         }
         else if(key == "log.verbosity")
         {
@@ -1027,6 +1188,169 @@ HMState::parseMasterYaml(const string& masterConfig)
         else if(key == "socket.path")
         {
             m_socketPath = val;
+        }
+        else if (key == "master-check-portv4")
+        {
+            int port = atoi(val.c_str());
+            if (port >= 0 && port <= 65535)
+            {
+                m_controlSocketCheckPortv4 = port;
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid port number for master-check-portv4, using default port %d",
+                        HM_CONTROL_SOCKET_DEFAULT_PORTV4);
+            }
+
+        }
+        else if (key == "master-check-portv6")
+        {
+            int port = atoi(val.c_str());
+            if (port >= 0 && port <= 65535)
+            {
+                m_controlSocketCheckPortv6 = port;
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid port number for master-check-portv6, using default port %d",
+                        HM_CONTROL_SOCKET_DEFAULT_PORTV6);
+            }
+
+        }
+        else if (key == "control-server-linux")
+        {
+            if (val == "off")
+            {
+                m_control_socket.erase(
+                        std::remove(m_control_socket.begin(),
+                                m_control_socket.end(),
+                                HM_CONTROL_SOCKET_LINUX),
+                        m_control_socket.end());
+            }
+            else if (val != "on")
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid value for control-server-ipv6, setting to default value");
+            }
+        }
+        else if (key == "control-server-ipv4")
+        {
+            if (val == "on")
+            {
+                if (m_enableSecureRemote)
+                {
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TLS_V4);
+                }
+                else
+                {
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TCP_V4);
+                }
+            }
+            else if (val != "off")
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid value for control-server-ipv4, setting to default value");
+            }
+        }
+        else if (key == "control-server-ipv6")
+        {
+            if (val == "on")
+            {
+                if (m_enableSecureRemote)
+                {
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TLS_V6);
+                }
+                else
+                {
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TCP_V6);
+                }
+            }
+            else if (val != "off")
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid value for control-server-ipv6, setting to default value");
+            }
+        }
+        else if (key == "enable-secure-remote")
+        {
+            if (val == "off")
+            {
+                if (std::find(m_control_socket.begin(), m_control_socket.end(),
+                        HM_CONTROL_SOCKET_TLS_V4) != m_control_socket.end())
+                {
+                    m_control_socket.erase(
+                            std::remove(m_control_socket.begin(),
+                                    m_control_socket.end(),
+                                    HM_CONTROL_SOCKET_TLS_V4),
+                            m_control_socket.end());
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TCP_V4);
+                }
+                if (std::find(m_control_socket.begin(), m_control_socket.end(),
+                        HM_CONTROL_SOCKET_TLS_V6) != m_control_socket.end())
+                {
+                    m_control_socket.erase(
+                            std::remove(m_control_socket.begin(),
+                                    m_control_socket.end(),
+                                    HM_CONTROL_SOCKET_TLS_V6),
+                            m_control_socket.end());
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TCP_V6);
+                }
+                m_enableSecureRemote = false;
+            }
+            else if (val == "on")
+            {
+                if (std::find(m_control_socket.begin(), m_control_socket.end(),
+                        HM_CONTROL_SOCKET_TCP_V4) != m_control_socket.end())
+                {
+                    m_control_socket.erase(
+                            std::remove(m_control_socket.begin(),
+                                    m_control_socket.end(),
+                                    HM_CONTROL_SOCKET_TCP_V4),
+                            m_control_socket.end());
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TLS_V4);
+                }
+                if (std::find(m_control_socket.begin(), m_control_socket.end(),
+                        HM_CONTROL_SOCKET_TCP_V6) != m_control_socket.end())
+                {
+                    m_control_socket.erase(
+                            std::remove(m_control_socket.begin(),
+                                    m_control_socket.end(),
+                                    HM_CONTROL_SOCKET_TCP_V6),
+                            m_control_socket.end());
+                    m_control_socket.push_back(HM_CONTROL_SOCKET_TLS_V6);
+                }
+                m_enableSecureRemote = true;
+            }
+        }
+        else if (key == "cert-file")
+        {
+            m_certFile = val;
+        }
+        else if (key == "key-file")
+        {
+            m_keyFile = val;
+        }
+        else if (key == "ca-file")
+        {
+            m_caFile = val;
+        }
+        else if (key == "enable-mutual-auth")
+        {
+            if (val == "on")
+            {
+                m_enableMutualAuth = true;
+            }
+            else if (val == "off")
+            {
+                m_enableMutualAuth = false;
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Invalid value for enable-mutual-auth, setting to default value");
+            }
         }
         else
         {
@@ -1071,4 +1395,39 @@ HMState::writeConfigs(HM_CONFIG_PLUGIN_CLASS configs, const string &fileName)
         break;
     }
     return parser->writeConfigs(*this, fileName);
+}
+
+const std::string& HMState::getCertFile() const
+{
+    return m_certFile;
+}
+
+const std::string& HMState::getKeyFile() const
+{
+    return m_keyFile;
+}
+
+const std::string& HMState::getCaFile() const
+{
+    return m_caFile;
+}
+
+bool HMState::isEnableSecureRemote() const
+{
+    return m_enableSecureRemote;
+}
+
+bool HMState::isEnableMutualAuth() const
+{
+    return m_enableMutualAuth;
+}
+
+bool HMState::isLibEventEnabled() const
+{
+    return m_libEventEnabled;
+}
+
+void HMState::setLibEventEnabled(bool libEventEnabled)
+{
+    m_libEventEnabled = libEventEnabled;
 }

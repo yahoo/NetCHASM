@@ -28,21 +28,6 @@ string server_path = HM_DEFAULT_USD_PATH;
 int sleep_duration = 3;
 bool verbose = false;
 
-map<int8_t, string> loglevels  = {
-        { -2, "LOG ERROR" },
-        { -1, "NONE" },
-        { 0, "EMERGENCY" },
-        { 1, "ALERT" },
-        { 2, "CRITICAL" },
-        { 3, "ERROR" },
-        { 4, "WARNING" },
-        { 5, "NOTICE" },
-        { 6, "INFO" },
-        { 7, "DEBUG" },
-        { 8, "DEBUG2" },
-        { 9, "DEBUG3" },
-};
-
 static void usage(char* name)
 {
     cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
@@ -62,7 +47,10 @@ static void usage(char* name)
             << "\t" <<"getworkperthreadratio \t get the current work to thread ratio for each thread in threadpool monitoring" << endl
             << "\t" <<"setworkperthreadratio <num of work>\t set the work to thread ratio for each thread in threadpool monitoring" << endl
             << "\t" <<"getrecycle \t get the recycle of threads enable status" << endl
-            << "\t" <<"setrecycle <on/off>\t enable/disable the threads recycling " << endl;
+            << "\t" <<"setrecycle <on/off>\t enable/disable the threads recycling " << endl
+            << "\t" <<"getremotequery \t get the remote query enable status of daemon" << endl
+            << "\t" <<"setremotequery <on/off>\t enable/disable the remote query state of the daemon " << endl;
+
 }
 
 void handleError(char *prog, string &name)
@@ -72,151 +60,144 @@ void handleError(char *prog, string &name)
     exit(-3);
 }
 
-void printError(string msg)
-{
-    cerr << msg << ":" << strerror(errno) << endl;
-}
-
-bool createSocket(int& s)
-{
-    if ((s = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
-    {
-        printError("Failed to create socket, error: ");
-        return false;
-    }
-    return true;
-}
-
-void closeSocket(int s)
-{
-    if (s != -1)
-    {
-        close(s);
-    }
-}
-
-bool connectSocket(int sock, string& server_path)
-{
-    int len;
-    struct sockaddr_un remote;
-    remote.sun_family = AF_UNIX;
-    strcpy(remote.sun_path, server_path.c_str());
-    len = strlen(remote.sun_path) + sizeof(remote.sun_family);
-    if (connect(sock, (struct sockaddr *) &remote, len) == -1)
-    {
-        printError("Failed to connect socket to " + server_path + ", error: ");
-        closeSocket(sock);
-        return false;
-    }
-    return true;
-}
-
-bool sendMessage(int s, string cmd)
-{
-    if (send(s, cmd.c_str(), cmd.length(), 0) == -1)
-    {
-        printError("failed to send msg " + cmd + " on socket, error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
-template <class T>
-bool recv(int s,  T &var, const string &cmd)
-{
-    int n = read(s, &var, sizeof(var));
-    if (n < 0)
-    {
-        printError("Failed to recv on socket for "+ cmd + ", error desc: ");
-        closeSocket(s);
-        return false;
-    }
-    return true;
-}
-
 bool runCommand(const vector<string> &strArgs)
 {
-    string strCommand;
-    bool bRemoveLastWS = false;
-    for (size_t i = 0; i < strArgs.size(); i++)
+    HMControlLinuxSocketClient socketAPI(server_path);
+    if (strArgs[0] == HM_CMD_SETLOGLEVEL)
     {
-        strCommand += strArgs[i];
-        strCommand += " ";
-        bRemoveLastWS = true;
+        return socketAPI.setLogLevel(strArgs[1]);
     }
 
-    if (bRemoveLastWS)
+    if (strArgs[0] == HM_CMD_SETMONFREQ)
     {
-        strCommand.erase(strCommand.size()-1);
+        uint32_t freq= std::stoul(strArgs[1], nullptr, 0);
+        return socketAPI.setMonitoringFrequency(freq);
     }
 
-    int s;
-    createSocket (s);
-    if (!connectSocket(s, server_path))
+    if (strArgs[0] == HM_CMD_SETSTRIDE)
     {
-        return false;
+        uint32_t stride = std::stoul(strArgs[1], nullptr, 0);
+        return socketAPI.setStride(stride);
     }
 
-    if (!sendMessage(s, strCommand))
+    if (strArgs[0] == HM_CMD_SETCONNECTIONTIMEOUT)
     {
-        return false;
+        uint64_t connectionTimeOut = std::stoull(strArgs[1], nullptr, 0);
+        return socketAPI.setConnectionTimeOut(connectionTimeOut);
+    }
+
+    if (strArgs[0] == HM_CMD_SETTTLTRESH)
+    {
+        uint32_t ttlTresh = std::stoul(strArgs[1], nullptr, 0);
+        return socketAPI.setTTLTreshold(ttlTresh);
+    }
+
+    if (strArgs[0] == HM_CMD_SETWORKPERTHREAD)
+    {
+        uint32_t workPerThread = std::stoul(strArgs[1], nullptr, 0);
+        return socketAPI.setWorkPerThread(workPerThread);
+    }
+
+    if (strArgs[0] == HM_CMD_SETRECYCLE)
+    {
+        if(strArgs[1] == "on")
+        {
+            return socketAPI.setRecycleOn();
+        }
+        else
+        {
+            return socketAPI.setRecycleOff();
+        }
+    }
+
+    if (strArgs[0] == HM_CMD_SETREMOTEQUERY)
+    {
+        if (strArgs[1] == "on")
+        {
+            return socketAPI.setRemoteQueryOn();
+        }
+        else
+        {
+            return socketAPI.setRemoteQueryOff();
+        }
+    }
+
+
+    if (strArgs[0] == HM_CMD_GETLOGLEVEL)
+    {
+        string log;
+        bool status = socketAPI.getLogLevel(log);
+        cout << "Log Level = " << log << endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETLOGLEVEL)
     {
-        string log = "UNKNOWN";
-        int8_t loglevel = 0;
-        recv<int8_t>(s, loglevel, strArgs[0]);
-        map<int8_t, string>::iterator it;
-        if((it = loglevels.find(loglevel)) != loglevels.end()){
-            log = it->second;
-        }
+        string log;
+        bool status = socketAPI.getLogLevel(log);
         cout << "Log Level = " << log << endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETCONNECTIONTIMEOUT)
     {
         uint64_t connectionTimeout = 0;
-        recv<uint64_t>(s, connectionTimeout, strArgs[0]);
+        bool status = socketAPI.getConnectionTimeout(connectionTimeout);
         cout << "Connection Timeout = " << connectionTimeout << " milliseconds" << endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETMONFREQ)
     {
         uint32_t freq = 0;
-        recv<uint32_t>(s, freq, strArgs[0]);
+        bool status = socketAPI.getMonitoringFrequency(freq);
         cout << "Monitoring Frequency = " << freq << " seconds" << endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETSTRIDE)
     {
         uint32_t stride = 0;
-        recv<uint32_t>(s, stride, strArgs[0]);
+        bool status = socketAPI.getStride(stride);
         cout << "Stride Percentage = " << stride << "%"<< endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETTTLTRESH)
     {
         uint32_t ttlTresh = 0;
-        recv<uint32_t>(s, ttlTresh, strArgs[0]);
-        cout << "TTL Threshold = " << ttlTresh << "%"<< endl;
+        bool status = socketAPI.getTTLTreshold(ttlTresh);
+        cout << "TTL Threshold = " << ttlTresh << "%" << endl;
+        return status;
     }
 
     if (strArgs[0] == HM_CMD_GETWORKPERTHREAD)
     {
         uint32_t workPerThread = 0;
-        recv<uint32_t>(s, workPerThread, strArgs[0]);
+        bool status = socketAPI.getWorkPerThread(workPerThread);
         cout << "Work per Thread Ratio = " << workPerThread << endl;
+        return status;
     }
     if (strArgs[0] == HM_CMD_GETRECYCLE)
     {
-        bool recycle = 0;
-        recv<bool>(s, recycle, strArgs[0]);
+        bool recycle = socketAPI.isRecycleOn();
         string status = recycle? "Enabled": "Disabled";
         cout << "Recycle Threads Status = " << status<< endl;
+        return true;
     }
-    closeSocket(s);
+    if (strArgs[0] == HM_CMD_GETREMOTEQUERY)
+    {
+        bool remoteQueryStatus;
+        if (socketAPI.getRemoteQueryOn(remoteQueryStatus))
+        {
+            string remoteQueryStatusString =
+                    remoteQueryStatus ? "Enabled" : "Disabled";
+            cout << "Remote query Enabled = " << remoteQueryStatusString
+                    << endl;
+            return true;
+        }
+        return false;
+    }
     return true;
 }
 
@@ -270,6 +251,7 @@ int main(int argc, char* argv[])
     case SETTTLTRESH:
     case SETWORKPERTHREAD:
     case SETRECYCLE:
+    case SETREMOTEQUERY:
         if (strArgs.size() < 2)
         {
             handleError(argv[0], strArgs[0]);
@@ -283,6 +265,7 @@ int main(int argc, char* argv[])
     case GETTTLTRESH:
     case GETWORKPERTHREAD:
     case GETRECYCLE:
+    case GETREMOTEQUERY:
         bSuccess = runCommand(strArgs);
         return (bSuccess) ? 0 : 1;
     case HOSTSCHDINFO:
@@ -293,6 +276,11 @@ int main(int argc, char* argv[])
     case DNSCHECK:
         cerr << "This command is supported in hm_command" << endl;
         return -1;
+    case ADDDNSADDRESSES:
+    case REMOVEDNSADDRESSES:
+    case GETDNSADDRESSES:
+        cerr << "This command is supported in hm_staticdns" << endl;
+        return -1;
     case RELOAD:
     case HOSTGROUPINFO:
     case LOADFBINFO:
@@ -301,6 +289,9 @@ int main(int argc, char* argv[])
     case HOSTCHECK:
     case HOSTGROUPPARAMS:
     case HOSTLIST:
+    case HOSTRESULTS:
+    case HOSTIPRESULTS:
+    case LOADFBINFOIP:
     case UNDEFINED:
         cerr << "Not all commands are supported at this time" << endl;
         return -3;

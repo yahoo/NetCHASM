@@ -435,6 +435,20 @@ HMAuxCache::storeAuxInfo(const string& hostname,
 }
 
 bool
+HMAuxCache::storeAuxInfo(const string& hostname,
+        const string& sourceURL,
+        const HMIPAddress& address,
+        HMAuxInfo& auxInfo)
+{
+    HMAuxKey key;
+    key.m_hostName = hostname;
+    key.m_sourceUrl = sourceURL;
+    key.m_address = address;
+    commitEntry(key, auxInfo);
+    return true;
+}
+
+bool
 HMAuxCache::updateAuxInfo(const string& hostname,
             const string& sourceURL,
             const HMIPAddress& address,

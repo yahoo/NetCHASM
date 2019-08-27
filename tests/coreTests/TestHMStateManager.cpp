@@ -38,11 +38,15 @@ void TESTNAME::setUp()
     //verify loading configs from backend
     std::ofstream fout11("conf/dummy_masterbackend.yaml");
     std::ofstream fout12("conf/dummy_masterbackendempty.yaml");
+    
+    //child host group
+    std::ofstream fout13("conf/dummy_master9.yaml");
+    std::ofstream fout14("conf/hm/testconf12.yaml");
 
 
     fout1 << "threads.max: 5\n\
 threads.min: 2\n\
-config.load-directory: ./conf/hm\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 dns.type: ares\n\
 dns.host: 192.168.1.1\n\
 dns.ttl: 360\n\
@@ -55,13 +59,13 @@ none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
 log.path: yHealth.log\n\
-log.type: stdout\n\
-log.verbosity: debug3\n\
+log.type: 0\n\
+log.verbosity: 0\n\
 socket.path: test_sock" << endl;
 
     fout2 << "threads.max: 4\n\
 threads.min: 3\n\
-config.load-directory: ./conf/hm\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 dns.type: ares\n\
 dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
@@ -137,15 +141,35 @@ log.path: yHealth.log\n" << endl;
        - dh2.hm.com\n\
 \n\
 -   name: config.parse6.netchasm.net\n\
-    check-type: http-auxfetch\n\
+    check-type: http\n\
     check-info: /a00.netchasm.net.xml\n\
     host:\n\
        - lfb-l3.hm1.com\n\
-       - lfb-l3.hm2.com" << endl;
+       - lfb-l3.hm2.com\n\
+\n\
+-   name: config.parse8.netchasm.net\n\
+    check-info: config.parse6.netchasm.net\n\
+    check-type: indirect-host\n\
+    host:\n\
+       - lfb-l3.hm1.com\n\
+       - lfb-l3.hm2.com\n\
+\n\
+-   name: config.parse9.netchasm.net\n\
+    check-type: indirect-host\n\
+    check-info: config.parse5.netchasm.net\n\
+    host:\n\
+       - lfb-l3.hm1.com\n\
+       - lfb-l3.hm2.com\n\
+-   name: config.parse10.netchasm.net\n\
+    check-info: config.parse6.netchasm.net\n\
+    check-type: http\n\
+    host-group:\n\
+       - config.parse3.netchasm.net\n\
+       - config.parse4.netchasm.net" << endl;
 
 
     fout4 << "threads.max: 5\n\
-config.load-directory: ./conf/hmd\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 log.type: text\n\
 dns.type: ares\n\
 dns.host: invalid.ip\n\
@@ -158,8 +182,7 @@ log.path: yHealth.log\n" << endl;
 
     fout5 << "threads.max: 5\n\
 threads.min: 2\n\
-config.load-directory: ./conf/hm\n\
-config.load-file: testconf.yaml\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 dns.type: ares\n\
 dns.host: 192.168.1.1\n\
 dns.ttl: 360\n\
@@ -178,7 +201,7 @@ socket.path: test_sock" << endl;
 
     fout6 << "threads.max: 4\n\
 threads.min: 3\n\
-config.load-directory: ./conf/hm\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 dns.type: ares\n\
 dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
@@ -188,7 +211,7 @@ db.path: netchasm.text\n\
 log.path: yHealth.log\n" << endl;
 
     fout7 << "threads.max: 5\n\
-config.load-directory: ./conf/hmd\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 log.type: text\n\
 dns.type: ares\n\
 dns.host: invalid.ip\n\
@@ -202,32 +225,30 @@ log.path: yHealth.log\n" << endl;
 config.load-directory ./conf/hmd\n\
 log.path: yHealth.log\n" << endl;
 
-    fout9 << "threads.max 5\n\
-threads.min 2\n\
-#config.load-directory ./conf/hm\n\
-config.load-file ./conf/hm/testconf.yaml\n\
+    fout9 << "threads.max: 5\n\
+threads.min: 2\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 \n\
-dns.type ares\n\
-dns.host 192.168.1.1\n\
-dns.ttl 360\n\
-dns.lookup-timeout 60\n\
-http.type curl\n\
-ftp.type curl\n\
-tcp.type rawsocket\n\
-dnsvc.type ares\n\
-none.type none\n\
+dns.type: ares\n\
+dns.host: 192.168.1.1\n\
+dns.ttl: 360\n\
+dns.lookup-timeout: 60\n\
+http.type: curl\n\
+ftp.type: curl\n\
+tcp.type: rawsocket\n\
+dnsvc.type: ares\n\
+none.type: none\n\
 \n\
-db.type mdbm\n\
-db.path netchasm.mdbm\n\
-log.path yHealth.log\n\
-log.type 0\n\
-log.verbosity 0\n\
-socket.path test_sock" << endl;
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: yHealth.log\n\
+log.type: 0\n\
+log.verbosity: 0\n\
+socket.path: test_sock" << endl;
 
     fout10 << "threads.max: 5\n\
 threads.min: 2\n\
-config.load-directory: ./conf/hm\n\
-config.load-file: testconf.yaml\n\
+config.load-file: ./conf/hm/testconf.yaml\n\
 dns.type: ares\n\
 dns.host: 192.168.1.1\n\
 dns.ttl: 360\n\
@@ -282,6 +303,39 @@ log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
 
+    fout13 << "threads.max: 5\n\
+threads.min: 2\n\
+config.load-file: ./conf/hm/testconf12.yaml\n\
+dns.type: ares\n\
+dns.host: 192.168.1.1\n\
+dns.ttl: 360\n\
+dns.lookup-timeout: 60\n\
+http.type: curl\n\
+ftp.type: curl\n\
+tcp.type: rawsocket\n\
+dnsvc.type: ares\n\
+none.type: none\n\
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: yHealth.log\n\
+log.type: 0\n\
+log.verbosity: 0\n\
+socket.path: test_sock" << endl;
+
+    fout14 << "-   name: iconfig.parse3.netchasm.net\n\
+    check-info: iconfig.parse6.netchasm.net\n\
+    check-type: indirect-host\n\
+    host:\n\
+       - ilfb-l3.hm1.com\n\
+       - lfb-l3.hm2.com\n\
+\n\
+-   name: iconfig.parse10.netchasm.net\n\
+    check-info: iconfig.parse6.netchasm.net\n\
+    check-type: http\n\
+    host-group:\n\
+       - iconfig.parse3.netchasm.net\n\
+       - iconfig.parse4.netchasm.net" << endl;
+
     fout1.close();
     fout2.close();
     fout3.close();
@@ -294,22 +348,26 @@ socket.path: test_sock" << endl;
     fout10.close();
     fout11.close();
     fout12.close();
+    fout13.close();
+    fout14.close();
 }
 
 void TESTNAME::tearDown()
 {
-    remove("conf/hm/testconf.yaml");
-    remove("conf/dummy_master.yaml");
+    //remove("conf/hm/testconf.yaml");
+    //remove("conf/dummy_master.yaml");
     remove("conf/dummy_master2.yaml");
     remove("conf/dummy_master3.yaml");
     remove("conf/dummy_master4.yaml");
     remove("conf/dummy_master5.yaml");
     remove("conf/dummy_master6.yaml");
     remove("conf/dummy_master7.yaml");
-    remove("conf/dummy_master.config");
+    remove("conf/dummy_master.yaml");
     remove("conf/dummy_master8.yaml");
     remove("conf/dummy_masterbackend.yaml");
     remove("conf/dummy_masterbackendempty.yaml");
+    //remove("conf/hm/testconf2.yaml");
+    //remove("conf/dummy_master9.yaml");    
     remove("conf/hm");
     remove("conf");
     remove("netchasm.mdbm");
@@ -418,6 +476,31 @@ void TESTNAME::test_config_parse1()
     CPPUNIT_ASSERT_EQUAL(true, sm.updateState(state1_ptr));
 }
 
+void TESTNAME::test_indirect_host()
+{
+    HMStateManager sm;
+    string master_config = "conf/dummy_master.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config.parse8.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+}
+
+void TESTNAME::test_indirect_host1()
+{
+    HMStateManager sm;
+    string master_config = "conf/dummy_master.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config.parse9.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+}
+
 void TESTNAME::test_master_yaml_conf_parse()
 {   
     HMState sm;
@@ -472,6 +555,31 @@ void TESTNAME::test_master_yaml_conf_parse1()
 
 }
 
+void TESTNAME::test_indirect_host2()
+{
+    HMStateManager sm;
+    string master_config = "conf/dummy_master.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config.parse8.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+}
+
+void TESTNAME::test_indirect_host3()
+{
+    HMStateManager sm;
+    string master_config = "conf/dummy_master8.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config.parse9.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+}
+
 
 void TESTNAME::test_load_configs_backend()
 {
@@ -479,20 +587,35 @@ void TESTNAME::test_load_configs_backend()
     HMStateManager *sm = new HMStateManager();
     string master_config = "conf/dummy_master8.yaml";
     CPPUNIT_ASSERT_EQUAL(true, sm->loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm->updateState(current);
+    auto it = current->m_hostGroups.find("config.parse9.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+    current.reset();
     delete sm;
 
     sm = new HMStateManager();
     string master_backend = "conf/dummy_masterbackend.yaml";
     CPPUNIT_ASSERT_EQUAL(true, sm->loadDaemonState(master_backend, HM_LOG_ERROR));
-    shared_ptr<HMState> current;
     sm->updateState(current);
-
+    it = current->m_hostGroups.find("config.parse9.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+    const vector<string> *hosts;
+    hosts = it->second.getHostList();
+    CPPUNIT_ASSERT_EQUAL(2, (int)hosts->size());
+    CPPUNIT_ASSERT(find(hosts->begin(), hosts->end(), "lfb-l3.hm1.com") != hosts->end());
+    CPPUNIT_ASSERT(find(hosts->begin(), hosts->end(), "lfb-l3.hm2.com") != hosts->end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse1.netchasm.net") != current->m_hostGroups.end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse2.netchasm.net") != current->m_hostGroups.end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse3.netchasm.net") != current->m_hostGroups.end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse4.netchasm.net") != current->m_hostGroups.end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse5.netchasm.net") != current->m_hostGroups.end());
     CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse6.netchasm.net") != current->m_hostGroups.end());
+    CPPUNIT_ASSERT(current->m_hostGroups.find("config.parse8.netchasm.net") != current->m_hostGroups.end());
     current.reset();
     delete sm;
     // should return true even on cold start when the mdbm is empty.
@@ -503,3 +626,41 @@ void TESTNAME::test_load_configs_backend()
     delete sm;
 }
 
+void TESTNAME::test_childhostgroup_1()
+{
+    string hostGroup0 = "config.parse3.netchasm.net";
+    string hostGroup1 = "config.parse4.netchasm.net";  
+    string host0 = "e1.hm.com";
+    string host1 = "e2.hm.com";
+    string host2 = "g4.hm.com";
+
+    HMStateManager sm;
+    string master_config = "conf/dummy_master4.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config.parse10.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+    const std::vector<std::string>* hostGroupslist = it->second.getHostGroupList();
+    CPPUNIT_ASSERT_EQUAL(hostGroupslist->at(0), hostGroup0);
+    CPPUNIT_ASSERT_EQUAL(hostGroupslist->at(1), hostGroup1);
+    const std::vector<std::string>* hostslist = it->second.getHostList();
+    CPPUNIT_ASSERT_EQUAL(hostslist->at(0), host0);
+    CPPUNIT_ASSERT_EQUAL(hostslist->at(1), host1);
+    CPPUNIT_ASSERT_EQUAL(hostslist->at(2), host2);
+}
+
+void TESTNAME::test_childhostgroup_2()
+{
+    string hostGroup0 = "config.parse3.netchasm.net";
+    string hostGroup1 = "config.parse4.netchasm.net";  
+    string host0 = "e1.hm.com";
+    string host1 = "e2.hm.com";
+    string host2 = "g4.hm.com";
+
+    HMStateManager sm;
+    string master_config = "conf/dummy_master9.yaml";
+    CPPUNIT_ASSERT_EQUAL(false, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+
+}

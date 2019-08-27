@@ -43,7 +43,8 @@ void TESTNAME::test_HMStorage_Construction()
     CPPUNIT_ASSERT(checkHeader.m_hostCheck == hostCheck);
     CPPUNIT_ASSERT(checkHeader.m_hostname == hostname);
     HMDataHostGroupMap hostGroupMap;
-    TestStorage myStorage(&hostGroupMap);
+    HMDNSCache dnsCache;
+    TestStorage myStorage(&hostGroupMap, &dnsCache);
 }
 
 void TESTNAME::test_HMStorage_OpenClose()
@@ -60,8 +61,8 @@ void TESTNAME::test_HMStorage_OpenClose()
     HMDataCheckResult result;
     HMDataHostGroupMap hostGroupMap;
 
-    TestStorage* readOnlyStorage = new TestStorage(&hostGroupMap);
-    TestStorage* rwStorage = new TestStorage(&hostGroupMap);
+    TestStorage* readOnlyStorage = new TestStorage(&hostGroupMap, &dnsCache);
+    TestStorage* rwStorage = new TestStorage(&hostGroupMap, &dnsCache);
 
     readOnlyStorage->m_commitCalls = 10;
     CPPUNIT_ASSERT(readOnlyStorage->openStore(true));
