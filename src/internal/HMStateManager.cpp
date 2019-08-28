@@ -276,6 +276,7 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
         return false;
     }
     m_newState->m_datastore->storeConfigs(*m_newState);
+    m_newState->storeConfigInfo();
     m_currentState.swap(m_newState);
     m_newState.reset();
 
@@ -353,6 +354,7 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
 
     m_currentState.swap(m_newState);
     m_currentState->m_datastore->storeConfigs(*m_currentState);
+    m_newState->storeConfigInfo();
     m_currentState->resheduleDNSChecks(m_newState, m_workQueue);
     m_currentState->resheduleHealthChecks(m_newState, m_workQueue);
     m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, false);

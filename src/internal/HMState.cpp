@@ -71,26 +71,32 @@ HMState::setupDaemonstate()
 
     bool bConfigLoadOk = loadAllConfigs();
 
-    HMConfigInfo configInfo;
-    HMHashMD5 configHash;
-    configInfo.m_version = HM_MDBM_VERSION;
-    configInfo.m_configLoadTime = HMTimeStamp::now();
-    configInfo.m_configStatus = (bConfigLoadOk) ? HM_CONFIG_STATUS_OK : HM_CONFIG_STATUS_ERROR;
-    if(configHash.init())
-    {
-        HashHostGroupMap(configHash, configInfo.m_hash);
-    }
     if(!bConfigLoadOk)
     {
        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading configs");
        return false;
     }
-    setHash(configInfo.m_hash);
-    m_datastore->storeConfigInfo(configInfo);
-
     generateHostCheckList();
     generateDNSCheckList();
     return true;
+}
+
+bool
+ HMState::storeConfigInfo()
+ {
+    HMConfigInfo configInfo;
+    HMHashMD5 configHash;
+    configInfo.m_version = HM_MDBM_VERSION;
+    configInfo.m_configLoadTime = HMTimeStamp::now();
+    configInfo.m_configStatus = HM_CONFIG_STATUS_OK;
+    if (!configHash.init())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure Initializing Hashing function");
+         return false;
+    }
+    HashHostGroupMap(configHash, configInfo.m_hash);
+    setHash(configInfo.m_hash);
+    return m_datastore->storeConfigInfo(configInfo);
 }
 
 const std::string&

@@ -34,7 +34,12 @@ add_custom_target(build
 
 add_custom_target(testbuild
     COMMAND ${CMAKE_MAKE_PROGRAM}
-    COMMAND ${CMAKE_MAKE_PROGRAM} -C tests
+    COMMAND ${CMAKE_MAKE_PROGRAM} configparsertests
+    COMMAND ${CMAKE_MAKE_PROGRAM} coretests
+    COMMAND ${CMAKE_MAKE_PROGRAM} externalio
+    COMMAND ${CMAKE_MAKE_PROGRAM} logtests
+    COMMAND ${CMAKE_MAKE_PROGRAM} storetests
+    COMMAND ${CMAKE_MAKE_PROGRAM} worktests
     COMMAND ${CMAKE_MAKE_PROGRAM} test ARGS="-V"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
