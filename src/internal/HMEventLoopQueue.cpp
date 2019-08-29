@@ -6,10 +6,10 @@
 using namespace std;
 
 void
-HMEventLoopQueue::addDNSTimeout(const string& hostname, bool ipv6, HMTimeStamp timeStamp)
+HMEventLoopQueue::addDNSTimeout(const string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp)
 {
     auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
-    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS timeout %llu", timeStamp.getTimeSinceEpoch());
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS scheduler timeout %llu", timeStamp.getTimeSinceEpoch());
 
     bool preempt = false;
     queueLock.lock();
@@ -17,7 +17,7 @@ HMEventLoopQueue::addDNSTimeout(const string& hostname, bool ipv6, HMTimeStamp t
     {
         preempt = true;
     }
-    m_timeouts.push(Timeout(hostname, ipv6, timeStamp));
+    m_timeouts.push(Timeout(hostname, dnsHostCheck.getPlugin(), dnsHostCheck.isIpv6(), timeStamp));
     queueLock.unlock();
 
     // if the Timeout we are inserting is before the next timeout, kick the tracker
@@ -33,7 +33,7 @@ HMEventLoopQueue::addHealthCheckTimeout(const string& hostname, const HMIPAddres
     auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
     bool preempt = false;
 
-    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding HealthCheck timeout %llu for %s", timeStamp.getTimeSinceEpoch(),hostname.c_str());
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding HealthCheck Scheduler timeout %llu for %s", timeStamp.getTimeSinceEpoch(),hostname.c_str());
 
     queueLock.lock();
     if(m_timeouts.empty() || timeStamp < m_timeouts.top().m_timeout)
@@ -165,18 +165,18 @@ HMEventLoopQueue::run()
         case DNSV6_TIMEOUT:
             HMLog(HM_LOG_DEBUG, "[EVENT] DNS Entry Timeout for %s",  timeout.m_hostname.c_str());
 
-            bool ipv6 = timeout.m_type == DNSV6_TIMEOUT ? true : false;
-            check_state = currentState->m_dnsCache.queryNeeded(timeout.m_hostname, ipv6);
+            HMDNSLookup dnsHostCheck(timeout.m_dnsPlugin, timeout.m_type == DNSV6_TIMEOUT);
+            check_state = currentState->m_dnsCache.queryNeeded(timeout.m_hostname, dnsHostCheck);
             if (check_state == HM_SCHEDULE_WORK)
             {
                 HMLog(HM_LOG_DEBUG3, "[DEBUG] DNS Health Check Schedule work for %s", timeout.m_hostname.c_str());
-                currentState->m_dnsCache.queueDNSQuery(timeout.m_hostname, (timeout.m_type == DNSV6_TIMEOUT), m_stateManager->m_workQueue);
+                currentState->m_dnsCache.queueDNSQuery(timeout.m_hostname, dnsHostCheck, m_stateManager->m_workQueue);
             }
             else if (check_state == HM_SCHEDULE_EVENT)
             {
                 HMLog(HM_LOG_DEBUG3, "[DEBUG] DNS Health Check Schedule event for %s", timeout.m_hostname.c_str());
                 HMTimeStamp nextCheckTimeOut = currentState->m_checkList.nextCheckTime(timeout.m_hostname, timeout.m_address, timeout.m_hostCheck);
-                addDNSTimeout(timeout.m_hostname, ipv6, nextCheckTimeOut);
+                addDNSTimeout(timeout.m_hostname, dnsHostCheck, nextCheckTimeOut);
             }
             else
             {

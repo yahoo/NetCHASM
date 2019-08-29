@@ -41,14 +41,14 @@ enum EVENT_TYPES
 class DNSTimeout
 {
 public:
-    DNSTimeout(const std::string& host, bool ipv6) :
+    DNSTimeout(const std::string& host, const HMDNSLookup& dnshostCheck) :
         m_hostname(host),
-        m_ipv6(ipv6),
+        m_dnsHostCheck(dnshostCheck),
         m_ev(nullptr),
         m_stateManager(nullptr) {}
 
     std::string m_hostname;
-    bool m_ipv6;
+    HMDNSLookup m_dnsHostCheck;
     struct event* m_ev;
     HMStateManager* m_stateManager;
 };
@@ -88,10 +88,10 @@ public:
     /*!
          Add a new DNS timeout to the event loop.
          \param the hostname to resolve.
-         \param true to resolve an IPv6 address.
+         \param structure holding DNS type and address type(v4 or v6).
          \param the time Stamp of when the DNS resolution should take place.
      */
-    void addDNSTimeout(const std::string& hostname, bool ipv6, HMTimeStamp timeStamp);
+    void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp);
 
     //! Add a new health check timeout.
     /*!

@@ -17,7 +17,7 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
     set<string> localNames;
 
     map<string,set<HMIPAddress>> dnsMap;
-    map<pair<string, bool>,HMTimeStamp> dnsResTimeMap;
+    map<pair<string, HMDNSLookup>,HMTimeStamp> dnsResTimeMap;
 
     HMIPAddress blank(AF_INET);
     HMIPAddress blankv6(AF_INET6);
@@ -67,7 +67,7 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
     {
         vector<HMCheckHeader> headers;
         bool v6, v4 = false;
-
+        HMCheckHeader checkHeader;
         for(auto check = localChecks.begin(); check != localChecks.end(); )
         {
             if(*it == check->m_hostname)
@@ -75,7 +75,10 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
                 // The check does not exist in the backend
                 v4 = (check->m_hostCheck.getDualStack() & HM_DUALSTACK_IPV4_ONLY) ? true : v4;
                 v6 = (check->m_hostCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY) ? true : v6;
-
+                checkHeader.m_hostCheck = check->m_hostCheck;
+                checkHeader.m_hostname = check->m_hostname;
+                checkHeader.m_checkParams = check->m_checkParams;
+                checkHeader.m_address = check->m_address;
                 headers.push_back(*check);
                 HMCheckData cd(check->m_hostname, check->m_address, check->m_hostCheck, check->m_checkParams, HMDataCheckResult());
                 HMAuxInfo empty;
@@ -106,7 +109,8 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
         // Insert blank DNS entry
         set<HMIPAddress> addresses;
         uint8_t dualstack = (v4 ? HM_DUALSTACK_IPV4_ONLY : 0) | (v6 ? HM_DUALSTACK_IPV6_ONLY : 0);
-        dnsCache.getAddresses(*it, dualstack, addresses);
+        HMDNSLookup dnsHostCheck(checkHeader.m_hostCheck.getDnsPlugin());
+        dnsCache.getAddresses(*it, dualstack, dnsHostCheck, addresses);
         if(addresses.size() == 0)
         {
             if(dualstack & HM_DUALSTACK_IPV4_ONLY)
@@ -166,7 +170,8 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
 
                     auto res = dnsMap.insert(make_pair(check->m_hostname, set<HMIPAddress>()));
                     res.first->second.insert(check->m_address);
-                    pair<string, bool> key = make_pair(check->m_hostname, check->m_address.getType() == AF_INET6 ? true : false);
+                    HMDNSLookup dnsHostCheck(check->m_hostCheck.getDnsPlugin(), check->m_address.getType() == AF_INET6);
+                    pair<string, HMDNSLookup> key = make_pair(check->m_hostname, dnsHostCheck);
                     if(dnsResTimeMap.find(key) == dnsResTimeMap.end())
                     {
                         dnsResTimeMap.insert(make_pair(key, result.m_checkTime));
@@ -201,7 +206,7 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
         {
             v6Result.setResultTime(res->second);
         }
-        dnsCache.updateReloadDNSEntry(it->first, it->second, v4Result, v6Result);
+        dnsCache.updateReloadDNSEntry(it->first, it->second, v4Result, v6Result, res->first.second.getPlugin());
     }
 
     // Fill missing entries in the backend

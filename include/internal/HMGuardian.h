@@ -50,7 +50,7 @@ public:
     void callback();
 
 private:
-    //! Fork the process and start healthMon as a daemon.
+    //! Fork the process and start NetCHASM as a daemon.
     /*!
           Fork the process and start netchasm as a daemon.
           \return true if the process forked and is running.

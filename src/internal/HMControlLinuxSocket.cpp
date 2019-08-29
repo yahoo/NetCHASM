@@ -11,12 +11,14 @@
 #include "HMControlLinuxSocket.h"
 #include "HMLogBase.h"
 #include "HMStateManager.h"
+#include "HMSocketUtilLinux.h"
 
 using namespace std;
 
 HMControlLinuxSocket::HMControlLinuxSocket(string socketPath, HMStateManager &stateManager) :
-        HMCommandListenerBase(socketPath, stateManager),
-        m_socket(-1) {}
+        HMCommandListenerBase(stateManager),
+        m_socket(-1),
+        m_socketPath(socketPath){}
 
 HMControlLinuxSocket::~HMControlLinuxSocket() {}
 
@@ -39,7 +41,6 @@ HMControlLinuxSocket::init()
 
     size_t len = m_socketPath.copy(addr.sun_path, m_socketPath.length(), 0);
     addr.sun_path[len] = '\0';
-
     // TODO: Should we use a SOCK_DGRAM socket, then we can't use accept,
     // listen etc.
     m_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -90,16 +91,18 @@ HMControlLinuxSocket::listernerShutDown()
     {
         close(m_socket);
     }
-    if(write(m_internalSocketSClient, "test",5) < 0)
+    if(write(m_pipesfd[1], "test",5) < 0)
     {
         HMLog(HM_LOG_ERROR, "[CORE] failed writing to shutdown listener"); //LCOV_EXCL_LINE
     }
     m_mainThread.join();
+    unlinkSocket(m_socketPath);
 }
 
 void
-HMControlLinuxSocket::handleClient(int clientSock)
+HMControlLinuxSocket::handleClient(char* client)
 {
+    int clientSock = *(int*)client;
     if(clientSock == -1)
     {
         //LCOV_EXCL_START
@@ -108,57 +111,37 @@ HMControlLinuxSocket::handleClient(int clientSock)
         throw system_error(ec, strBuf);
         //LCOV_EXCL_STOP
     }
-
+    HMSocketUtilLinux utilLinux(clientSock, m_socketPath);
     int done = 0;
-    char buf[1024];
-    fd_set fdset;
-
     do
     {
         struct timeval timeToWait;
         timeToWait.tv_sec = 3;
         timeToWait.tv_usec = 0;
-        FD_ZERO(&fdset);
-        FD_SET(clientSock, &fdset);
-        int ret = select(clientSock+1, &fdset, NULL, NULL, &timeToWait);
-        if(ret < 0)
+        string command;
+        if (!utilLinux.receiveCommand(command, timeToWait))
         {
-            char buf[1024];
-            strerror_r(errno, buf, sizeof(buf));
-            buf[sizeof(buf) - 1] = '\0';
-            HMLog(HM_LOG_ERROR, "select Error, error desc: %s", buf);
-            break;
-        }
-        if(ret == 0)
-        {
-            HMLog(HM_LOG_DEBUG, "select timed out, closing Socket");
-            break;
-        }
-        if(FD_ISSET(clientSock, &fdset))
-        {
-            int n = recv(clientSock, buf, 1023, 0);
-            if(n == 0)
-            {
-                break;
-            }
-            buf[n] = '\0';
-            string command = buf;
-            HMLog(HM_LOG_DEBUG3, "[CORE] HMCommandListener::run command = %s", command.c_str());
+            done = 1;
 
-            if(command == "quit")
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG3, "[CORE] HMCommandListener::run command = %s",
+                    command.c_str());
+
+            if (command == "quit")
             {
                 done = 1;
             }
             else
             {
-                handleCommands(command, clientSock);
+                handleCommands(command, utilLinux);
             }
         }
     } while (!done);
 
     lock_guard<mutex> lg(m_handlerMutex);
     m_handlerThreadsStatus[this_thread::get_id()] = true;
-    close(clientSock);
     return;
 }
 
@@ -172,8 +155,8 @@ void HMControlLinuxSocket::handleConnections()
     {
         FD_ZERO (&fds);
         FD_SET(m_socket, &fds);
-        FD_SET(m_internalSocketClient, &fds);
-        int max = m_socket>m_internalSocketClient?m_socket:m_internalSocketClient;
+        FD_SET(m_pipesfd[0], &fds);
+        int max = m_socket>m_pipesfd[1]?m_socket:m_pipesfd[0];
         int res = select(max + 1, &fds, NULL, NULL, NULL);
         if(res < 0)
         {
@@ -187,54 +170,28 @@ void HMControlLinuxSocket::handleConnections()
             if(clientSock > 0)
             {
                 cleanHandlerThreads();
-                m_handlerThreads.push_back(thread(&HMControlLinuxSocket::handleClient, this, clientSock));
+                m_handlerThreads.push_back(
+                        thread(&HMControlLinuxSocket::handleClient, this,
+                                (char*)&clientSock));
                 HMLog(HM_LOG_DEBUG, "[CORE] HMCommandListener::run accept on client sock = %d", clientSock);
             }
         }
-        if(FD_ISSET(m_internalSocketClient, &fds))
+        if(FD_ISSET(m_pipesfd[0], &fds))
         {
-            close(m_internalSocketClient);
-            close(m_internalSocketServer);
-            close(m_internalSocketSClient);
+            close(m_pipesfd[0]);
+            close(m_pipesfd[1]);
             HMLog(HM_LOG_INFO, "[CORE] Shutting down listener");
         }
     }
 }
 
-void HMControlLinuxSocket::responseMessage(int clientSock , const void* buffer, size_t size)
+void
+HMControlLinuxSocket::unlinkSocket(string& socketPath)
 {
-    int n = send(clientSock, buffer, size, 0);
-    if(n < 0)
+    if(unlink(socketPath.c_str()) != 0 && errno != ENOENT)
     {
-        HMLog(HM_LOG_DEBUG, "Failed to send message %s, error code: %d", m_socketPath.c_str(), errno);
-    }
-}
-
-void HMControlLinuxSocket::responseMessageVarLen(int clientSock, const char* buffer, size_t size)
-{
-    const uint32_t chunk = 65535;
-    int n = send(clientSock, &size, sizeof(size),0);
-    if(n < 0)
-    {
-        HMLog(HM_LOG_DEBUG, "Failed to send message %s, error code:%d", m_socketPath.c_str(), errno);
-        return;
-    }
-    if(size > 0)
-    {
-        size_t offset = 0;
-        size_t chunkSize = 0;
-        for(; size > 0; size -= chunkSize)
-        {
-            chunkSize = (size < chunk) ? size : chunk;
-            const char *data = buffer + offset;
-            int n = send(clientSock, data, chunkSize, 0);
-            if(n < 0)
-            {
-                HMLog(HM_LOG_DEBUG, "Failed to send message %s, error code:%d", m_socketPath.c_str(), errno);
-                return;
-            }
-
-            offset += chunkSize;
-        }
+        //LCOV_EXCL_START;
+        throwException("Failed to unlink socket path " + socketPath + ", error desc: ");
+        //LCOV_EXCL_STOP;
     }
 }

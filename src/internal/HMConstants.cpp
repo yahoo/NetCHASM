@@ -1,7 +1,8 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include "HMConstants.h"
-
+#include "HMDataHostCheck.h"
+#include "HMLogBase.h"
 using namespace std;
 
 string
@@ -46,13 +47,13 @@ printCheckTypeConfigs(HM_CHECK_TYPE ct)
         return "ftps-explicit-no-peer-check";
 
     case HM_CHECK_AUX_HTTP:
-        return "http-auxfetch";
+        return "http";
 
     case HM_CHECK_AUX_HTTPS:
-        return "https-auxfetch";
+        return "https";
 
     case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
-        return "https-no-peer-check-auxfetch";
+        return "https-no-peer-check";
 
     default:
         return "default (empty) value";
@@ -73,6 +74,9 @@ printCheckType(HM_CHECK_TYPE ct)
 
     case HM_CHECK_TCP:
         return "tcp";
+
+    case HM_CHECK_TCPS:
+        return "tcps";
 
     case HM_CHECK_HTTPS:
         return "https";
@@ -156,6 +160,24 @@ printMeasurementOptions(uint16_t rtMode)
 }
 
 string
+printDnsType(HM_DNS_PLUGIN_CLASS dt)
+{
+    switch(dt)
+    {
+    case HM_DNS_PLUGIN_ARES:
+        return "Ares";
+    case HM_DNS_PLUGIN_LIBEVENT:
+        return "Libevent";
+    case HM_DNS_PLUGIN_NONE:
+        return "None";
+    case HM_DNS_PLUGIN_STATIC:
+        return "Static";
+    default:
+        return "Invalid DNS type";
+    }
+}
+
+string
 printDualStack(HM_DUALSTACK ds)
 {
     switch(ds)
@@ -210,6 +232,8 @@ printReason(HM_REASON reason)
         return "Response 5xx";
     case HM_REASON_INTERNAL_ERROR:
         return "Internal Error";
+    case HM_REASON_REMOTE_NODATA:
+        return "Remote No Data";
     default:
         return "Invalid Response Code";
     }
@@ -260,25 +284,23 @@ printResponse(HM_RESPONSE response)
         return "Failed";
     case HM_RESPONSE_DNS_FAILED:
         return "DNS Failed";
+    case HM_RESPONSE_REMOTE_FAILED:
+        return "Remote Failed";
     default:
         return "Invalid Response";
     }
 }
 
-string
-printWorkState(HM_WORK_STATE state)
-{
-    switch(state)
+bool CompareCheckList::operator()(const std::pair<std::string,HMDataHostCheck>& lhs,
+        const std::pair<std::string,HMDataHostCheck>& rhs) const {
+
+    if(lhs.first  == rhs.first)
     {
-    case HM_CHECK_INACTIVE:
-        return "INACTIVE";
-    case HM_CHECK_QUEUED:
-        return "QUEUED";
-    case HM_CHECK_IN_PROGRESS:
-        return "IN PROGRESS";
-    case HM_CHECK_FAILED:
-        return "FAILED";
-    default:
-        return "Invalid Response";
+        if(lhs.second == rhs.second)
+        {
+            return (uint8_t)lhs.second.getDnsPlugin() < rhs.second.getDnsPlugin();
+        }
+        return lhs.second < rhs.second;
     }
+    return lhs.first < rhs.first;
 }

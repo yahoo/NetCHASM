@@ -17,8 +17,8 @@
 class TestHMWorkDNSLookup : public HMWorkDNSLookup
 {
 public:
-    TestHMWorkDNSLookup(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
-            HMWorkDNSLookup(hostname, ip, hostcheck) {};
+    TestHMWorkDNSLookup(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck, const HMDNSLookup& dnsHostCheck) :
+            HMWorkDNSLookup(hostname, ip, hostcheck, dnsHostCheck) {};
 
     void init(HMWorkState& state) {};
     HM_WORK_STATUS dnsLookup();

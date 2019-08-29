@@ -18,8 +18,8 @@ class HMWorkDNSLookupAres : public HMWorkDNSLookup
 
 public:
 
-    HMWorkDNSLookupAres(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
-        HMWorkDNSLookup(hostname, ip, hostcheck),
+    HMWorkDNSLookupAres(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck, const HMDNSLookup& dnsHostCheck) :
+        HMWorkDNSLookup(hostname, ip, hostcheck, dnsHostCheck),
         m_finished(false),
         m_channel(nullptr) {};
 

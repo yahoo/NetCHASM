@@ -12,7 +12,6 @@
 
 #include "HMStateManager.h"
 #include "HMEventLoopQueue.h"
-#include "HMStorageHostGroupMDBM.h"
 #include "HMStorageHostText.h"
 #include "HMLogText.h"
 #include "HMLogStdout.h"
@@ -22,7 +21,8 @@
 #include "HMConfigParserYaml.h"
 #include "HMLogBase.h"
 #include "HMControlLinuxSocket.h"
-
+#include "HMControlTLSSocket.h"
+#include "HMControlTCPSocket.h"
 using namespace std;
 
 static HMStateManager* monitor;
@@ -39,7 +39,8 @@ HMStateManager::HMStateManager() :
           m_keepRunning(true),
           m_eventLoop(nullptr),
           m_threadPool(nullptr),
-          m_libEvent(nullptr)
+          m_libEvent(nullptr),
+          m_enableRemoteQueryReply(true)
 {
     hlog = nullptr;
 }
@@ -103,7 +104,12 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     sigTermHandler.sa_flags = 0;
     sigaction(SIGTERM, &sigTermHandler, NULL);
 
-    signal(SIGPIPE, SIG_IGN);
+    struct sigaction sigPipeHandler;
+    sigPipeHandler.sa_handler = SIG_IGN;
+    sigemptyset(&sigPipeHandler.sa_mask);
+    sigPipeHandler.sa_flags = 0;
+    sigaction(SIGPIPE, &sigPipeHandler, NULL);
+
     thread threadMonitor;
     // Main function to do all the health checking
 
@@ -115,10 +121,14 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
 
     // Step 2. Initialize the event library
     if(m_currentState->getDefaultHTTPCheckype() == HM_CHECK_PLUGIN_HTTP_LIBEVENT
-            || m_currentState->getDefaultDNSLookupType() == HM_DNS_PLUGIN_LIBEVENT
+            || m_currentState->isLibEventEnabled() == HM_DNS_PLUGIN_LIBEVENT
             || m_currentState->getDefaultEventType() == HM_EVENT_LIBEVENT)
     {
+#ifdef USE_LIBEVENT
         m_libEvent = new HMEventLoopLibEvent(this);
+#else
+        HMLog(HM_LOG_ERROR, "LibEvent disabled during build. Please enable it for the LibEvent to work");
+#endif
     }
 
     if(m_currentState->getDefaultEventType() == HM_EVENT_LIBEVENT)
@@ -137,22 +147,57 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     updateState(current);
     current->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, true);
     const string socketPath = current->getSocketPath();
-    current.reset();
     // Step 4: Create a socket to listen for external commands
-    m_listener = unique_ptr<HMControlLinuxSocket>(new HMControlLinuxSocket(socketPath, *this));
 
+    for(HM_CONTROL_SOCKET type : current->getControlSocket())
+    {
+        unique_ptr<HMCommandListenerBase> listener;
+        switch(type)
+        {
+        case HM_CONTROL_SOCKET_LINUX:
+            listener = unique_ptr<HMControlLinuxSocket>(
+                        new HMControlLinuxSocket(socketPath, *this));
+            break;
+        case HM_CONTROL_SOCKET_TCP_V4:
+            listener = unique_ptr<HMControlTCPSocket>(
+                        new HMControlTCPSocket(false, *this));
+            break;
+        case HM_CONTROL_SOCKET_TCP_V6:
+            listener = unique_ptr<HMControlTCPSocket>(
+                        new HMControlTCPSocket(true, *this));
+            break;
+        case HM_CONTROL_SOCKET_TLS_V4:
+            listener = unique_ptr<HMControlTLSSocket>(
+                    new HMControlTLSSocket(false, *this));
+            break;
+        case HM_CONTROL_SOCKET_TLS_V6:
+            listener = unique_ptr<HMControlTLSSocket>(
+                    new HMControlTLSSocket(true, *this));
+		}
+        m_listener.push_back(std::move(listener));
+    }
+    current.reset();
 
-    m_listener->init();
-
-
+    for (auto &it : m_listener)
+    {
+        if (it)
+        {
+            it->init();
+        }
+    }
     // Step 5. Start the worker threads
     HMLog(HM_LOG_INFO, "[CORE] Starting Worker Threads");
     m_threadPool = new HMThreadPool(this, m_eventLoop);
     threadMonitor = thread(&HMThreadPool::monitorThreads, m_threadPool);
 
     // Step 6: Listen for commands on the socket
-    m_listener->run();
-
+    for (auto &it : m_listener)
+    {
+        if (it)
+        {
+            it->run();
+        }
+    }
     // Step 7. Start the Health Tracker (Run this in the primary thread)
     if(m_eventLoop != m_libEvent && m_libEvent)
     {
@@ -192,7 +237,13 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
         delete hlog;
         hlog = nullptr;
     }
-    m_listener->shutdown();
+    for (auto &it : m_listener)
+    {
+        if (it)
+        {
+            it->shutDown();
+        }
+    }
     threadMonitor.join();
     return true;
 }
@@ -206,10 +257,61 @@ HMStateManager::shutdown()
 }
 
 bool
+HMStateManager::loadCertificates()
+{
+    if (m_newState->isEnableSecureRemote())
+    {
+        SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        SSL_load_error_strings();
+        m_newState->m_ctx = SSL_CTX_new(TLSv1_2_method());
+        if(!m_newState->m_ctx)
+        {
+            HMLog(HM_LOG_CRITICAL, "Failed creating ssl context, err:%s",
+                                ERR_error_string(ERR_get_error(), NULL));
+            return false;
+        }
+        if (SSL_CTX_use_certificate_file(m_newState->m_ctx,
+                m_newState->getCertFile().c_str(),
+                SSL_FILETYPE_PEM) <= 0)
+        {
+            HMLog(HM_LOG_CRITICAL, "Failed loading certificate file, err:%s",
+                    ERR_error_string(ERR_get_error(), NULL));
+            return false;
+        }
+        if (SSL_CTX_use_PrivateKey_file(m_newState->m_ctx,
+                m_newState->getKeyFile().c_str(), SSL_FILETYPE_PEM) <= 0)
+        {
+            HMLog(HM_LOG_CRITICAL, "Failed loading private key file, err:%s",
+                    ERR_error_string(ERR_get_error(), NULL));
+            return false;
+        }
+        if (!SSL_CTX_check_private_key(m_newState->m_ctx))
+        {
+            HMLog(HM_LOG_CRITICAL,
+                    "Private key does not match the public certificate");
+            return false;
+        }
+        if (!SSL_CTX_load_verify_locations(m_newState->m_ctx, m_newState->getCaFile().c_str(), NULL))
+        {
+            HMLog(HM_LOG_CRITICAL, "failed loading CA certificate, err: %s",
+                    ERR_error_string(ERR_get_error(), NULL));
+            return false;
+        }
+        if (m_newState->isEnableMutualAuth())
+        {
+            SSL_CTX_set_verify(m_newState->m_ctx,
+            SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+            NULL);
+        }
+    }
+    return true;
+}
+
+bool
 HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLevel)
 {
     lock_guard<mutex> lg(m_reloadMutex);
-
     // save a copy of the current backend storage
     string currentStoragePath;
     HM_LOG_PLUGIN_CLASS lastLogType;
@@ -267,7 +369,11 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
         m_newState.reset();
         return false;
     }
-
+    if (!loadCertificates())
+    {
+        HMLog(HM_LOG_CRITICAL, "Failed loading certificates");
+        return false;
+    }
     if(!m_newState->setupDaemonstate())
     {
         HMLog(HM_LOG_CRITICAL, "Failure Parsing Configs");
@@ -276,6 +382,7 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
         return false;
     }
     m_newState->m_datastore->storeConfigs(*m_newState);
+    m_newState->storeConfigInfo();
     m_currentState.swap(m_newState);
     m_newState.reset();
 
@@ -342,6 +449,11 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
         return false;
     }
 
+    if (!loadCertificates())
+    {
+        HMLog(HM_LOG_CRITICAL, "Failed loading certificates");
+        return false;
+    }
     if(!m_newState->setupDaemonstate())
     {
         HMLog(HM_LOG_CRITICAL, "Failure Parsing Configs");
@@ -350,9 +462,9 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
         return false;
     }
     m_newState->restoreRunningCheckState(m_currentState);
-
     m_currentState.swap(m_newState);
     m_currentState->m_datastore->storeConfigs(*m_currentState);
+    m_currentState->storeConfigInfo();
     m_currentState->resheduleDNSChecks(m_newState, m_workQueue);
     m_currentState->resheduleHealthChecks(m_newState, m_workQueue);
     m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, false);
@@ -361,7 +473,6 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
     m_eventLoop->wakeupTracker();
     m_workQueue.cycleThreads();
     while(m_newState.use_count() > 1) {}
-
     // Load any results that were in flight
     m_currentState->restoreRunningCheckState(m_newState);
 
@@ -385,13 +496,6 @@ HMStateManager::startLogging(uint32_t lastLogClass, const string& lastLogPath, H
         case HM_LOG_PLUGIN_DEFAULT:
         case HM_LOG_PLUGIN_TEXT:
             newLog = new HMLogText();
-            break;
-        case HM_LOG_PLUGIN_STDOUT:
-            newLog = new HMLogStdout();
-            break;
-        case HM_LOG_PLUGIN_SYSLOG:
-            newLog = new HMLogSyslog();
-            break;
         }
 
         if(!newLog->initLogging(m_newState->getLogPath(), m_newState->getLogLevel(), true))
@@ -551,3 +655,12 @@ HMStateManager::setState(shared_ptr<HMState> debugState)
     m_currentState = debugState;
 }
 
+bool HMStateManager::isEnableRemoteQueryReply() const
+{
+    return m_enableRemoteQueryReply;
+}
+
+void HMStateManager::setEnableRemoteQueryReply(bool enableRemoteQueryReply)
+{
+    m_enableRemoteQueryReply = enableRemoteQueryReply;
+}

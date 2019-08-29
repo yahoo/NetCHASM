@@ -6,6 +6,7 @@
 #include "HMStateManager.h"
 #include "HMStorage.h"
 #include "HMWorkDNSLookupAres.h"
+#include "HMWorkHealthCheckRemote.h"
 #include "common.h"
 #include <unistd.h>
 
@@ -38,12 +39,21 @@ void TESTNAME::test_basic_datachecklist()
     ip.set("2001:0db8::0370:7334");
     set<HMIPAddress> ips, vip_ret;
     ips.insert(ip);
-    data_host.setCheckParams(HM_CHECK_HTTPS, HM_CHECK_PLUGIN_HTTP_CURL, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTPS);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.initDNSCache(cache, waitlist);
-    cache.getAddresses(host_name, HM_DUALSTACK_BOTH, vip_ret);
+    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    cache.getAddresses(host_name, HM_DUALSTACK_BOTH, dnsHostCheckT, vip_ret);
     check_list.checkNeeded(host_name, ip, data_host);
     cout<<check_list.printChecks(true);
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
@@ -58,8 +68,15 @@ void TESTNAME::test_basic_datachecklist()
                     "Host1\nCheck Type: https\tCheck Info: DummyCheckInfo\tPort: 53\tDual Stack: both\nCheck Timeout: 10000\nCheck TTL:30000\nNumber Check Retries: 0\nCheck Retry Delay: 0\nMeasurement Options: connect\nSmoothing Window: 10\nGroup Threshold: 20\nSlow Threshold: 20\nMax Flaps: 4\n\n\n"));
 
     //neg cases HM_CHECK_AUX_HTTP
-    data_host.setCheckParams(HM_CHECK_AUX_HTTP, (HM_CHECK_PLUGIN_CLASS)10, 53,
-    HM_DUALSTACK_BOTH, check_info);
+	hostGroup.setCheckType(HM_CHECK_AUX_HTTP);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -81,12 +98,21 @@ void TESTNAME::test_ip_dns_failed()
     string host_name = "Host1";
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
-    data_host.setCheckParams(HM_CHECK_HTTPS, HM_CHECK_PLUGIN_HTTP_CURL, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTPS);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_HTTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.initDNSCache(cache, waitlist);
-    cache.getAddresses(host_name, HM_DUALSTACK_BOTH, vip_ret);
+    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    cache.getAddresses(host_name, HM_DUALSTACK_BOTH, dnsHostCheckT, vip_ret);
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
     check_list.checkNeeded(host_name, ip, data_host));
 }
@@ -107,8 +133,16 @@ void TESTNAME::test_basic_healthPlugins_tcp()
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
     bool threadStatus = false;
-    data_host.setCheckParams(HM_CHECK_TCP, HM_CHECK_PLUGIN_TCP_RAW, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_TCP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_TCP_RAW);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -122,12 +156,166 @@ void TESTNAME::test_basic_healthPlugins_tcp()
     CPPUNIT_ASSERT(check_list.getCheckResult(allChecks[0], result));
 
     //neg cases
-    data_host.setCheckParams(HM_CHECK_TCP, (HM_CHECK_PLUGIN_CLASS)10, 53,
-    HM_DUALSTACK_BOTH, check_info);
+	hostGroup.setCheckType(HM_CHECK_TCP);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());    
+}
+
+void TESTNAME::test_basic_healthPlugins_remoteDisabled()
+{
+    HMDataHostCheck data_host;
+    HMDataCheckParams params;
+    HMDataCheckList check_list;
+    HMIPAddress ip;
+    set<HMIPAddress> ips;
+    ips.insert(ip);
+    HMWorkQueue queue;
+    vector<HMCheckHeader> allChecks;
+    unique_ptr<HMWork> work;
+    string host_name = "Host1";
+    string host_group = "HostGroup1";
+    string check_info = "DummyCheckInfo";
+    bool threadStatus = false;
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_FTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_FTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("RemoteRotation");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_TCP);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue, false);
+    CPPUNIT_ASSERT_EQUAL((uint32_t )2, queue.queueSize());
+    CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )work->m_hostCheck.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_PLUGIN_FTP_CURL,
+            (uint8_t )work->m_hostCheck.getCheckPlugin());
+    CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
+    HMWorkHealthCheckRemote* test = dynamic_cast<HMWorkHealthCheckRemote*>(work.get());
+    CPPUNIT_ASSERT(!test);
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )work->m_hostCheck.getCheckType());
+    check_list.getAllChecks(allChecks);
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )allChecks[0].m_hostCheck.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )allChecks[1].m_hostCheck.getCheckType());
+
+    //neg cases
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue);
+    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
+}
+
+
+void TESTNAME::test_basic_healthPlugins_remoteEnabled()
+{
+    HMDataHostCheck data_host;
+    HMDataCheckParams params;
+    HMDataCheckList check_list;
+    HMIPAddress ip;
+    set<HMIPAddress> ips;
+    ips.insert(ip);
+    HMWorkQueue queue;
+    vector<HMCheckHeader> allChecks;
+    unique_ptr<HMWork> work;
+    string host_name = "Host1";
+    string host_group = "HostGroup1";
+    string check_info = "DummyCheckInfo";
+    bool threadStatus = false;
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_FTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue, true);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_FTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("RemoteRotation");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_TCP);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue);
+    CPPUNIT_ASSERT_EQUAL((uint32_t )2, queue.queueSize());
+    CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )work->m_hostCheck.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_PLUGIN_FTP_CURL,
+            (uint8_t )work->m_hostCheck.getCheckPlugin());
+    CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
+    HMWorkHealthCheckRemote* test = dynamic_cast<HMWorkHealthCheckRemote*>(work.get());
+    CPPUNIT_ASSERT(test);
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )work->m_hostCheck.getCheckType());
+    check_list.getAllChecks(allChecks);
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+            (uint8_t )allChecks[0].m_hostCheck.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
+                (uint8_t )allChecks[1].m_hostCheck.getCheckType());
+
+    //neg cases
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
+    check_list.insertCheck(host_group, host_name, data_host, params, ips);
+    check_list.startCheck(host_name, ip, data_host);
+    check_list.queueCheck(host_name, ip, data_host, queue);
+    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
 void TESTNAME::test_basic_healthPlugins_ftp()
@@ -145,8 +333,16 @@ void TESTNAME::test_basic_healthPlugins_ftp()
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
     bool threadStatus = false;
-    data_host.setCheckParams(HM_CHECK_FTP, HM_CHECK_PLUGIN_FTP_CURL, 53,
-    HM_DUALSTACK_IPV6_ONLY, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_FTP_CURL);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -158,8 +354,15 @@ void TESTNAME::test_basic_healthPlugins_ftp()
     CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
             (uint8_t )allChecks[0].m_hostCheck.getCheckType());
     //neg cases
-    data_host.setCheckParams(HM_CHECK_FTP, (HM_CHECK_PLUGIN_CLASS)10, 53,
-    HM_DUALSTACK_BOTH, check_info);
+	hostGroup.setCheckType(HM_CHECK_FTP);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -181,8 +384,16 @@ void TESTNAME::test_basic_healthPlugins_dnsvc()
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
     bool threadStatus = false;
-    data_host.setCheckParams(HM_CHECK_DNSVC, HM_CHECK_PLUGIN_DNS_ARES, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_DNSVC);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_DNS_ARES);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -195,8 +406,15 @@ void TESTNAME::test_basic_healthPlugins_dnsvc()
             (uint8_t )allChecks[0].m_hostCheck.getCheckType());
 
     //neg cases
-    data_host.setCheckParams(HM_CHECK_DNSVC, (HM_CHECK_PLUGIN_CLASS)10, 53,
-    HM_DUALSTACK_BOTH, check_info);
+	hostGroup.setCheckType(HM_CHECK_DNSVC);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -219,8 +437,16 @@ void TESTNAME::test_basic_healthPlugins_none()
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
     bool threadStatus = false;
-    data_host.setCheckParams(HM_CHECK_NONE, HM_CHECK_PLUGIN_DEFAULT, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_NONE);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_DEFAULT);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -233,8 +459,15 @@ void TESTNAME::test_basic_healthPlugins_none()
             (uint8_t )allChecks[0].m_hostCheck.getCheckType());
 
     //neg cases
-    data_host.setCheckParams(HM_CHECK_NONE, (HM_CHECK_PLUGIN_CLASS)10, 53,
-    HM_DUALSTACK_BOTH, check_info);
+	hostGroup.setCheckType(HM_CHECK_NONE);
+	hostGroup.setCheckPlugin((HM_CHECK_PLUGIN_CLASS)10);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
@@ -255,12 +488,20 @@ void TESTNAME::test_basic_healthPlugins_dns()
     string host_name = "Host1";
     string host_group = "HostGroup1";
     string check_info = "DummyCheckInfo";
-    data_host.setCheckParams(HM_CHECK_DEFAULT, HM_CHECK_PLUGIN_DEFAULT, 53,
-    HM_DUALSTACK_BOTH, check_info);
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_DEFAULT);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_DEFAULT);
+	hostGroup.setPort(53);
+	hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+	hostGroup.setCheckInfo(check_info);
+	hostGroup.setRemoteCheck("");
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
-    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
+    CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
 }
 
 void TESTNAME::test_add_hostgroup()
@@ -283,4 +524,29 @@ void TESTNAME::test_add_hostgroup()
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, neg_check_list.addHostGroup(group2));
     CPPUNIT_ASSERT_EQUAL((group1 < group2), true);
     CPPUNIT_ASSERT_EQUAL((group2 < group2), false);
+}
+
+
+void TESTNAME::test_hostgroup_distributed_fallback()
+{
+    HMDataHostGroup group1("Group1");
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_NONE);
+    group1.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_LOCAL);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_LOCAL);
+    group1.unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK_LOCAL);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_NONE);
+    group1.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_REMOTE);
+    group1.unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_NONE);
+    group1.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_LOCAL);
+    group1.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_BOTH);
+    group1.unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_LOCAL);
+    group1.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    group1.unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK_LOCAL);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_REMOTE);
+    group1.unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK_REMOTE);
+    CPPUNIT_ASSERT_EQUAL(group1.getDistributedFallback(), HM_DISTRIBUTED_FALLBACK_NONE);
 }

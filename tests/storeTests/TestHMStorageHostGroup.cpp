@@ -96,8 +96,8 @@ TESTNAME::test_HMStorageHostGroup_ReadOnly()
     HMGroupCheckUpdate update8(hostGroup2, hostname2_2, address2_2_2, result2_2_2);
 
     HMDataCheckResult testresult;
-
-    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap);
+    HMDNSCache dnsCache;
+    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap, &dnsCache);
 
     storageHost->test_manual_add(update1);
     storageHost->test_manual_add(update2);
@@ -155,9 +155,10 @@ TESTNAME::test_HMStorageHostGroup_ReadWrite()
     string hostname1_2 = "test1_2.hm.com";
     string hostname2_1 = "test2_1.hm.com";
     string hostname2_2 = "test2_2.hm.com";
-
+    dataHostGroup1.setDualStack(HM_DUALSTACK_BOTH);
     dataHostGroup1.addHost(hostname1_1);
     dataHostGroup1.addHost(hostname1_2);
+    dataHostGroup2.setDualStack(HM_DUALSTACK_BOTH);
     dataHostGroup2.addHost(hostname2_1);
     dataHostGroup2.addHost(hostname2_2);
 
@@ -214,8 +215,39 @@ TESTNAME::test_HMStorageHostGroup_ReadWrite()
 
     HMDataCheckResult testresult;
     vector<HMGroupCheckResult> results;
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
+    set<HMIPAddress> addresses;
+    addresses.insert(address1_1_1);
+    dnsCache.updateDNSEntry(hostname1_1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address1_1_2);
+    dnsCache.updateDNSEntry(hostname1_1, dnsHostCheckv6, addresses);
 
-    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap);
+    addresses.clear();
+    addresses.insert(address1_2_1);
+    dnsCache.updateDNSEntry(hostname1_2, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address1_2_2);
+    dnsCache.updateDNSEntry(hostname1_2, dnsHostCheckv6, addresses);
+
+    addresses.clear();
+    addresses.insert(address2_1_1);
+    dnsCache.updateDNSEntry(hostname2_1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address2_1_2);
+    dnsCache.updateDNSEntry(hostname2_1, dnsHostCheckv6, addresses);
+
+    addresses.clear();
+    addresses.insert(address2_2_1);
+    dnsCache.updateDNSEntry(hostname2_2, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address2_2_2);
+    dnsCache.updateDNSEntry(hostname2_2, dnsHostCheckv6, addresses);
+
+
+    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap, &dnsCache);
 
     storageHost->openStore(false);
 
@@ -423,15 +455,14 @@ TESTNAME::test_HMStorageHostGroup_Restore()
     HMGroupCheckUpdate update8(hostGroup2, hostname2_2, address2_2_2, result2_2_2);
 
     HMDataCheckResult testresult;
-
-    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap);
+    HMDNSCache* dnsCache = new HMDNSCache();
+    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap, dnsCache);
     HMDataCheckList* checkList = new HMDataCheckList();
     checkList->insertCheck(hostGroup1, hostname1_1, hostCheck, checkParams1, ips1_1);
     checkList->insertCheck(hostGroup1, hostname1_2, hostCheck, checkParams1, ips1_2);
     checkList->insertCheck(hostGroup2, hostname2_1, hostCheck, checkParams2, ips2_1);
     checkList->insertCheck(hostGroup2, hostname2_2, hostCheck, checkParams2, ips2_2);
 
-    HMDNSCache* dnsCache = new HMDNSCache();
     HMAuxCache auxCache;
     storageHost->test_manual_add(update1);
     storageHost->test_manual_add(update2);
@@ -443,58 +474,58 @@ TESTNAME::test_HMStorageHostGroup_Restore()
     storageHost->test_manual_add(update8);
 
     storageHost->openStore(false);
-
+    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES);
     storageHost->initResultsFromBackend(*checkList, *dnsCache, auxCache);
     set<HMIPAddress> vip_ret;
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_1_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_1_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_1_2) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_1_2) != vip_ret.end());
     vip_ret.clear();
 
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_2_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_2_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_2_2) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address1_2_2) != vip_ret.end());
     vip_ret.clear();
 
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_1_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_1_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_1_2) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_1_2) != vip_ret.end());
     vip_ret.clear();
 
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_2_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_2_1) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_2_2) != vip_ret.end());
     vip_ret.clear();
-    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address2_2_2) != vip_ret.end());;
 
     std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>> results;
@@ -545,7 +576,7 @@ TESTNAME::test_HMStorageHostGroup_Restore()
 
     // Test an empty hostGroup list
     HMDataHostGroupMap emptyHostGroupMap;
-    storageHost = new TestStorageHostGroup(&emptyHostGroupMap);
+    storageHost = new TestStorageHostGroup(&emptyHostGroupMap, dnsCache);
     checkList = new HMDataCheckList();
     dnsCache = new HMDNSCache();
 
@@ -565,37 +596,37 @@ TESTNAME::test_HMStorageHostGroup_Restore()
 
     // Now nothing should be restored
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname1_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_1, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV4_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV6_ONLY, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_IPV6_ONLY, dnsHostCheck, vip_ret));
     vip_ret.clear();
-    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, vip_ret));
+    CPPUNIT_ASSERT(!dnsCache->getAddresses(hostname2_2, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));
 
     CPPUNIT_ASSERT(!checkList->getCheckResults(hostname1_1, hostCheck, address1_1_1, results));
     CPPUNIT_ASSERT(!checkList->getCheckResults(hostname1_1, hostCheck, address1_1_2, results));
@@ -611,7 +642,7 @@ TESTNAME::test_HMStorageHostGroup_Restore()
     delete checkList;
     delete dnsCache;
 
-    storageHost = new TestStorageHostGroup(&hostGroupMap);
+    storageHost = new TestStorageHostGroup(&hostGroupMap, dnsCache);
     checkList = new HMDataCheckList();
     dnsCache = new HMDNSCache();
 
@@ -711,8 +742,8 @@ TESTNAME::test_HMStorageHostGroup_InternalFunctions()
     HMGroupCheckUpdate update8(hostGroup2, hostname2_2, address2_2_2, result2_2_2);
 
     HMDataCheckResult testresult;
-
-    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap);
+    HMDNSCache dnsCache;
+    TestStorageHostGroup* storageHost = new TestStorageHostGroup(&hostGroupMap, &dnsCache);
 
     storageHost->test_manual_add(update1);
     storageHost->test_manual_add(update2);

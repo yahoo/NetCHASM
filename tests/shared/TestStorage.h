@@ -9,8 +9,8 @@
 class TestStorage : public HMStorage
 {
 public:
-    TestStorage(HMDataHostGroupMap* hostGroupMap) :
-            HMStorage(hostGroupMap){ m_commitCalls = 0;}
+    TestStorage(HMDataHostGroupMap* hostGroupMap, HMDNSCache *dnsCache) :
+            HMStorage(hostGroupMap, dnsCache){ m_commitCalls = 0;}
 
     virtual ~TestStorage() {};
 

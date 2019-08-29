@@ -12,6 +12,20 @@
 
 class HMState;
 
+//! Class containing info of configuration outside of hostgroup info.
+/*!
+   master-slave params
+   indirect host support to allow us to map a host check to another host check.
+ */
+class HMConfigParams
+{
+public:
+    HMConfigParams() : m_masterMode(false) {}
+    bool m_masterMode;
+    //! Remote Domain-Master information
+    std::map<std::string, std::string> m_remoteChecks;
+    std::map<std::string, std::string> m_indirectHost;
+};
 //! Base class for all configuration parsing types. Derive a new config parser from this class.
 /*!
    Base class for configuraiton parsing.
@@ -32,27 +46,30 @@ public:
          The function used to parse the file based on the type of config file.
          \param fileName the file to parse.
          \param state the state data structure to fill from the config information.
+         \param class to fill info of config outside of Host-Groups
          \return the number of config parsing errors. Zero means a successful load.
      */
-    static uint32_t parseConfigFile(const std::string& fileName, HMState& state);
+    static uint32_t parseConfigFile(const std::string& fileName, HMState& state, HMConfigParams& configParam);
 
     //! Parse the entire given directory for configs.
     /*!
         Parse the given directory loading all the config files.
         \param path the config directory path to load.
         \param state the configuration state to use when loading the configs.
+        \param class to fill info of config outside of Host-Groups
         \return the number of errors encountered while loading. Zero indicates no problems.
      */
-    static uint32_t parseDirectory(const std::string& path, HMState& state);
+    static uint32_t parseDirectory(const std::string& path, HMState& state, HMConfigParams& configParams);
 
     //! Main parse config function.
     /*!
      The function used to parse a config file.
      \param fileName the file to parse.
      \param state the state data structure to fill from the config information.
+     \param class to fill info of config outside of Host-Groups
      \return the number of config parsing errors. Zero means a successful load.
      */
-    virtual uint32_t parseConfig(const std::string& fileName, HMState& state) = 0;
+    virtual uint32_t parseConfig(const std::string& fileName, HMState& state, HMConfigParams& configParams) = 0;
 
     //! Write the internal config state back to disk.
     /*!

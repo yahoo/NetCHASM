@@ -1,0 +1,25 @@
+syntax = "proto3";
+import "netchasm/ipaddress.proto";
+package netchasm;
+message DataHostGroup {
+    uint32 measurementOptions = 1;
+    uint32 dualstack = 2;
+    uint32 checkType = 3;
+    uint32 port = 4;
+    uint32 numCheckRetries = 5;
+    uint32 checkRetryDelay = 6;
+    uint32 smoothingWindow = 7;
+    uint32 groupThreshold = 8;
+    uint32 slowThreshold = 9;
+    uint32 maxFlaps = 10;
+    uint64 checkTimeout = 11;
+    uint64 checkTTL = 12;
+    uint32 flapThreshold = 13;
+    uint32 passthroughInfo = 14;
+    string checkInfo = 15;
+    repeated string hosts = 16;
+    repeated string hostgroups = 17;
+    IPAddress sourceAddress = 18;
+    uint32 TOSValue = 19;
+    uint32 dnsType = 20;
+}

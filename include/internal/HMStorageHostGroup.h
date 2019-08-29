@@ -41,8 +41,8 @@
 class HMStorageHostGroup : public HMStorage
 {
 public:
-    HMStorageHostGroup(HMDataHostGroupMap* hostGroupMap) :
-        HMStorage(hostGroupMap) {}
+    HMStorageHostGroup(HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
+        HMStorage(hostGroupMap, dnsCache) {}
 
     virtual ~HMStorageHostGroup() {};
 

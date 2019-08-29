@@ -6,6 +6,7 @@
 #include <string>
 #include <cstdint>
 
+#include "HMSocketUtilTCP.h"
 #include "HMWorkHealthCheck.h"
 
 // LCOV_EXCL_START; Tested in functional testing

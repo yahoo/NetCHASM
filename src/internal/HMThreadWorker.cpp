@@ -46,10 +46,7 @@ HMThreadWorker::runThread()
             m_idle = true;
         }
     }
-    if(m_workState.m_aresLoaded)
-    {
-        ares_destroy(m_workState.m_channel);
-    }
+    m_workState.destroyAres();
 }
 
 void

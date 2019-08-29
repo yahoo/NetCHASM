@@ -1,0 +1,14 @@
+syntax = "proto3";
+import "netchasm/datacheckresult.proto";
+import "netchasm/datahostgroup.proto";
+
+package netchasm;
+message HostGroupCheckResult {
+    string hostname = 1;
+    DataCheckResult hostResults = 2;
+}
+
+message HostGroupInfo {
+    DataHostGroup hostGroup = 1;
+    repeated HostGroupCheckResult groupCheckResult = 2;
+}

@@ -40,6 +40,13 @@ public:
      */
     bool loadDaemonState(const std::string& masterConfig, HM_LOG_LEVEL logLevel);
 
+    //! Load the certificate and key files
+    /*!
+         Load the certificate files and key files.
+         \return true on success.
+     */
+    bool loadCertificates();
+
     //! Reaload the Daemon.
     /*!
          Trigger a reload of the Daemon state. The new state will re-parse the master and health check configs.
@@ -192,6 +199,12 @@ public:
      */
     void setState(std::shared_ptr<HMState> debugState);
 
+    //! check is remote query reply is enabled
+    bool isEnableRemoteQueryReply() const;
+
+    //! set remote query reply flag
+    void setEnableRemoteQueryReply(bool enableRemoteQueryReply);
+
     //! The Work Queue
     HMWorkQueue m_workQueue;
 
@@ -210,7 +223,8 @@ private:
 
     std::shared_ptr<HMState> m_currentState;
     std::shared_ptr<HMState> m_newState;
-    std::unique_ptr<HMCommandListenerBase> m_listener;
+    std::vector<std::unique_ptr<HMCommandListenerBase>> m_listener;
+    bool m_enableRemoteQueryReply;
 };
 
 #endif /* HMSTATEMANAGER_H_ */

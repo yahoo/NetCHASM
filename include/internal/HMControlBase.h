@@ -9,10 +9,14 @@
 #include "HMConstants.h"
 #include "HMLogBase.h"
 #include "HMStorage.h"
+#include "HMDataPacking.h"
+#include "HMControlLinuxSocketClient.h"
+#include "HMSocketUtilBase.h"
 
 const std::string HM_CMD_RELOAD = "reload";
 const std::string HM_CMD_HOSTGROUP = "hostgroup";
 const std::string HM_CMD_LOADFB = "loadfb";
+const std::string HM_CMD_LOADFBIP = "loadfbip";
 const std::string HM_CMD_THREADINFO = "threadinfo";
 const std::string HM_CMD_WORKQUEUEINFO = "workqueueinfo";
 const std::string HM_CMD_SCHDQUEUEINFO = "schdqueueinfo";
@@ -20,6 +24,8 @@ const std::string HM_CMD_SETHOSTSTATUS = "host_set";
 const std::string HM_CMD_HOSTGROUPLIST = "hostgrouplist";
 const std::string HM_CMD_HOSTLIST = "hostlist";
 const std::string HM_CMD_HOSTCHECK = "hostcheck";
+const std::string HM_CMD_HOSTRESULTS = "hostresults";
+const std::string HM_CMD_HOSTIPRESULTS = "hostipresults";
 const std::string HM_CMD_HOSTGROUPPARAMS = "hostgroupparams";
 const std::string HM_CMD_HOSTSCHDINFO = "hostschdinfo";
 const std::string HM_CMD_HEALTHCHECK = "healthcheck";
@@ -39,159 +45,172 @@ const std::string HM_CMD_GETWORKPERTHREAD = "getworkperthreadratio";
 const std::string HM_CMD_SETWORKPERTHREAD = "setworkperthreadratio";
 const std::string HM_CMD_SETRECYCLE = "setrecycle";
 const std::string HM_CMD_GETRECYCLE = "getrecycle";
+const std::string HM_CMD_SETREMOTEQUERY = "setremotequery";
+const std::string HM_CMD_GETREMOTEQUERY = "getremotequery";
+const std::string HM_CMD_ADDDNSADDRESSES = "adddnsaddresses";
+const std::string HM_CMD_REMOVEDNSADDRESSES = "removednsaddresses";
+const std::string HM_CMD_GETDNSADDRESSES = "getdnsaddresses";
+
 
 class HMStateManager;
-
-typedef struct hm_threadInfo_s
-{
-    uint64_t numThreads;
-    uint64_t numIdleThreads;
-} hm_threadInfo_t;
-
-typedef struct hm_dns_sched_s
-{
-    bool hasv4;
-    bool hasv6;
-    uint64_t v4LastCheckTime;
-    uint64_t v4NextCheckTime;
-    HM_WORK_STATE v4State;
-    uint64_t v6LastCheckTime;
-    uint64_t v6NextCheckTime;
-    HM_WORK_STATE v6State;
-    uint32_t count;
-} hm_dns_sched_t;
-
-typedef struct hm_hc_sched_s
-{
-    uint8_t     addrtype;
-    union
-    {
-        in_addr_t s_addr;
-        struct in6_addr s_addr6;
-    } addr;
-    uint64_t lastCheckTime;
-    uint64_t nextCheckTime;
-    HM_WORK_STATE state;
-} hm_hc_sched_t;
-
-typedef struct hm_nameinfo_s
-{
-    int      ni_numhost;
-    bool     ni_check_status;
-    int      ni_errno;
-    size_t      ni_size;
-    unsigned int    ni_ttl;
-    unsigned int    ni_group_threshold;
-    unsigned int    ni_mode;
-} hm_nameinfo_sock_t;
-
-typedef struct hm_hostinfo2_s
-{
-    uint16_t        hi_size;    /* size of struct */
-    uint8_t     pad[1];
-    uint8_t     hi_addrtype;    /* address family */
-    union {
-    in_addr_t   s_addr;     /* v4 host address */
-    struct in6_addr s_addr6;    /* v6 host address */
-    }           hi_addr;
-    unsigned int    hi_status;  /* current status (see above) */
-    unsigned int    hi_reason;  /* failure reason code */
-    unsigned long   hi_connect_rt;  /* time to connect socket on last check (usec) */
-    unsigned long   hi_smoothed_connect_rt; /* smoothed connect time */
-    unsigned long   hi_total_rt;    /* time to receive response on last check (us) */
-    unsigned long long  hi_statustime;  /* timeofday when host last changed state */
-    char        hi_hostname[0]; /* hostname */
-} hm_hostinfo2_t;
-
-typedef struct hm_loadfbfile_s
-{
-    unsigned int    file_size;
-    char        file_buffer[0];
-} hm_loadfbfile_t;
-
-typedef struct hm_loadfbdata_s
-{
-    unsigned int    ld_size;
-    unsigned int    ld_count;
-    unsigned int    ld_ttl;
-    unsigned int    ld_reserved0;
-    unsigned long long  ld_updatetime;
-    int      ni_errno;
-    bool     ni_check_status;
-    char        ld_filecontents[0];
-} hm_loadfbdata_t;
-
-typedef struct hm_hostcheck_s
-{
-    int32_t errnum;
-    bool    check_status;
-    uint32_t    status;  /* current status (see above) */
-    uint32_t    reason;  /* failure reason code */
-    uint64_t    connect_rt;  /* time to connect socket on last check (usec) */
-    uint64_t    smoothed_connect_rt; /* smoothed connect time */
-    uint64_t    total_rt;    /* time to receive response on last check (us) */
-    uint64_t    statustime;  /* timeofday when host last changed state */
-} hm_hostcheck_t;
-
-typedef struct hm_grpcheckparams_s
-{
-    bool    check_status;
-    HM_CHECK_TYPE checkType;
-    uint16_t port;
-    uint8_t dualStack;
-    uint32_t checkInfoSize;
-    uint32_t smoothingWindow;
-    uint32_t maxFlaps;
-    uint32_t flapThreshold;
-    uint8_t numCheckRetries;
-    uint32_t checkRetryDelay;
-    uint32_t groupThreshold;
-    uint32_t slowThreshold;
-    uint64_t checkTimeout;
-    uint64_t checkTTL;
-    uint8_t mode;
-    char    check_info[0];
-} hm_grpcheckparams_t;
-
+//! Class to handle external communications
 class HMCommandListenerBase
 {
  public:
-  HMCommandListenerBase(std::string& socketPath, HMStateManager& stateManager);
+  HMCommandListenerBase(HMStateManager& stateManager);
   virtual ~HMCommandListenerBase() {}
 
   HMCommandListenerBase& operator=(const HMCommandListenerBase&) = delete;        // Disallow copying
   HMCommandListenerBase(const HMCommandListenerBase&) = delete;
 
+  //! Base function to initialize sockets
   virtual void init();
-  void acceptThread();
 
+  //! Base function to handle connections
   virtual void run() = 0;
+  //! Base function to shutdown sockets
   virtual void listernerShutDown() = 0;
-  virtual void responseMessage(int, const void*, size_t) = 0;
-  virtual void responseMessageVarLen(int, const char*, size_t) = 0;
 
+  //! Convert the string message to HM_COMMAND_TASKS enum
   static HM_COMMAND_TASKS convert(const std::string& task);
-  void handleCommands(std::string& command, int clientSock);
-  void shutdown();
-  void unlinkSocket(std::string& socketPath);
+
+  /*!
+       Called to handle socket commands.
+       \param command received.
+       \param Utility base class to send and receive messages.
+  */
+  void handleCommands(std::string& command, HMSocketUtilBase& utilBase);
+
+  //! function to shutdown base socket
+  void shutDown();
+
+  //! function to throw exception
   void throwException(std::string errStr);
 
+  /*!
+       Called to get the host group in for a particular hostgroup.
+       \param name of hostgroup.
+       \param HMDataHostGroup to store results.
+       \return true if results are found.
+  */
   bool getHostGroupInfo(const std::string& name, HMDataHostGroup& group);
-  bool getHostSchdInfo(const std::string& hostgroup, std::string& host, hm_dns_sched_t& dns, std::vector<hm_hc_sched_t>& hcs);
-  uint32_t getHostGroupResults(const std::string& name, std::vector<HMGroupCheckResult>& results);
-  void createHostGroup(char* buf, size_t buflen, std::string& hostGroupName);
-  std::unique_ptr<char[]> getloadfbdata (std::string rotationName, uint32_t& buflen);
-  //host name, host ip, forcehostdown
-  bool setHostStatus (const std::string& hostGroupName, const std::string& host, bool forceHostStatus);
-  void getAllHostGroupNames(std::string& groupNames);
-  void getHosts(const std::string& hostGroupName, std::string& hostNames);
-  void getHostCheck(const std::string& hostGroupName, const std::string& hostName, hm_hostcheck_t* hostcheck);
-  std::unique_ptr<char[]> getHostGroupParams(std::string& hostGroupName, uint32_t& buflen);
 
+  /*!
+       Called to get the packed scheduling for a particular host in hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the hostgroup.
+       \param name of the host.
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+  std::unique_ptr<char[]> getHostSchdInfo(std::unique_ptr<HMDataPacking>& datapacking, const std::string& hostgroup,
+            std::string& host, uint64_t& buflen);
+
+  /*!
+       Called to get the health check results for a particular hostgroup.
+       \param name of hostgroup.
+       \param vector to store results.
+       \return true if results are found.
+    */
+  uint32_t getHostGroupResults(const std::string& name, std::vector<HMGroupCheckResult>& results);
+
+  /*!
+       Called to get the packed health check results for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the hostgroup
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+  std::unique_ptr<char[]> createHostGroup(std::unique_ptr<HMDataPacking>& datapacking, std::string& hostGroupName, uint64_t& buflen);
+
+  /*!
+       Called to get the packed load feedback data for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the hostgroup
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+  std::unique_ptr<char[]> getloadfbdata (std::unique_ptr<HMDataPacking>& datapacking, std::string& rotationName, uint64_t& buflen);
+
+  /*!
+       Called to get the packed load feedback data for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the host
+       \param source URL of the hostgroup
+       \param ipaddress of the host
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+  std::unique_ptr<char[]> getloadfbdata (std::unique_ptr<HMDataPacking>& dataPacking, std::string& hostName, std::string& sourceURL, HMIPAddress& address, uint64_t& buflen);
+
+  /*!
+       Called to set status up/down for a particular host in a hostgroup.
+       \param name of hostgroup.
+       \param name of the host.
+       \param status true=up, false=down.
+       \return true if results are found.
+    */
+
+  bool setHostStatus (const std::string& hostGroupName, const std::string& host, bool forceHostStatus);
+
+  /*!
+       Called to get all the hostgroups
+       \param vector to store results(hostgroup names).
+   */
+  void getAllHostGroupNames(std::vector<std::string>& groupNames);
+
+  /*!
+     Called to get all the hosts in a hostgroup.
+     \param name of hostgroup.
+     \param vector to store results(host names).
+  */
+  void getHosts(const std::string& hostGroupName, std::vector<std::string>& hostNames);
+
+  /*!
+     Called to get the health check results for a particular host in a hostgroup.
+     \param name of hostgroup.
+     \param name of the host.
+     \param vector to store results.
+     \return true if results are found.
+  */
+  bool getHostCheck(const std::string& hostGroupName, const std::string& hostName, std::vector<HMDataCheckResult>& hostResults);
+
+  /*!
+     Called to get the packed health check results for a particular host and datahostcheck.
+     \param unique ptr of the data packing class.
+     \param name of the host
+     \param datahostcheck of the host
+     \param size of the packed data.
+     \return unique pointer containing the data.
+  */
+  std::unique_ptr<char[]> getHostResults(std::unique_ptr<HMDataPacking>& datapacking, const std::string& hostName, HMDataHostCheck& hostCheck, uint64_t& dataSize);
+
+  /*!
+     Called to get the packed health check results for a particular host, ip address and datahostcheck.
+     \param unique ptr of the data packing class.
+     \param name of the host
+     \param ip address of the host
+     \param datahostcheck of the host
+     \param size of the packed data.
+     \return unique pointer containing the data.
+  */
+  std::unique_ptr<char[]> getHostResults(std::unique_ptr<HMDataPacking>& dataPacking, const std::string& hostName, const HMIPAddress& address, HMDataHostCheck& hostCheck, uint64_t& dataSize);
+
+  //! clean the handler thread after communication completes
   void cleanHandlerThreads();
 
+  /*!
+       Called to validate the received command.
+       \param command received.
+       \return true is successful.
+   */
   static bool isValidCommand(const std::string& strCommand);
 
+  /*!
+       Called to tokenize the command to individual tokens.
+       \param command message.
+       \param tokens extracted from the command.
+   */
   void tokenize(std::string& command, std::vector<std::string>& tokens);
 
   // This object will be valid during the lifetime of the command listener
@@ -202,11 +221,7 @@ class HMCommandListenerBase
   std::mutex m_exceptionMutex;
   std::vector<std::thread> m_handlerThreads;
   std::map<std::thread::id,bool> m_handlerThreadsStatus;
-  int m_internalSocketClient;
-  int m_internalSocketServer;
-  int m_internalSocketSClient;
-  std::string m_internalSocketPath;
-  std::string m_socketPath;
+  int m_pipesfd[2];
 };
 
 #endif /* HMCOMMANDLISTENERBASE_H */
