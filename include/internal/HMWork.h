@@ -4,7 +4,9 @@
 #define HMWORK_H_
 
 #include <thread>
+#ifdef USE_ARES
 #include "ares.h"
+#endif
 
 #include "HMDataCheckParams.h"
 #include "HMDataHostCheck.h"
@@ -28,6 +30,7 @@ class HMDNSCache;
 class HMWorkState
 {
 public:
+    #ifdef USE_ARES
     ares_channel m_channel;
     bool m_aresLoaded;
 
@@ -38,6 +41,7 @@ public:
     HMWorkState(ares_channel channel, bool aresLoaded) :
         m_channel(channel),
         m_aresLoaded(aresLoaded) {};
+    #endif
 
     //! Reload the state. Used during a reload to re-init libraries such as Ares that are init once.
     /*!

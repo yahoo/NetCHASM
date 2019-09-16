@@ -7,7 +7,9 @@
 #include "HMThreadWorker.h"
 #include "HMWork.h"
 #include "HMWorkDNSLookup.h"
+#ifdef USE_ARES 
 #include "HMWorkDNSLookupAres.h"
+#endif
 #include "HMWorkHealthCheck.h"
 #include "HMWorkHealthCheckCurl.h"
 #include "HMLogBase.h"

@@ -1,7 +1,9 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include <chrono>
+#ifdef USE_ARES 
 #include "ares.h"
+#endif
 
 #include "HMDataHostGroup.h"
 #include "HMDNSLookup.h"

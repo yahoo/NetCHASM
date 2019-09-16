@@ -10,7 +10,11 @@ using namespace std;
 HMHashMD5::HMHashMD5() :
                 finalized(false)
 {
+     #if OPENSSL_VERSION_NUMBER < 0x10100000L
+     ctx = EVP_MD_CTX_create();
+     #else 
      ctx = EVP_MD_CTX_new();
+     #endif 
 }
 
 bool 
@@ -63,5 +67,9 @@ HMHashMD5::size() const
 HMHashMD5::~HMHashMD5()
 {
     finalized = false;
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    EVP_MD_CTX_destroy(ctx);
+    #else 
     EVP_MD_CTX_free(ctx);
+    #endif 
 }
