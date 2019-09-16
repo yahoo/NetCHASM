@@ -17,12 +17,14 @@ foreach( file  ${PROTO})
     set (SOURCES ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/${name})
     add_custom_command(
 	OUTPUT  ${CMAKE_CURRENT_SOURCE_DIR}/${name}
-	COMMAND ${PROTOBUF_PATH}/bin/protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR} ${file}
-	COMMAND ${PROTOBUF_PATH}/bin/protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR} --python_out=${CMAKE_SOURCE_DIR}/api ${file}
+        COMMAND ${PROTOBUF_PATH}/bin/protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR} 
+        --cpp_out=${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/${file}
+        COMMAND ${PROTOBUF_PATH}/bin/protoc --proto_path=${CMAKE_CURRENT_SOURCE_DIR} 
+        --python_out=${CMAKE_SOURCE_DIR}/api ${CMAKE_CURRENT_SOURCE_DIR}/${file}
 	DEPENDS ${file}
      )
 
-endforeach( file ${PROTOS} )
+endforeach( file ${PROTO} )
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CPP_FLAGS "-Wall -Wextra -Wchkp -Wfloat-equal -Wl,--copy-dt-needed-entries -Wl,--as-needed -Wl,--no-undefined")

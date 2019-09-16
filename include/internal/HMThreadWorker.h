@@ -3,8 +3,10 @@
 #ifndef INCLUDES_HMTHREADWORKER_H_
 #define INCLUDES_HMTHREADWORKER_H_
 
+#ifdef USE_ARES
+#include <ares.h> 
+#endif 
 #include <cstdint>
-#include <ares.h>
 #include <thread>
 #include <atomic>
 

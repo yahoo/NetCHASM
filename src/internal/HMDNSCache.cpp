@@ -8,7 +8,9 @@
 #include "HMConstants.h"
 #include "HMWork.h"
 #include "HMWorkDNSLookup.h"
+#ifdef USE_ARES
 #include "HMWorkDNSLookupAres.h"
+#endif
 #include "HMWorkDNSLookupStatic.h"
 #include "HMLogBase.h"
 #include "HMStorage.h"
