@@ -6,7 +6,9 @@
 
 #include "HMState.h"
 #include "HMConfigParserYaml.h"
+#ifdef USE_MDBM
 #include "HMStorageHostGroupMDBM.h"
+#endif
 #include "HMStorageHostText.h"
 #include "HMLogBase.h"
 
