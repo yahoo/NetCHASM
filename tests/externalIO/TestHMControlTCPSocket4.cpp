@@ -35,7 +35,7 @@ void TESTNAME::setUp()
     remove(hmConfig.c_str());
 
     setupCommon();
-    string hostGroupName = "test.healthmon.net";
+    string hostGroupName = "test.netchasm.net";
     HMAuxInfo auxInfo;
     HMAuxInfo auxInfo1;
     HMAuxInfo auxInfo2;
@@ -263,7 +263,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master3.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -280,7 +280,7 @@ void TESTNAME::test_cmdlstnr1()
     address.set(ipaddr);
     HMAPIIPAddress addressv6;
     addressv6.set(ipaddr1);
-    string hostGroupName = "test.healthmon.net";
+    string hostGroupName = "test.netchasm.net";
     vector<HMAPIAuxInfo> auxInfos;
     CPPUNIT_ASSERT(socketAPI.getLoadFeedback(hostGroupName, auxInfos));
     CPPUNIT_ASSERT_EQUAL(2, (int)auxInfos.size());
@@ -316,7 +316,7 @@ void TESTNAME::test_cmdlstnr1()
 void TESTNAME::test_cmdlstnr2()
 {
     HMControlTCPSocketClient socketAPI(server, port);
-    string hostGroupName = "dummy.healthmon.net";
+    string hostGroupName = "dummy.netchasm.net";
     vector<HMAPIAuxInfo> auxInfos;
     CPPUNIT_ASSERT(!socketAPI.getLoadFeedback(hostGroupName, auxInfos));
 }

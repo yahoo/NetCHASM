@@ -17,6 +17,7 @@
 #include "HMWorkHealthCheckRemote.h"
 #include "HMWorkHealthCheckRemoteTLS.h"
 #include "HMWorkHealthCheckTCPS.h"
+#include "HMWorkMarkFetchCurl.h"
 using namespace std;
 
 HM_SCHEDULE_STATE
@@ -229,6 +230,7 @@ HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDat
                 return;
             }
             break;
+
         case HM_CHECK_AUX_HTTP:
         case HM_CHECK_AUX_HTTPS:
         case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
@@ -238,6 +240,24 @@ HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDat
             case HM_CHECK_PLUGIN_DEFAULT:
                 healthCheck = make_unique<HMWorkAuxFetchCurl>(
                         HMWorkAuxFetchCurl(hostname, ip, check));
+                break;
+            default:
+                HMLog(HM_LOG_ERROR,
+                        "[CORE] Invalid Check Type Plugin for %s CheckType",
+                        printCheckType(check.getCheckType()).c_str());
+                return;
+            }
+            break;
+
+        case HM_CHECK_MARK_HTTP:
+        case HM_CHECK_MARK_HTTPS:
+        case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+            switch (check.getCheckPlugin())
+            {
+            case HM_CHECK_PLUGIN_DEFAULT:
+            case HM_CHECK_PLUGIN_MARK_CURL:
+                healthCheck = make_unique<HMWorkMarkFetchCurl>(
+                        HMWorkMarkFetchCurl(hostname, ip, check));
                 break;
             default:
                 HMLog(HM_LOG_ERROR,
@@ -380,13 +400,13 @@ HMDataCheckList::storeCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIP
 }
 
 void
-HMDataCheckList::storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, string  auxData, HMStorage* store, HMAuxCache& aux)
+HMDataCheckList::storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, string  auxData, HMStorage* store, HMAuxCache& aux, HM_AUX_DATA_TYPE auxDataType)
 {
 
     if(work->m_reason == HM_REASON_SUCCESS)
     {
         // Store a local copy of the Aux data
-        aux.storeAuxInfo(work->m_hostname, hostCheck.getCheckInfo(), address, auxData);
+        aux.storeAuxInfo(work->m_hostname, hostCheck.getCheckInfo(), address, auxData, auxDataType);
     }
 
     // Commit it to the back store as well

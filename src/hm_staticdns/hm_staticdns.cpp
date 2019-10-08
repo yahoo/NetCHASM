@@ -1,3 +1,5 @@
+// Copyright 2019, Oath Inc.
+// Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include <signal.h>
 #include <string.h>
 #include <assert.h>
@@ -26,18 +28,22 @@ using namespace std;
 string server_path = HM_DEFAULT_USD_PATH;
 static void usage(char* name)
 {
-    cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
+    string command = "man ";
+    command.append(name);
+    {
+        cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
             << "-s      <socket-path> [default: " << server_path << "]" << endl
             << "Commands:"<<endl
             << "\t" <<"getdnsaddresses <hostname>\tReturns static DNS address for the host" <<endl
             << "\t" <<"removednsaddresses <hostname> <address1> <address2> ....\tRemove addresses from static DNS for a host" <<endl
             << "\t" <<"adddnsaddresses <hostname> <address1> <address2> ....\tAdd addresses to static DNS for a host" <<endl;
+    }
 }
 
 void handleError(char *prog, string &name)
 {
-    cout<<"Missing parameters for "<< name<<endl;
-    usage(prog);
+    cerr<<prog<<":"<<"Missing parameters for command "<< name<<endl;
+    cerr<<"Use \""<<prog<<" -h\" for usage information"<<endl;
     exit(-3);
 }
 
@@ -161,8 +167,6 @@ int main(int argc, char* argv[])
     case SCHDQUEUEINFO:
     case HEALTHCHECK:
     case DNSCHECK:
-        cerr << "This command is supported in hm_command" << endl;
-        return -1;
     case SETLOGLEVEL:
     case SETCONNECTIONTIMEOUT:
     case SETMONFREQ:
@@ -179,7 +183,10 @@ int main(int argc, char* argv[])
     case GETRECYCLE:
     case GETREMOTEQUERY:
     case SETREMOTEQUERY:
-        cerr << "This command is supported in hm_configure" << endl;
+    case REMOVEHOSTMARK:
+    case GETHOSTMARK:
+    case SETHOSTMARK:
+        cerr << "This command is supported in hm_command" << endl;
         return -1;
     case RELOAD:
     case HOSTGROUPINFO:

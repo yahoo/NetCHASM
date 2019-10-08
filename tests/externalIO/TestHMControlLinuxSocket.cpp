@@ -40,7 +40,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -56,11 +56,11 @@ dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 socket.path: test_sock1" << endl;
 
-    fout3 << "-   name: config.parse1.healthmon.net\n\
+    fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     error-ttl: 2\n\
@@ -84,7 +84,7 @@ socket.path: test_sock1" << endl;
     host:\n\
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n\
--   name: config.parse2.healthmon.net\n\
+-   name: config.parse2.netchasm.net\n\
     allow-hosts: any\n\
     check-info: //hm/checkinfo\n\
     check-port: 80\n\
@@ -98,7 +98,7 @@ socket.path: test_sock1" << endl;
         - mrf1.hm1.com\n\
         - mrf1.hm2.com\n\
 \n\
--   name: config.parse3.healthmon.net\n\
+-   name: config.parse3.netchasm.net\n\
     dual-stack-mode: ipv6-only\n\
     check-info: //hm/checkInfo-ssl\n\
     check-port: 443\n\
@@ -109,7 +109,7 @@ socket.path: test_sock1" << endl;
         - e1.hm.com\n\
         - e2.hm.com\n\
 \n\
--   name: config.parse4.healthmon.net\n\
+-   name: config.parse4.netchasm.net\n\
     ttl: 60000\n\
     timeout: 10000\n\
     rt-mode: smoothed-connect\n\
@@ -118,8 +118,8 @@ socket.path: test_sock1" << endl;
     host:\n\
         - g4.hm.com\n\
 \n\
--   name: config.parse5.healthmon.net\n\
-    check-info: healthmon:y\\treexrzindaaR3zuqhnjpcqqtwM8xq@/\n\
+-   name: config.parse5.netchasm.net\n\
+    check-info: netchasm:y\\treexrzindaaR3zuqhnjpcqqtwM8xq@/\n\
     check-port: 21\n\
     check-type: ftp\n\
     timeout: 10000\n\
@@ -127,14 +127,14 @@ socket.path: test_sock1" << endl;
         - dh1.hm.com\n\
         - dh2.hm.com\n\
 \n\
--   name: config.parse6.healthmon.net\n\
+-   name: config.parse6.netchasm.net\n\
     check-type: http\n\
-    check-info: /a00.healthmon.net.xml\n\
+    check-info: /a00.netchasm.net.xml\n\
     host:\n\
         - lfb3.hm1.com\n\
         - lfb3.hm2.com \n\
 \n\
--   name: config.parse7.healthmon.net\n\
+-   name: config.parse7.netchasm.net\n\
     check-type: none\n\
     host:\n\
         - lfb3.hm1.com\n\
@@ -147,7 +147,7 @@ dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: text\n\
-db.path: healthmon.text\n\
+db.path: netchasm.text\n\
 log.path: yHealth.log\n\
 socket.path: test_sock1" << endl;
 
@@ -176,7 +176,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master3.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -199,7 +199,7 @@ void TESTNAME::test_cmdlstnr1()
     CPPUNIT_ASSERT_EQUAL(1, (int )state->getMinThreads());
     CPPUNIT_ASSERT_EQUAL(3000, (int )state->getConnectionTimeout());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     CPPUNIT_ASSERT_EQUAL(true, state->getDNSAddress(ip_ret));
     CPPUNIT_ASSERT(!ip_ret.toString().compare("192.168.1.3"));
@@ -209,7 +209,7 @@ void TESTNAME::test_cmdlstnr1()
     sm->updateState(state);
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     CPPUNIT_ASSERT_EQUAL(true, state->getDNSAddress(ip_ret));
     CPPUNIT_ASSERT(!ip_ret.toString().compare("192.168.1.1"));
@@ -226,7 +226,7 @@ void TESTNAME::test_cmdlstnr2()
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL(3000, (int )state->getConnectionTimeout());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     state.reset();
     CPPUNIT_ASSERT(socketAPI.reload(masterConfig));
@@ -239,7 +239,7 @@ void TESTNAME::test_cmdlstnr2()
     CPPUNIT_ASSERT_EQUAL((int )HM_CHECK_PLUGIN_HTTP_CURL,
             (int )state->getDefaultHTTPCheckype());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT_EQUAL(60, (int )state->getDNSLookupTimeout());
     CPPUNIT_ASSERT_EQUAL(60, (int )state->getDNSLookupTimeout());
 }
@@ -259,7 +259,7 @@ void TESTNAME::test_cmdlstnr3()
     state->setDNSServer(ip);
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     CPPUNIT_ASSERT_EQUAL(true, state->getDNSAddress(ip_ret));
     CPPUNIT_ASSERT(!ip_ret.toString().compare("192.168.1.3"));
@@ -267,7 +267,7 @@ void TESTNAME::test_cmdlstnr3()
     std::this_thread::sleep_for(1s);
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     CPPUNIT_ASSERT_EQUAL(true, state->getDNSAddress(ip_ret));
     CPPUNIT_ASSERT(!ip_ret.toString().compare("192.168.1.3"));
@@ -283,7 +283,7 @@ void TESTNAME::test_cmdlstnr4()
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     state.reset();
     CPPUNIT_ASSERT(socketAPI.reload(masterConfig));
@@ -293,7 +293,7 @@ void TESTNAME::test_cmdlstnr4()
     CPPUNIT_ASSERT_EQUAL((int )HM_CHECK_PLUGIN_HTTP_CURL,
             (int )state->getDefaultHTTPCheckype());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_TEXT, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.text"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.text"));
 }
 
 void TESTNAME::test_cmdlstnr5()
@@ -301,10 +301,10 @@ void TESTNAME::test_cmdlstnr5()
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
     vector<string> hostGroupList;
-    vector<string> hgns = { "config.parse1.healthmon.net",
-            "config.parse2.healthmon.net", "config.parse3.healthmon.net",
-            "config.parse4.healthmon.net", "config.parse5.healthmon.net",
-            "config.parse6.healthmon.net", "config.parse7.healthmon.net" };
+    vector<string> hgns = { "config.parse1.netchasm.net",
+            "config.parse2.netchasm.net", "config.parse3.netchasm.net",
+            "config.parse4.netchasm.net", "config.parse5.netchasm.net",
+            "config.parse6.netchasm.net", "config.parse7.netchasm.net" };
     CPPUNIT_ASSERT(socketAPI.getHostGroupList(hostGroupList));
     CPPUNIT_ASSERT_EQUAL(hgns.size(), hostGroupList.size());
     for( uint64_t i=0; i< hgns.size(); i++)
@@ -317,7 +317,7 @@ void TESTNAME::test_cmdlstnr6()
 {
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     vector<string> result = {"loadfb3.hm1.com","loadfb3.hm2.com"};
     vector<string> hostList;
     CPPUNIT_ASSERT(socketAPI.getHostList(hostGroupName, hostList));
@@ -333,7 +333,7 @@ void TESTNAME::test_cmdlstnr7()
 {
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
-    string hostGroupName = "dummy.parse1.healthmon.net";
+    string hostGroupName = "dummy.parse1.netchasm.net";
     vector<string> hostList;
     CPPUNIT_ASSERT(socketAPI.getHostList(hostGroupName, hostList));
 }
@@ -343,7 +343,7 @@ void TESTNAME::test_cmdlstnr8()
 {
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     vector<string> result = {"loadfb3.hm1.com","loadfb3.hm2.com"};
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
@@ -377,7 +377,7 @@ void TESTNAME::test_cmdlstnr9()
 {
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
-    string hostGroupName = "dummy.parse1.healthmon.net";
+    string hostGroupName = "dummy.parse1.netchasm.net";
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
     CPPUNIT_ASSERT(!socketAPI.getHostGroupParams(hostGroupName, checkInfo, hosts));
@@ -389,17 +389,17 @@ void TESTNAME::test_cmdlstnr10()
     string socketPath = "test_sock";
     HMControlLinuxSocketClient socketAPI(socketPath);
     vector<string> hostGroupList;
-    vector<string> hgns = { "config.parse1.healthmon.net",
-            "config.parse2.healthmon.net", "config.parse3.healthmon.net",
-            "config.parse4.healthmon.net", "config.parse5.healthmon.net",
-            "config.parse6.healthmon.net", "config.parse7.healthmon.net" };
+    vector<string> hgns = { "config.parse1.netchasm.net",
+            "config.parse2.netchasm.net", "config.parse3.netchasm.net",
+            "config.parse4.netchasm.net", "config.parse5.netchasm.net",
+            "config.parse6.netchasm.net", "config.parse7.netchasm.net" };
     CPPUNIT_ASSERT(socketAPI.getHostGroupList(hostGroupList));
     CPPUNIT_ASSERT_EQUAL(hgns.size(), hostGroupList.size());
     for (uint32_t i = 0; i < hgns.size(); i++)
     {
         CPPUNIT_ASSERT(hgns[i] == hostGroupList[i]);
     }
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     vector<string> result = { "loadfb3.hm1.com", "loadfb3.hm2.com" };
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
@@ -443,4 +443,67 @@ void TESTNAME::test_cmdlstnr11()
     this_thread::sleep_for(1s);
     CPPUNIT_ASSERT(socketAPI.getRemoteQueryOn(status));
     CPPUNIT_ASSERT(status);
+}
+
+void TESTNAME::test_cmdlstnr12()
+{
+    string socketPath = "test_sock";
+    HMControlLinuxSocketClient socketAPI(socketPath);
+    string hostGroupName1 = "config.parse6.netchasm.net";
+    string hostGroupName2 = "config.parse7.netchasm.net";
+    string hostName1 = "lfb3.hm1.com";
+    string hostName2 = "lfb3.hm2.com";
+    string addr1 = "127.0.0.4";
+    HMAPIIPAddress address1;
+    address1.set(addr1);
+    string addr2 = "::2";
+    HMAPIIPAddress address2;
+    address2.set(addr2);
+
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName1, hostName1, address1, 1));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName2, hostName1, address1, 2));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName1, hostName2, address1, 3));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName2, hostName2, address1, 4));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName1, hostName1, address2, 5));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName2, hostName1, address2, 6));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName1, hostName2, address2, 7));
+    CPPUNIT_ASSERT(socketAPI.setHostMark(hostGroupName2, hostName2, address2, 8));
+
+    int value;
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName1, address1, value));
+    CPPUNIT_ASSERT_EQUAL(1, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName1, address1, value));
+    CPPUNIT_ASSERT_EQUAL(2, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName2, address1, value));
+    CPPUNIT_ASSERT_EQUAL(3, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName2, address1, value));
+    CPPUNIT_ASSERT_EQUAL(4, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName1, address2, value));
+    CPPUNIT_ASSERT_EQUAL(5, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName1, address2, value));
+    CPPUNIT_ASSERT_EQUAL(6, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName2, address2, value));
+    CPPUNIT_ASSERT_EQUAL(7, value);
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName2, address2, value));
+    CPPUNIT_ASSERT_EQUAL(8, value);
+
+    //delete entries
+    CPPUNIT_ASSERT(socketAPI.removeHostMark(hostGroupName1, hostName1, address1));
+    CPPUNIT_ASSERT(socketAPI.removeHostMark(hostGroupName1, hostName2, address1));
+    CPPUNIT_ASSERT(socketAPI.removeHostMark(hostGroupName2, hostName1, address2));
+    CPPUNIT_ASSERT(socketAPI.removeHostMark(hostGroupName2, hostName2, address2));
+
+    CPPUNIT_ASSERT(!socketAPI.getHostMark(hostGroupName1, hostName1, address1, value));
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName1, address1, value));
+    CPPUNIT_ASSERT_EQUAL(2, value);
+    CPPUNIT_ASSERT(!socketAPI.getHostMark(hostGroupName1, hostName2, address1, value));
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName2, hostName2, address1, value));
+    CPPUNIT_ASSERT_EQUAL(4, value);
+
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName1, address2, value));
+    CPPUNIT_ASSERT_EQUAL(5, value);
+    CPPUNIT_ASSERT(!socketAPI.getHostMark(hostGroupName2, hostName1, address2, value));
+    CPPUNIT_ASSERT(socketAPI.getHostMark(hostGroupName1, hostName2, address2, value));
+    CPPUNIT_ASSERT_EQUAL(7, value);
+    CPPUNIT_ASSERT(!socketAPI.getHostMark(hostGroupName2, hostName2, address2, value));
 }

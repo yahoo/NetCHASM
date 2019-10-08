@@ -26,6 +26,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr9);
     CPPUNIT_TEST(test_cmdlstnr10);
     CPPUNIT_TEST(test_cmdlstnr11);
+    CPPUNIT_TEST(test_cmdlstnr12);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -45,6 +46,7 @@ protected:
     void test_cmdlstnr9();
     void test_cmdlstnr10();
     void test_cmdlstnr11();
+    void test_cmdlstnr12();
     HMStateManager *sm;
     std::thread sm_thr;
     HMAPIIPAddress server;

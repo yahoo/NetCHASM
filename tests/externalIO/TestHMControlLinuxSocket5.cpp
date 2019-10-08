@@ -37,14 +37,14 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 enable-secure-remote : off\n\
 socket.path: test_sock" << endl;
 
-    fout3 << "-   name: config.parse1.healthmon.net\n\
+    fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -58,7 +58,7 @@ socket.path: test_sock" << endl;
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n\
     \n\
--   name: config1.parse1.healthmon.net\n\
+-   name: config1.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 600000\n\
     failure-response: dns\n\
@@ -72,7 +72,7 @@ socket.path: test_sock" << endl;
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n\
     \n\
--   name: config2.parse1.healthmon.net\n\
+-   name: config2.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -90,16 +90,16 @@ socket.path: test_sock" << endl;
     fout3.close();
 
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
     string host1 = "loadfb3.hm1.com";
     string host2 = "loadfb3.hm2.com";
     HMDataHostGroupMap groupMap;
     string checkInfo = "hm-hello";
 
-    string hostGroupName = "config.parse1.healthmon.net";
-    string hostGroupName1 = "config1.parse1.healthmon.net";
-    string hostGroupName2 = "config2.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
+    string hostGroupName1 = "config1.parse1.netchasm.net";
+    string hostGroupName2 = "config2.parse1.netchasm.net";
 
     HMIPAddress address;
     address.set("192.168.1.3");
@@ -303,7 +303,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -327,9 +327,9 @@ void TESTNAME::test_cmdlstnr1()
     addr2.set(ipaddr2);
     HMAPIIPAddress addr3;
     addr3.set(ipaddr3);
-    string hostGroupName = "config.parse1.healthmon.net";
-    string hostGroupName1 = "config1.parse1.healthmon.net";
-    string hostGroupName2 = "config2.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
+    string hostGroupName1 = "config1.parse1.netchasm.net";
+    string hostGroupName2 = "config2.parse1.netchasm.net";
     CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, results));
     CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
     CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
@@ -415,9 +415,9 @@ void TESTNAME::test_cmdlstnr2()
     addr2.set(ipaddr2);
     HMAPIIPAddress addr3;
     addr3.set(ipaddr3);
-    string hostGroupName = "config.parse1.healthmon.net";
-    string hostGroupName1 = "config1.parse1.healthmon.net";
-    string hostGroupName2 = "config2.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
+    string hostGroupName1 = "config1.parse1.netchasm.net";
+    string hostGroupName2 = "config2.parse1.netchasm.net";
     CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, results));
     CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
     CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
@@ -483,9 +483,9 @@ void TESTNAME::test_cmdlstnr3()
     addr2.set(ipaddr2);
     HMAPIIPAddress addr3;
     addr3.set(ipaddr3);
-    string hostGroupName = "config.parse1.healthmon.net";
-    string hostGroupName1 = "config1.parse1.healthmon.net";
-    string hostGroupName2 = "config2.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
+    string hostGroupName1 = "config1.parse1.netchasm.net";
+    string hostGroupName2 = "config2.parse1.netchasm.net";
     CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, results));
     CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
     CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);

@@ -55,6 +55,15 @@ printCheckTypeConfigs(HM_CHECK_TYPE ct)
     case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
         return "https-no-peer-check";
 
+    case HM_CHECK_MARK_HTTP:
+        return "http-mark";
+
+    case HM_CHECK_MARK_HTTPS:
+        return "https-mark";
+
+    case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+        return "https-mark-no-peer-check";
+
     default:
         return "default (empty) value";
     }
@@ -113,6 +122,15 @@ printCheckType(HM_CHECK_TYPE ct)
 
     case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
         return "aux https-no-peer-check";
+
+    case HM_CHECK_MARK_HTTP:
+        return "http-mark";
+
+    case HM_CHECK_MARK_HTTPS:
+        return "https-mark";
+
+    case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+        return "https-mark-no-peer-check";
 
     default:
         return "default (empty) value";

@@ -150,9 +150,10 @@ public:
         \param ip address to update.
         \param the aux data to parse in the aux cache parser.
         \param pointer to the current backend data storage class.
+        \param format of aux data string.
         \param the current aux cache.
      */
-    void storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, std::string auxData, HMStorage* store, HMAuxCache& aux);
+    void storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, std::string auxData, HMStorage* store, HMAuxCache& aux, HM_AUX_DATA_TYPE auxDataType);
 
     //! This function is called by the worker thread to commit the aux information to the backend data store.
     /*

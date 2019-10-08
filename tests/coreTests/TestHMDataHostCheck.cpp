@@ -1779,3 +1779,36 @@ TESTNAME::test_parseCheckInfo_40()
     CPPUNIT_ASSERT_EQUAL(port, (uint32_t)80);
 }
 
+void TESTNAME::test_basic_data_host_check2()
+{   
+    HMDataHostCheck data_host;
+    string check_info = "DummyCheckInfo";
+    string remote_check = "remote.hm.com";
+    CPPUNIT_ASSERT_EQUAL(0, (int )data_host.getPort());
+    CPPUNIT_ASSERT_EQUAL(0, (int )data_host.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(0, (int )data_host.getCheckPlugin());
+    CPPUNIT_ASSERT_EQUAL((int )HM_DUALSTACK_IPV4_ONLY,
+            (int )data_host.getDualStack());
+    CPPUNIT_ASSERT(data_host.getCheckInfo().empty());
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+        hostGroup.setCheckType(HM_CHECK_MARK_HTTPS);
+        hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_MARK_CURL);
+        hostGroup.setPort(53);
+        hostGroup.setDualStack(HM_DUALSTACK_BOTH);
+        hostGroup.setCheckInfo(check_info);
+        hostGroup.setRemoteCheck(remote_check);
+        hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+        hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+        data_host.setCheckParams(hostGroup);
+    CPPUNIT_ASSERT_EQUAL(53, (int )data_host.getPort());
+    CPPUNIT_ASSERT_EQUAL((int )HM_CHECK_MARK_HTTPS,
+            (int )data_host.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_PLUGIN_MARK_CURL, (int )data_host.getCheckPlugin());
+    CPPUNIT_ASSERT_EQUAL((int )HM_DUALSTACK_BOTH,
+            (int )data_host.getDualStack());
+    string test = data_host.getCheckInfo();
+    CPPUNIT_ASSERT(!data_host.getCheckInfo().compare(check_info));
+    CPPUNIT_ASSERT(!data_host.getRemoteCheck().compare(remote_check));
+}
+

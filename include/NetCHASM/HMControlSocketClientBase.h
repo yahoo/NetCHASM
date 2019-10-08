@@ -159,7 +159,7 @@ public:
          \param hostName of the hostgroup to force set it down.
          \return true if successful.
     */
-    bool setForceStatusDown(std::string& hostGroupName, std::string& hostName);
+    bool setForceStatusDown(const std::string& hostGroupName, const std::string& hostName);
 
 	/*!
 	 Force set the host down .
@@ -176,7 +176,7 @@ public:
          \param hostName of the hostgroup to unset the force set down.
          \return true if successful.
     */
-    bool unsetForceStatusDown(std::string& hostGroupName, std::string& hostName);
+    bool unsetForceStatusDown(const std::string& hostGroupName, const std::string& hostName);
 
     /*!
          Unset the force set host down .
@@ -338,6 +338,35 @@ public:
          \return true if successful.
      */
     bool getDNSAddresses(const std::string& hostName, std::vector<HMAPIIPAddress>& addresses);
+
+    /*!
+         set mark to a particular host in a host-group.
+         \param host-groupname  the host belongs
+         \param host-name to sdd the mark
+         \param address of the host to set the mark
+         \param mark value
+         \return true if successful.
+     */
+    bool setHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, int value);
+
+    /*!
+         remove mark to a particular host in a host-group.
+         \param host-groupname  the host belongs
+         \param host-name to remove the mark
+         \param address of the host to remove the mark
+         \return true if successful.
+     */
+    bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address);
+
+    /*!
+         get mark that is set to a particular host in a host-group.
+         \param host-groupname  the host belongs
+         \param host-name to get the mark
+         \param address of the host to get the mark
+         \param variable to store the mark value
+         \return true if successful.
+     */
+    bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, int& value);
 
     /*!
          Get error message on failure.

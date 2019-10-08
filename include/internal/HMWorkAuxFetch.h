@@ -25,7 +25,7 @@ class HMWorkAuxFetch : public HMWork
 {
 public:
     HMWorkAuxFetch(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
-         HMWork(hostname, ip, hostcheck) {};
+         HMWork(hostname, ip, hostcheck), m_auxDataType(HM_AUX_DATA_XML) {};
 
      virtual ~HMWorkAuxFetch() {};
 
@@ -60,8 +60,25 @@ public:
       */
      HM_WORK_STATUS processWork();
 
+     //! Called to get the aux data type.
+         /*!
+          Called to get the aux data type.
+          \return the current HM_AUX_DATA_TYPE used to determine the aux data received.
+     */
+     HM_AUX_DATA_TYPE getAuxDataType() const { return m_auxDataType; }
+
+     //! Called to set the aux data type.
+         /*!
+          Called to set the aux data type.
+          \param the current HM_AUX_DATA_TYPE used to set the aux data type.
+     */
+     void setAuxDataType(HM_AUX_DATA_TYPE auxDataType) { m_auxDataType = auxDataType; }
+
 protected:
      std::string m_auxData;
+
+private:
+     HM_AUX_DATA_TYPE m_auxDataType;
 };
 
 #endif /* INCLUDE_HMWORKAUXFETCH_H_ */

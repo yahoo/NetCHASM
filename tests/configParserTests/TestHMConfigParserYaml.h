@@ -44,6 +44,9 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_write_configs1);
     CPPUNIT_TEST(test_config20_tests);
     CPPUNIT_TEST(test_write_configs2);    
+    CPPUNIT_TEST(test_config_mark_http_tests);
+    CPPUNIT_TEST(test_config_mark_https_tests);
+    CPPUNIT_TEST(test_config_mark_https_no_peer_tests);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -80,6 +83,9 @@ protected:
     void test_write_configs1();
     void test_config20_tests();
     void test_write_configs2();
+    void test_config_mark_http_tests();
+    void test_config_mark_https_tests();
+    void test_config_mark_https_no_peer_tests();
     const std::string folderLocation = "./yamlconfig";
     const std::string folderLocation1 = "./yamlconfig1";
     const std::string fileLocation = "./yamlconfig/testconf.yaml";

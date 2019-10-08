@@ -1,5 +1,5 @@
 // Copyright 2019, Oath Inc.
-// Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.#ifndef TESTS_LIBRARYTESTS_TESTHMLIBRARY_H_
+// Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #ifndef TESTS_HMCONTROLTLSSOCKET9_H_
 #define TESTS_HMCONTROLTLSSOCKET9_H_
 

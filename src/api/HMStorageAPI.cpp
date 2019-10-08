@@ -752,7 +752,7 @@ HMStorageAPI::generateAuxXML(const std::string& name, std::vector<std::string>& 
 
         if (loadFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_LOAD_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_LOAD_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 fileContents.push_back(xml);
             }
@@ -760,7 +760,7 @@ HMStorageAPI::generateAuxXML(const std::string& name, std::vector<std::string>& 
 
         if (oobFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_OOB_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_OOB_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 fileContents.push_back(xml);
             }
@@ -818,7 +818,7 @@ HMStorageAPI::writeAuxXML(const std::string& name, std::vector<std::string>& fil
 
         if (loadFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_LOAD_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_LOAD_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 string fileName = name + "_" + auxResult->m_hostName + "_LoadFile.xml";
                 files.push_back(fileName);
@@ -828,7 +828,7 @@ HMStorageAPI::writeAuxXML(const std::string& name, std::vector<std::string>& fil
 
         if (oobFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_OOB_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_OOB_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 string fileName = name + "_" + auxResult->m_hostName + "_OOBFile.xml";
                 files.push_back(fileName);

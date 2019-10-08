@@ -37,7 +37,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -49,7 +49,7 @@ control-server-ipv6 : on\n\
 enable-secure-remote : off\n\
 socket.path: test_sock" << endl;
 
-    fout3 << "-   name: config.parse1.healthmon.net\n\
+    fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -72,9 +72,9 @@ socket.path: test_sock" << endl;
     portv4 = HM_CONTROL_SOCKET_DEFAULT_PORTV4;
     portv6 = HM_CONTROL_SOCKET_DEFAULT_PORTV6;
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     string host1 = "loadfb3.hm1.com";
     string host2 = "loadfb3.hm2.com";
     HMDataHostGroupMap groupMap;
@@ -171,7 +171,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -191,7 +191,7 @@ void TESTNAME::test_cmdlstnr1()
     addr.set(ipaddr);
     HMAPIIPAddress addr2;
     addr2.set(ipaddr1);
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, results));
     CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
     CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
@@ -232,7 +232,7 @@ void TESTNAME::test_cmdlstnr1()
 
 void TESTNAME::test_cmdlstnr2()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	HMControlTCPSocketClient socketAPI(serverv6, portv6);
 	HMAPICheckInfo checkInfo;
 	vector<HMAPICheckResult> results;
@@ -282,7 +282,7 @@ void TESTNAME::test_cmdlstnr2()
 
 void TESTNAME::test_cmdlstnr3()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	HMControlTCPSocketClient socketAPI(serverv4, portv4);
 	HMAPICheckInfo checkInfo;
 	vector<HMAPICheckResult> results;
@@ -337,7 +337,7 @@ void TESTNAME::test_cmdlstnr3()
 
 void TESTNAME::test_cmdlstnr4()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	HMControlTCPSocketClient socketAPI(serverv6, portv6);
 	HMAPICheckInfo checkInfo;
 	vector<HMAPICheckResult> results;

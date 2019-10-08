@@ -18,6 +18,10 @@ if(NOT SKIP-LIBEVENT)
   list(APPEND SOURCES ./checks_libevent/HMWorkHealthCheckLibEvent.cpp)
 endif()
 
+if(NOT SKIP-RAPIDXML)
+  list(APPEND SOURCES ./rapidxml_parser/HMAuxParserRapidXML.cpp)
+endif()
+
 set(CMAKE_BUILD_TYPE Debug)
 set(CPP_FLAGS "-Wall -Wextra -Wchkp -Wfloat-equal -Wl,--copy-dt-needed-entries -Wl,--as-needed -Wl,--no-undefined")
 set(COV_FLAGS "-fprofile-arcs -ftest-coverage")
@@ -52,6 +56,10 @@ endif()
 if(NOT SKIP-LIBEVENT)
   ADD_DEFINITIONS(-DUSE_LIBEVENT)
   target_link_libraries (netchasm_core PUBLIC event event_openssl)
+endif()
+
+if(NOT SKIP-RAPIDXML)
+  ADD_DEFINITIONS(-DUSE_RAPIDXML)
 endif()
 
 set_property(TARGET netchasm_core PROPERTY POSITION_INDEPENDENT_CODE ON)

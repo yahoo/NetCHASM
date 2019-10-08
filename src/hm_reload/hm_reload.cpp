@@ -15,9 +15,13 @@ using namespace std;
 
 static void usage(char* name)
 {
-    cout << "Usage: "<< name<<" [options] ..." << endl << "Options:" << endl
-            << "-s      <socket-path> [default: " << HM_DEFAULT_USD_PATH << "]" << endl
-            << "-m      <master-config path> " << endl;
+    string command = "man ";
+    command.append(name);
+    {
+        cout << "Usage: "<< name<<" [options] ..." << endl << "Options:" << endl
+                << "-s      <socket-path> [default: " << HM_DEFAULT_USD_PATH << "]" << endl
+                << "-m      <master-config path> " << endl;
+    }
 }
 
 void printError(string msg)
@@ -44,11 +48,8 @@ int main(int argc, char *argv[])
             usage(argv[0]);
             exit(0);
         case '?':
-            if (optopt == 'c' || optopt == 'm')
-                fprintf(stderr, "Option -%c requires an argument\n", optopt);
-            else
-                fprintf(stderr, "Unknown option:-%c\n", optopt);
-            return 1;
+            usage(argv[0]);
+            exit(0);
         }
 
     }

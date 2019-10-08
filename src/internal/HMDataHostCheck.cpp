@@ -179,7 +179,8 @@ HMDataHostCheck::parseCheckInfo(const string& host, uint32_t& port, string& chec
         if (((portindex = checkInfoHost.find(":")) == string::npos)
                 && (port != 443)
                 && (m_checkType != HM_CHECK_HTTP)
-                && (m_checkType != (HM_CHECK_AUX_HTTP)))
+                && (m_checkType != (HM_CHECK_AUX_HTTP))
+                && (m_checkType != (HM_CHECK_MARK_HTTP)))
         {
             // checkInfo //host/yyy
             hostname = "Host: " + checkInfoHost + ":" + to_string((uint64_t)port);
@@ -188,7 +189,9 @@ HMDataHostCheck::parseCheckInfo(const string& host, uint32_t& port, string& chec
         {
             // checkInfo //host:port/yyy
             hostname = "Host: " + checkInfoHost;
-            if ((m_checkType != HM_CHECK_HTTP) && (m_checkType != HM_CHECK_AUX_HTTP))
+            if ((m_checkType != HM_CHECK_HTTP) 
+                && (m_checkType != HM_CHECK_AUX_HTTP) 
+                && (m_checkType != HM_CHECK_MARK_HTTP))
             {
                 //if checkinfo port is different than check port
                 if ((portindex != string::npos) && checkInfoHost.substr(portindex + 1) != to_string(port))

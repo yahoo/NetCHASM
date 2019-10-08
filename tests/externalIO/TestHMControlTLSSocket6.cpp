@@ -37,7 +37,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -57,7 +57,7 @@ socket.path: test_sock" << endl;
     port = HM_CONTROL_SOCKET_DEFAULT_PORTV4;
 
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
     HMDataHostGroupMap groupMap;
     HMConfigInfo configInfo;
@@ -88,7 +88,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();

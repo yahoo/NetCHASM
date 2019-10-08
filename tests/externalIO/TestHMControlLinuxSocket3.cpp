@@ -38,14 +38,14 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 enable-secure-remote : off\n\
 socket.path: test_sock" << endl;
 
-    fout3 << "-   name: config.parse1.healthmon.net\n\
+    fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -63,9 +63,9 @@ socket.path: test_sock" << endl;
     fout3.close();
 
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     string host1 = "loadfb3.hm1.com";
     string host2 = "loadfb3.hm2.com";
     HMDataHostGroupMap groupMap;
@@ -166,7 +166,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -182,7 +182,7 @@ void TESTNAME::test_cmdlstnr1()
     sm->updateState(state);
     CPPUNIT_ASSERT_EQUAL(2, (int )state->getMaxThreads());
     CPPUNIT_ASSERT_EQUAL((int )HM_STORAGE_MDBM, (int )state->getStorageType());
-    CPPUNIT_ASSERT(!state->getStoragePath().compare("healthmon.mdbm"));
+    CPPUNIT_ASSERT(!state->getStoragePath().compare("netchasm.mdbm"));
     CPPUNIT_ASSERT(!state->getSocketPath().compare("test_sock"));
     state.reset();
     sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -223,7 +223,7 @@ void TESTNAME::test_cmdlstnr2()
     addr.set(ipaddr);
     HMAPIIPAddress addr2;
     addr2.set(ipaddr1);
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, checkInfo, results));
     CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
     CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
@@ -264,7 +264,7 @@ void TESTNAME::test_cmdlstnr2()
 
 void TESTNAME::test_cmdlstnr3()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	string sock_path = "test_sock";
 	HMControlLinuxSocketClient socketAPI(sock_path);
 	HMAPICheckInfo checkInfo;
@@ -315,7 +315,7 @@ void TESTNAME::test_cmdlstnr3()
 
 void TESTNAME::test_cmdlstnr4()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	string sock_path = "test_sock";
 	HMControlLinuxSocketClient socketAPI(sock_path);
 	HMAPICheckInfo checkInfo;
@@ -371,7 +371,7 @@ void TESTNAME::test_cmdlstnr4()
 
 void TESTNAME::test_cmdlstnr5()
 {
-	string hostGroupName = "config.parse1.healthmon.net";
+	string hostGroupName = "config.parse1.netchasm.net";
 	string sock_path = "test_sock";
 	HMControlLinuxSocketClient socketAPI(sock_path);
 	HMAPICheckInfo checkInfo;

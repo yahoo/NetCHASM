@@ -199,14 +199,7 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
             {
                 if (val == "http")
                 {
-                    if((hostNode["mode"]) && ((hostNode["mode"]).Scalar() == "load-feedback"))
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTP);  
-                    }                 
-                    else
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_HTTP);
-                    }
+                    currentHostGroup->second.setCheckType(HM_CHECK_HTTP);
                     if(!currentHostGroup->second.getCheckPort())
                     {
                         currentHostGroup->second.setPort(HM_HTTP_DEFAULT_PORT);
@@ -214,14 +207,7 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                 }
                 else if (val == "https")
                 {
-                    if((hostNode["mode"]) && ((hostNode["mode"]).Scalar() == "load-feedback"))
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTPS);                
-                    }
-                    else
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_HTTPS);
-                    }
+                    currentHostGroup->second.setCheckType(HM_CHECK_HTTPS);
                     if(!currentHostGroup->second.getCheckPort())
                     {
                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
@@ -273,14 +259,7 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                 }
                 else if (val == "https-no-peer-check")
                 {
-                    if((hostNode["mode"]) && ((hostNode["mode"]).Scalar() == "load-feedback"))
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTPS_NO_PEER_CHECK);                
-                    }
-                    else
-                    {
-                        currentHostGroup->second.setCheckType(HM_CHECK_HTTPS_NO_PEER_CHECK);
-                    } 
+                    currentHostGroup->second.setCheckType(HM_CHECK_HTTPS_NO_PEER_CHECK);
                     if(!currentHostGroup->second.getCheckPort())
                     {
                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
@@ -318,37 +297,61 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                         currentHostGroup->second.setPort(HM_FTP_DEFAULT_PORT);
                     }
                 }
-		else if(val == "http-auxfetch")
-		{
-                     currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTP);
-                     if(!currentHostGroup->second.getCheckPort())
-                     {
-                         currentHostGroup->second.setPort(HM_HTTP_DEFAULT_PORT);
-                     }
-                 }
-                 else if(val == "https-auxfetch")
-                 {
- 
-                     currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTPS);
- 
-                     if(!currentHostGroup->second.getCheckPort())
-                     {
-                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
-                     }
-                 }
-                 else if(val == "https-no-peer-check-auxfetch")
-                 {
-                     currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTPS_NO_PEER_CHECK);
- 
-                     if(!currentHostGroup->second.getCheckPort())
-                     {
-                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
-                     }
-                 }
+                else if (val == "http-auxfetch")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTP);
+                    if (!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTP_DEFAULT_PORT);
+                    }
+                }
+                else if (val == "https-auxfetch")
+                {
 
+                    currentHostGroup->second.setCheckType(HM_CHECK_AUX_HTTPS);
+
+                    if (!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
+                }
+                else if (val == "https-no-peer-check-auxfetch")
+                {
+                    currentHostGroup->second.setCheckType(
+                            HM_CHECK_AUX_HTTPS_NO_PEER_CHECK);
+
+                    if (!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
+                }
                 else if (val == "indirect-host")
                 {
                     configParams.m_indirectHost.insert(make_pair(currentHostGroup->second.getName(),currentHostGroup->second.getCheckInfo()));
+                }
+                else if (val == "http-mark")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_MARK_HTTP);
+                    if(!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTP_DEFAULT_PORT);
+                    }
+                }
+                else if (val == "https-mark")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_MARK_HTTPS);
+                    if(!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
+                }
+                else if (val == "https-mark-no-peer-check")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_MARK_HTTPS_NO_PEER_CHECK);
+                    if(!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
                 }
                 else
                 {
