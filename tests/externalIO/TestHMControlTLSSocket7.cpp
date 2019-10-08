@@ -35,7 +35,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -62,7 +62,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -89,7 +89,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -116,7 +116,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -132,7 +132,7 @@ socket.path: test_sock" << endl;
     fout5.close();
 
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
     HMDataHostGroupMap groupMap;
     HMConfigInfo configInfo;
@@ -157,7 +157,7 @@ void TESTNAME::tearDown()
     remove("conf/missing_cert_master.yaml");
     remove("conf/cert_key_mismatch_master.yaml");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
 }
 
 

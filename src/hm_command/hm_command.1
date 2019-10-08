@@ -1,0 +1,137 @@
+.TH hm_command 1 "01 October 2019" "version 1.2"
+.SH NAME
+hm_command - Tool to interact with NetCHASM daemon
+.SH SYNOPSIS
+.B hm_command [OPTIONS] COMMAND
+.SH DESCRIPTION
+This tool interacts with the NetCHASM daemon to configure the daemon, fetch daemon parameters, fetch results, provide auxiliary information and instruct daemon to performs certain operations
+.SH OPTIONS
+.BI "		-s " 
+SOCKET-PATH
+.PP
+			Override the UNIX socket path for communicating with Daemon. The default path is /home/y/var/run/netchasm/controlsocket
+
+.BI "		-v"
+.PP
+			verbose output
+
+.SH COMMAND
+.BI "		threadinfo"
+.PP 
+			Returns # of total and idle threads
+
+.BI "		workqueueinfo
+.PP 
+			Returns length of WorkQueue
+
+.BI "		schdqueueinfo"
+.PP 
+			Returns length of Scheduler queue
+
+.BI "		hostschdinfo" 
+HOSTGROUP-NAME HOSTNAME
+.PP 
+			Returns Scheduling Information about a host in the hostgroup. It produces both DNS and Health check information
+
+.BI "		hostset" 
+HOSTGROUP-NAME HOSTNAME ON|OFF
+.PP 
+			Force set HOST in HOSTGROUP-NAME to DOWN by turning hostset ON or to UP by turning hostset OFF 
+
+.BI "		dnscheck "
+HOSTGROUP-NAME [HOSTNAME]
+.PP 
+			Instructs the daemon to perform DNS check
+
+.BI "		healthcheck "
+HOSTGROUP-NAME [HOSTNAME]
+.PP 
+			Instruct the daemon to performs Health check
+
+.BI "		getloglevel" 
+.PP 
+			get the current daemon log verbosity
+
+.BI "		setloglevel "
+emergency|alert|critical|error|warnings|notice|info|debug|debug2|debug3|off|none
+.PP 
+			set the daemon log verbosity
+
+.BI "		getconnectiontimeout
+.PP 
+			get the current connection timeout for healthchecks
+
+.BI "		setconnectiontimeout" 
+TIMEOUT
+.PP 
+			set the connection timeout for healthchecks. TIMEOUT is in milliseconds
+
+.BI "		getstride"
+.PP 
+			get the current thread-reduce percent in threadpool monitoring
+
+.BI "		setstride"
+STRIDE
+.PP 
+			set the thread-reduce percent in threadpool monitoring. STRIDE is consideres in %.
+
+.BI "		getmonitorfrequency"
+.PP 
+			get the current threadpool monitoring frequency.
+
+.BI "		setmonitorfrequency" 
+FREQUENCY
+.PP 
+			set threadpool monitoring frequency. FREQUENCY is in seconds.
+
+.BI "		getttlthreshold" 
+.PP 
+			get the current monitoring TTL threshold for threadpool monitoring.
+
+.BI "		setttlthreshold" 
+THRESHOLD
+.PP 
+			set monitoring TTL threshold for threadpool monitoring. THRESHOLD in considered in %.
+
+.BI "		getworkperthreadratio"
+.PP 
+			get the current work to thread ratio for each thread in threadpool monitoring.
+
+.BI "		setworkperthreadratio" 
+NUM
+.PP 
+			set the work to thread ratio for each thread in threadpool monitoring. NUM work is assigned per thread.
+
+.BI "		getrecycle"
+.PP 			
+			get the recycle of threads enable status.
+
+.BI "		setrecycle"
+ON/OFF
+.PP 
+			enable/disable the threads recycling.
+
+.BI "		getremotequery"
+.PP 
+			get the remote query enable status of daemon.
+
+.BI "		setremotequery"
+ON/OFF
+.PP 
+			enable/disable the remote query state of the daemon.
+
+.BI "		gethostmark"
+HOSTGROUP-NAME HOSTNAME IP-ADDRESS
+.PP 
+			Returns host mark value for the HOST with ip IP-ADDRESS.
+
+.BI "		removehostmark"
+HOSTGROUP-NAME HOSTNAME IP-ADDRESS
+.PP 
+			Remove host mark values for a HOST with ip IP-ADDRESS.	
+
+.BI "		sethostmark"
+HOSTGROUP-NAME HOSTNAME IP-ADDRESS VALUE
+.PP 
+			Set mark VALUE for a HOST with ip IP-ADDRESS
+

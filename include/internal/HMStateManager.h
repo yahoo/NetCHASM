@@ -12,6 +12,7 @@
 #include "HMConstants.h"
 #include "HMDNSCache.h"
 #include "HMLogBase.h"
+#include "HMHostMark.h"
 
 class HMThreadPool;
 class HMCommandListenerBase;
@@ -207,6 +208,8 @@ public:
 
     //! The Work Queue
     HMWorkQueue m_workQueue;
+
+    HMHostMark m_hostMark;
 
 private:
 

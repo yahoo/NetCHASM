@@ -41,26 +41,30 @@ char delim = 0;
 
 static void usage(char* name)
 {
-    cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
-            << "-i      <socket-ip-address> [default: " << server_address << "]" << endl
-            << "-p     <server-port> [default: " << server_port<< "]" <<endl
-            << "-o     <tcp/tcps> [default: tcp"<< "]" <<endl
-            << "-k      <key-file>"<<endl
-            << "-c     <cert-file>"<<endl
-            << "-a     <ca-file>"<<endl
-            << "-d     <delimiter> [default: " <<delim<< "Show host status in bare delimited format"<<endl
-            << "-L          Show load feedback information"<<endl
-            << "-s          Show per-host state summary"<<endl
-            << "Commands:"<<endl
-            << "\t" <<"getremotequery \t get the remote query enable status of daemon" << endl
-            << "\t" <<"setremotequery <on/off>\t enable/disable the remote query state of the daemon " << endl
-            << "\t" <<"hostresults <host-group>\t get the host group results" << endl;
+    string command = "man ";
+    command.append(name);
+    {
+        cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
+                << "-i      <socket-ip-address> [default: " << server_address << "]" << endl
+                << "-p     <server-port> [default: " << server_port<< "]" <<endl
+                << "-o     <tcp/tcps> [default: tcp"<< "]" <<endl
+                << "-k      <key-file>"<<endl
+                << "-c     <cert-file>"<<endl
+                << "-a     <ca-file>"<<endl
+                << "-d     <delimiter> [default: " <<delim<< "Show host status in bare delimited format"<<endl
+                << "-L          Show load feedback information"<<endl
+                << "-s          Show per-host state summary"<<endl
+                << "Commands:"<<endl
+                << "\t" <<"getremotequery \t get the remote query enable status of daemon" << endl
+                << "\t" <<"setremotequery <on/off>\t enable/disable the remote query state of the daemon " << endl
+                << "\t" <<"hostresults <host-group>\t get the host group results" << endl;
+    }
 }
 
 void handleError(char *prog, string &name)
 {
-    cout<<"Missing parameters for "<< name<<endl;
-    usage(prog);
+    cerr << prog << ":" << "Missing parameters for command " << name << endl;
+    cerr<<"Use \""<<prog<<" -h\" for usage information"<<endl;
     exit(-3);
 }
 
@@ -480,7 +484,7 @@ bool getLFBInfo(unique_ptr<HMControlSocketClientBase>& socketAPI,
             }
             if (auxInfo.m_auxData[0]->m_type == HM_LOAD_FILE)
             {
-                if (auxCache.genAuxXML(auxInfo, HM_LOAD_FILE, hostGroup, xml))
+                if (auxCache.genAuxData(auxInfo, HM_LOAD_FILE, hostGroup, xml, HM_AUX_DATA_XML))
                 {
                     string fileName = hostGroup + "_" + result.m_host
                             + "_LoadFile.xml";
@@ -490,7 +494,7 @@ bool getLFBInfo(unique_ptr<HMControlSocketClientBase>& socketAPI,
             }
             else if (auxInfo.m_auxData[0]->m_type == HM_OOB_FILE)
             {
-                if (auxCache.genAuxXML(auxInfo, HM_OOB_FILE, hostGroup, xml))
+                if (auxCache.genAuxData(auxInfo, HM_OOB_FILE, hostGroup, xml, HM_AUX_DATA_XML))
                 {
                     string fileName = hostGroup + "_" + result.m_host
                             + "_OOBFile.xml";
@@ -680,6 +684,11 @@ int main(int argc, char* argv[])
     case REMOVEDNSADDRESSES:
     case GETDNSADDRESSES:
         cerr << "This command is supported in hm_staticdns" << endl;
+        return -1;
+    case REMOVEHOSTMARK:
+    case GETHOSTMARK:
+    case SETHOSTMARK:
+        cerr << "This command is supported in hm_hostmark" << endl;
         return -1;
     case HOSTSCHDINFO:
     case WORKQUEUEINFO:

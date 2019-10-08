@@ -36,7 +36,7 @@ HM_WORK_STATUS HMWorkAuxFetch::processWork()
 
     currentState->m_checkList.updateCheck(this, this->m_hostCheck);
     currentState->m_checkList.storeCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_datastore.get());
-    currentState->m_checkList.storeAux(this, this->m_hostCheck, this->m_ipAddress, this->m_auxData, currentState->m_datastore.get(), currentState->m_auxCache);
+    currentState->m_checkList.storeAux(this, this->m_hostCheck, this->m_ipAddress, this->m_auxData, currentState->m_datastore.get(), currentState->m_auxCache, this->getAuxDataType());
 
     // check to see if this check is complete
     HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);

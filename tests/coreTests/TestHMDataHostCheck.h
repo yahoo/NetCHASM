@@ -68,6 +68,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_parseCheckInfo_38);
     CPPUNIT_TEST(test_parseCheckInfo_39);
     CPPUNIT_TEST(test_parseCheckInfo_40);
+    CPPUNIT_TEST(test_basic_data_host_check2);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -129,6 +130,7 @@ public:
     void test_parseCheckInfo_38();
     void test_parseCheckInfo_39();
     void test_parseCheckInfo_40();
+    void test_basic_data_host_check2();
 protected:
 
 };

@@ -6,7 +6,7 @@ import socket
 import time
 from collections import namedtuple
 
-from netchasm import threadinfo_pb2
+from netchasm  import threadinfo_pb2
 from netchasm import generalparams_pb2
 from netchasm import datahostgroup_pb2
 from netchasm import ipaddress_pb2

@@ -2,7 +2,7 @@
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include "curl/curl.h"
 
-#include "HMWorkAuxFetchCurl.h"
+#include "HMWorkMarkFetchCurl.h"
 #include "HMWork.h"
 #include "HMTimeStamp.h"
 #include "HMConstants.h"
@@ -14,15 +14,14 @@
 using namespace std;
 
 size_t
-curl_Callback(void* ptr, size_t size, size_t nmemb, HMWorkAuxFetchCurl* check)
+curl_Callback(void* ptr, size_t size, size_t nmemb, HMWorkMarkFetchCurl* check)
 {
     check->updateBuffer((char*)ptr,nmemb);
-    check->setAuxDataType(HM_AUX_DATA_XML);
     return size * nmemb;
 }
 
 int
-sockopt_callBack(void *sockopt, curl_socket_t curlfd,
+sockopt_CallBack(void *sockopt, curl_socket_t curlfd,
                             curlsocktype purpose)
 {
   (void)purpose;
@@ -31,19 +30,48 @@ sockopt_callBack(void *sockopt, curl_socket_t curlfd,
   return CURL_SOCKOPT_OK;
 }
 
+int
+sockopt_mark_callback(void *sockopt, curl_socket_t curlfd,
+                            curlsocktype purpose)
+{
+    (void) purpose;
+    int val = *(int *) sockopt;
+    if (setsockopt(curlfd, SOL_SOCKET, SO_MARK, (const char *) &val,
+            sizeof(val)) < 0)
+    {
+        if (errno == EPERM)
+        {
+            HMLog(HM_LOG_ERROR,
+                    "[CURLCHECK] Failed to mark the socket. Operation not permitted. Need CAP_NET_ADMIN capability to set mark");
+        }
+        else
+        {
+            HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to mark the socket. %s",
+                    strerror(errno));
+        }
+    }
+    int val_verify;
+    socklen_t len;
+    getsockopt(curlfd, SOL_SOCKET, SO_MARK, (char *) &val_verify, &len);
+    if (val != val_verify)
+    {
+        HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to mark the socket");
+    }
+    return CURL_SOCKOPT_OK;
+}
+
 void
-HMWorkAuxFetchCurl::updateBuffer(char* buf, uint32_t length)
+HMWorkMarkFetchCurl::updateBuffer(char* buf, uint32_t length)
 {
     rcvdBuffer = rcvdBuffer + string(buf, length);
 }
 
 HM_WORK_STATUS
-HMWorkAuxFetchCurl::fetchAux()
+HMWorkMarkFetchCurl::healthCheck()
 {
-
-    if(m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTP
-            || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS
-            || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
+    if(m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTP
+            || m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTPS
+            || m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTPS_NO_PEER_CHECK)
     {
         shared_ptr<HMState> currentState;
         m_stateManager->updateState(currentState);
@@ -52,11 +80,10 @@ HMWorkAuxFetchCurl::fetchAux()
         string url;
         string checkInfoHost;
         bool sni = false;
-        CURL* curl = curl_easy_init();
+        CURL* curl;
+        curl = curl_easy_init();
         curl_slist* slist = NULL;
         struct curl_slist *host = NULL;
-        uint32_t port = m_hostCheck.getPort();
-        uint32_t checkInfoPort;
 
         uint64_t timeout = m_timeout - HMTimeStamp::now();
 
@@ -65,6 +92,9 @@ HMWorkAuxFetchCurl::fetchAux()
             HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to initialize CURL");
             return HM_WORK_COMPLETE;
         }
+
+        uint32_t port = m_hostCheck.getPort();
+        uint32_t checkInfoPort;
 
         // setup the HTTP parameters
         // we need to parse the checkInfo parameter
@@ -77,7 +107,8 @@ HMWorkAuxFetchCurl::fetchAux()
             if((index = checkInfo.find("/", 2)) != string::npos)
             {
                 //checkinfo //xxxx/yy hostLen = 4 (xxxx)
-                hostLen = checkInfo.substr(2, (checkInfo.find("/", 2) - 2)).length();
+                hostLen =
+                        checkInfo.substr(2, (checkInfo.find("/", 2) - 2)).length();
             }
             else
             {
@@ -141,7 +172,7 @@ HMWorkAuxFetchCurl::fetchAux()
         curl_easy_setopt(curl,CURLOPT_TIMEOUT, timeout / 1000);
         curl_easy_setopt(curl,CURLOPT_SSL_VERIFYHOST,0);
         curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1);
-        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
+        curl_easy_setopt(curl,CURLOPT_TCP_NODELAY,1);
         if (m_hostCheck.getSourceAddress().isSet())
         {
             curl_easy_setopt(curl, CURLOPT_INTERFACE,
@@ -151,20 +182,27 @@ HMWorkAuxFetchCurl::fetchAux()
         if (m_hostCheck.getTOSValue())
         {
             uint8_t tos = m_hostCheck.getTOSValue();
-            curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_callBack);
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_CallBack);
             curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &tos);
         }
 
-        if(m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
+        int mark;
+        if (m_stateManager->m_hostMark.getSocketOption(m_hostname, m_ipAddress, m_hostCheck, mark))
+        {
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_mark_callback);
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &mark);
+        }
+        
+        if(m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTPS_NO_PEER_CHECK)
         {
             curl_easy_setopt(curl, CURLOPT_CAINFO, NULL);
             curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER,0);
         }
 
-        url = ((m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTP) ? "http://" : "https://");
+        url = ((m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTP) ? "http://" : "https://");
 
         //if the mode is http or https with checkInfo /xxx or ///xxxx
-        if((sni == false) || (m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTP))
+        if((sni == false) || (m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTP))
         {
             if(m_ipAddress.getType() == AF_INET6)
             {
@@ -202,8 +240,7 @@ HMWorkAuxFetchCurl::fetchAux()
                 }
                 else
                 {
-                    url = url + m_hostname + ":"
-                            + to_string((uint64_t) port);
+                    url = url + m_hostname + ":" + to_string((uint64_t) port);
                 }
             }
             else
@@ -233,7 +270,8 @@ HMWorkAuxFetchCurl::fetchAux()
                 }
                 else
                 {
-                    url = url + checkInfoHost + ":"  + to_string((uint64_t) checkInfoPort);
+                    url = url + checkInfoHost + ":" + to_string((uint64_t) checkInfoPort);
+
                 }
             }
             HMLog(HM_LOG_DEBUG3,
@@ -255,8 +293,8 @@ HMWorkAuxFetchCurl::fetchAux()
         {
             url = url + uri;
         }
-
         curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
+        HMLog(HM_LOG_DEBUG3, "[CURLCHECK] curl fetching http url for CurlCheck %s",url.c_str());
 
         rcvdBuffer = "";
         curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, &curl_Callback);
@@ -280,7 +318,6 @@ HMWorkAuxFetchCurl::fetchAux()
                 double t;
                 curl_easy_getinfo(curl, CURLINFO_CONNECT_TIME, &t);
                 m_end = m_start + ((uint64_t)(t*1000));
-                m_auxData = rcvdBuffer;
                 m_reason = HM_REASON_SUCCESS;
             }
             else
@@ -323,18 +360,23 @@ HMWorkAuxFetchCurl::fetchAux()
         {
             m_reason = HM_REASON_RESPONSE_FAILURE;
         }
-        HMLog(HM_LOG_DEBUG3,
-                "[CURLCHECK] curl fetching http url for CurlCheck %s returned reason %s ",
-                url.c_str(), printReason(m_reason).c_str());
+
+               
+        HMLog(HM_LOG_DEBUG3, "[CURLCHECK] curl fetching http url for CurlCheck %s returned reason %s ",
+                 url.c_str(),
+                 printReason(m_reason).c_str());
+
+
         curl_easy_cleanup(curl);
         curl_slist_free_all(host);
         curl_slist_free_all(slist);
+        return HM_WORK_COMPLETE;
     }
-    else
+
+    else 
     {
-        HMLog(HM_LOG_ERROR,
-                "[CURLCHECK] Invalid Check type for CurlCheck %d",
-                (uint32_t) m_hostCheck.getCheckType());
+        HMLog(HM_LOG_ERROR, "[CURLCHECK] Invalid Check type for CurlCheck %s",
+                printCheckType(m_hostCheck.getCheckType()).c_str());
     }
     return HM_WORK_COMPLETE;
 }

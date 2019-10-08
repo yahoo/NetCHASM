@@ -1,0 +1,19 @@
+.TH hm_reload 1 "01 October 2019" "version 1.2"
+.SH NAME
+hm_reload - Tool to reload NetCHASM daemon
+.SH SYNOPSIS
+.B hm_reload [OPTIONS]
+.SH DESCRIPTION
+This tool helps reload the NetCHASM daemon
+.SH OPTIONS
+.BI "		-s " 
+SOCKET-PATH
+.PP
+			Override the UNIX socket path for communicating with Daemon. The default path is /home/y/var/run/netchasm/controlsocket
+
+.SH OPTIONS
+.BI "           -m "
+MASTER-CONFIG-PATH
+.PP
+			Set the master config path to be passed along with the reload signal
+

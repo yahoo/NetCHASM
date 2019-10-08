@@ -32,7 +32,7 @@ void TESTNAME::setUp()
     std::ofstream fout8("conf/dummy_master7.yaml");
 
     //verify HM_CONFIG_AUTO
-    std::ofstream fout9("conf/dummy_master.config");
+    std::ofstream fout9("conf/dummy_master.yaml");
     std::ofstream fout10("conf/dummy_master8.yaml");
 
     //verify loading configs from backend
@@ -58,7 +58,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -72,7 +72,7 @@ dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: text\n\
 db.path: netchasm.text\n\
-log.path: yHealth.log\n" << endl;
+log.path: netchasm.log\n" << endl;
 
     fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
@@ -141,7 +141,7 @@ log.path: yHealth.log\n" << endl;
        - dh2.hm.com\n\
 \n\
 -   name: config.parse6.netchasm.net\n\
-    check-type: http\n\
+    check-type: http-auxfetch\n\
     check-info: /a00.netchasm.net.xml\n\
     host:\n\
        - lfb-l3.hm1.com\n\
@@ -177,7 +177,7 @@ dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: text\n\
 db.path: netchasm.text\n\
-log.path: yHealth.log\n" << endl;
+log.path: netchasm.log\n" << endl;
 
 
     fout5 << "threads.max: 5\n\
@@ -194,7 +194,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -208,7 +208,7 @@ dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: text\n\
 db.path: netchasm.text\n\
-log.path: yHealth.log\n" << endl;
+log.path: netchasm.log\n" << endl;
 
     fout7 << "threads.max: 5\n\
 config.load-file: ./conf/hm/testconf.yaml\n\
@@ -219,11 +219,11 @@ dns.lookup-timeout: 60\n\
 http.type: curl\n\
 db.type: text\n\
 db.path: netchasm.text\n\
-log.path: yHealth.log\n" << endl;
+log.path: netchasm.log\n" << endl;
 
     fout8 << "threads.max: 5\n\
 config.load-directory ./conf/hmd\n\
-log.path: yHealth.log\n" << endl;
+log.path: netchasm.log\n" << endl;
 
     fout9 << "threads.max: 5\n\
 threads.min: 2\n\
@@ -241,7 +241,7 @@ none.type: none\n\
 \n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -260,7 +260,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -279,7 +279,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -298,7 +298,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm_empty.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -317,7 +317,7 @@ dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
 db.path: netchasm.mdbm\n\
-log.path: yHealth.log\n\
+log.path: netchasm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
 socket.path: test_sock" << endl;
@@ -485,7 +485,7 @@ void TESTNAME::test_indirect_host()
     sm.updateState(current);
     auto it = current->m_hostGroups.find("config.parse8.netchasm.net");
     CPPUNIT_ASSERT(it != current->m_hostGroups.end());
-    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_AUX_HTTP, it->second.getCheckType());
 }
 
 void TESTNAME::test_indirect_host1()
@@ -564,7 +564,7 @@ void TESTNAME::test_indirect_host2()
     sm.updateState(current);
     auto it = current->m_hostGroups.find("config.parse8.netchasm.net");
     CPPUNIT_ASSERT(it != current->m_hostGroups.end());
-    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_AUX_HTTP, it->second.getCheckType());
 }
 
 void TESTNAME::test_indirect_host3()
@@ -629,7 +629,7 @@ void TESTNAME::test_load_configs_backend()
 void TESTNAME::test_childhostgroup_1()
 {
     string hostGroup0 = "config.parse3.netchasm.net";
-    string hostGroup1 = "config.parse4.netchasm.net";  
+    string hostGroup1 = "config.parse4.netchasm.net";
     string host0 = "e1.hm.com";
     string host1 = "e2.hm.com";
     string host2 = "g4.hm.com";
@@ -654,7 +654,7 @@ void TESTNAME::test_childhostgroup_1()
 void TESTNAME::test_childhostgroup_2()
 {
     string hostGroup0 = "config.parse3.netchasm.net";
-    string hostGroup1 = "config.parse4.netchasm.net";  
+    string hostGroup1 = "config.parse4.netchasm.net";
     string host0 = "e1.hm.com";
     string host1 = "e2.hm.com";
     string host2 = "g4.hm.com";

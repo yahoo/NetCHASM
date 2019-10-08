@@ -30,7 +30,7 @@ http.type: curl\n\
 \n\
 \n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: yHealth.log\n\
 control-server-linux: off\n\
 control-socket-check-portv6 : 10054\n\
@@ -59,7 +59,7 @@ void TESTNAME::tearDown()
 {
     remove("conf/dummy_master2.yaml");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();

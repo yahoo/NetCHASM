@@ -24,7 +24,7 @@ build:
 	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc; make build; cd ..;
 
 slimbuild:
-	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSKIP-MDBM=ON -DSKIP-LIBEVENT=ON -DSKIP-ARES=ON; make build
+	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSKIP-MDBM=ON -DSKIP-LIBEVENT=ON -DSKIP-ARES=ON -DSKIP-RAPIDXML=ON; make build
 
 test:
 	mkdir -p build_test; cd build_test; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCOV=ON; make testbuild; cd ..;

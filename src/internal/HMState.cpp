@@ -350,12 +350,15 @@ HMState::loadAllConfigs()
             case HM_CHECK_DEFAULT:
             case HM_CHECK_HTTP:
             case HM_CHECK_AUX_HTTP:
+            case HM_CHECK_MARK_HTTP:
                 it->second.setPort(HM_HTTP_DEFAULT_PORT);
                 break;
             case HM_CHECK_HTTPS:
             case HM_CHECK_HTTPS_NO_PEER_CHECK:
             case HM_CHECK_AUX_HTTPS:
             case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
+            case HM_CHECK_MARK_HTTPS:
+            case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
                 it->second.setPort(HM_HTTPS_DEFAULT_PORT);
                 break;
             case HM_CHECK_TCP:
@@ -426,7 +429,6 @@ HMState::generateHostCheckList()
                 || it->second.getCheckType() == HM_CHECK_HTTPS
                 || it->second.getCheckType() == HM_CHECK_HTTPS_NO_PEER_CHECK)
         {
-            //(it->second.
             it->second.setCheckPlugin(m_httpDefaultCheckClass);
         }
         else if(it->second.getCheckType() == HM_CHECK_FTP
@@ -442,6 +444,12 @@ HMState::generateHostCheckList()
                 || it->second.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
         {
             it->second.setCheckPlugin(m_auxDefaultCheckClass);
+        }
+        else if(it->second.getCheckType() == HM_CHECK_MARK_HTTP
+                || it->second.getCheckType() == HM_CHECK_MARK_HTTPS
+                || it->second.getCheckType() == HM_CHECK_MARK_HTTPS_NO_PEER_CHECK)
+        {
+            it->second.setCheckPlugin(m_markDefaultCheckClass);
         }
         else if(it->second.getCheckType() == HM_CHECK_TCP)
         {

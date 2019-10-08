@@ -41,6 +41,7 @@ public:
         m_dnsDefaultCheckClass(HM_CHECK_PLUGIN_DNS_ARES),
         m_noneDefaultCheckClass(HM_CHECK_PLUGIN_DEFAULT),
         m_auxDefaultCheckClass(HM_CHECK_PLUGIN_AUX_CURL),
+        m_markDefaultCheckClass(HM_CHECK_PLUGIN_MARK_CURL),
         m_dnsLookupTimeout(HM_DEFAULT_DNS_RESOLUTION_TIMEOUT),
         m_dnsRetries(HM_DEFAULT_DNS_RETRIES),
         m_nMaxThreads(1),
@@ -496,6 +497,7 @@ private:
     HM_CHECK_PLUGIN_CLASS m_dnsDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_noneDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_auxDefaultCheckClass;
+    HM_CHECK_PLUGIN_CLASS m_markDefaultCheckClass;
 
     uint32_t m_dnsLookupTimeout;
     uint32_t m_dnsRetries;

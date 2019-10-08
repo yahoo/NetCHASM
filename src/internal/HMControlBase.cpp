@@ -49,7 +49,10 @@ map<string, HM_COMMAND_TASKS> commands =
     { HM_CMD_GETREMOTEQUERY, GETREMOTEQUERY },
     { HM_CMD_ADDDNSADDRESSES, ADDDNSADDRESSES },
     { HM_CMD_REMOVEDNSADDRESSES, REMOVEDNSADDRESSES },
-    { HM_CMD_GETDNSADDRESSES, GETDNSADDRESSES }
+    { HM_CMD_GETDNSADDRESSES, GETDNSADDRESSES },
+    { HM_CMD_SETHOSTMARK, SETHOSTMARK },
+    { HM_CMD_REMOVEHOSTMARK, REMOVEHOSTMARK },
+    { HM_CMD_GETHOSTMARK, GETHOSTMARK }
 };
 
 HMCommandListenerBase::HMCommandListenerBase(HMStateManager &stateManager) :
@@ -118,6 +121,7 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     }
     HM_COMMAND_TASKS task = convert(cmd_args[0]);
     bool result = true;
+    int int_result;
     uint64_t buflen;
     unique_ptr<char[]> returnResult;
     vector<string> returnList;
@@ -583,12 +587,91 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             current.reset();
         }
         break;
+
+    case SETHOSTMARK:
+        if (cmd_args.size() > 4)
+        {
+            int value = std::stoi(cmd_args[4], NULL, 0);
+            HMIPAddress address;
+            if (address.set(cmd_args[3]))
+            {
+                result = setHostMark(cmd_args[1], cmd_args[2], address, value);
+                returnResult = dataPacking->packBool(result, buflen);
+                socketBase.sendMessage(returnResult.get(), buflen);
+            }
+            else
+            {
+                socketBase.sendMessage(nullptr, 0);
+                HMLog(HM_LOG_ERROR, "Invalid IP address for command:%s",
+                                                            HM_CMD_SETHOSTMARK.c_str());
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address value for command:%s",
+                    HM_CMD_SETHOSTMARK.c_str());
+        }
+        break;
+    case REMOVEHOSTMARK:
+        if (cmd_args.size() > 3)
+        {
+            HMIPAddress address;
+            if (address.set(cmd_args[3]))
+            {
+                result = removeHostMark(cmd_args[1], cmd_args[2], address);
+                returnResult = dataPacking->packBool(result, buflen);
+                socketBase.sendMessage(returnResult.get(), buflen);
+            }
+            else
+            {
+                socketBase.sendMessage(nullptr, 0);
+                HMLog(HM_LOG_ERROR, "Invalid IP address for command:%s",
+                        HM_CMD_SETHOSTMARK.c_str());
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address for command:%s",
+                    HM_CMD_REMOVEHOSTMARK.c_str());
+        }
+        break;
+    case GETHOSTMARK:
+        if (cmd_args.size() > 3)
+        {
+            HMIPAddress address;
+            if (address.set(cmd_args[3]))
+            {
+                result = getHostMark(cmd_args[1], cmd_args[2], address,
+                        int_result);
+                if (result)
+                {
+                    returnResult = dataPacking->packInt(int_result, buflen);
+                    socketBase.sendMessage(returnResult.get(), buflen);
+                }
+                else
+                {
+                    socketBase.sendMessage(nullptr, 0);
+                }
+            }
+            else
+            {
+                socketBase.sendMessage(nullptr, 0);
+                HMLog(HM_LOG_ERROR, "Invalid IP address for command:%s",
+                        HM_CMD_SETHOSTMARK.c_str());
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address for command:%s",
+                    HM_CMD_GETHOSTMARK.c_str());
+        }
+        break;
     case UNDEFINED:
         HMLog(HM_LOG_DEBUG, "[COMMANDLISTENERBASE] Undefined command to handle");
     }
     if(!result)
     {
-        HMLog(HM_LOG_DEBUG, "%s : failed", cmd_args[0]);//LCOV_EXCL_LINE;
+        HMLog(HM_LOG_DEBUG, "%s : failed", cmd_args[0].c_str());//LCOV_EXCL_LINE;
     }
 }
 
@@ -889,6 +972,72 @@ HMCommandListenerBase::getHostResults(unique_ptr<HMDataPacking>& dataPacking, co
     current->m_checkList.getCheckResults(hostName, hostCheck, address,
             finalResults);
     return dataPacking->packHostResults(finalResults, dataSize);
+}
+
+bool
+HMCommandListenerBase::setHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, int value)
+{
+    string groupName = hostGroupName;
+    HMDataHostGroup group(hostGroupName);
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+
+    auto hgi = current->m_hostGroups.find(groupName);
+    if(hgi == current->m_hostGroups.end())
+    {
+        return false;
+    }
+    group = hgi->second;
+    HMDataHostCheck check;
+    if(group.getHostCheck(check))
+    {
+        return m_stateManager.m_hostMark.setSocketOption(hostName, address, check, value);
+    }
+    return false;
+}
+
+bool
+HMCommandListenerBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address)
+{
+    string groupName = hostGroupName;
+    HMDataHostGroup group(hostGroupName);
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+
+    auto hgi = current->m_hostGroups.find(groupName);
+    if(hgi == current->m_hostGroups.end())
+    {
+        return false;
+    }
+    group = hgi->second;
+    HMDataHostCheck check;
+    if (group.getHostCheck(check))
+    {
+        return m_stateManager.m_hostMark.removeSocketOption(hostName, address, check);
+    }
+    return false;
+}
+
+bool
+HMCommandListenerBase::getHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, int& value)
+{
+    string groupName = hostGroupName;
+    HMDataHostGroup group(hostGroupName);
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+
+    auto hgi = current->m_hostGroups.find(groupName);
+    if(hgi == current->m_hostGroups.end())
+    {
+        return false;
+    }
+    group = hgi->second;
+    HMDataHostCheck check;
+    if (group.getHostCheck(check))
+    {
+        return m_stateManager.m_hostMark.getSocketOption(hostName, address,check, value);
+    }
+    return false;
 }
 
 void

@@ -1,0 +1,29 @@
+.TH hm_staticdns 1 "01 October 2019" "version 1.2"
+.SH NAME
+hm_staticdns - Tool to manipulate static DNS entries for hosts to NetCHASM daemon
+.SH SYNOPSIS
+.B hm_staticdns [OPTIONS] COMMAND
+.SH DESCRIPTION
+This tool interacts with the NetCHASM daemon to add, remove and retrieve DNS entries for host for static DNS feature
+.SH OPTIONS
+.BI "		-s " 
+SOCKET-PATH
+.PP
+			Override the UNIX socket path for communicating with Daemon. The default path is /home/y/var/run/netchasm/controlsocket
+
+.SH COMMAND
+
+.BI "		getdnsaddresses" 
+HOST
+.PP 
+			Returns static DNS addresses for the HOST
+
+.BI "		removednsaddresses"
+HOST [IP-ADDRESS1] [IP-ADDRESS2] . . .
+.PP 
+			Remove addresses from static DNS for a HOST
+
+.BI "           adddnsaddresses"
+HOST [IP-ADDRESS1] [IP-ADDRESS2] . . .
+.PP
+			Add addresses to static DNS for a HOST

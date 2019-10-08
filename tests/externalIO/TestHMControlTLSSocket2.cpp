@@ -37,7 +37,7 @@ tcp.type: rawsocket\n\
 dnsvc.type: ares\n\
 none.type: none\n\
 db.type: mdbm\n\
-db.path: healthmon.mdbm\n\
+db.path: netchasm.mdbm\n\
 log.path: hm.log\n\
 log.type: 0\n\
 log.verbosity: 0\n\
@@ -51,7 +51,7 @@ key-file: " + std::string(CERT_FOLDER) + "/server.key\n\
 ca-file: " + std::string(CERT_FOLDER) + "/ca.crt\n\
 socket.path: test_sock" << endl;
 
-    fout3 << "-   name: config.parse1.healthmon.net\n\
+    fout3 << "-   name: config.parse1.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -60,11 +60,11 @@ socket.path: test_sock" << endl;
     check-info: hm-hello\n\
     group-threshold: 12\n\
     host-group:\n\
-        - config.parse2.healthmon.net\n\
+        - config.parse2.netchasm.net\n\
     host:\n\
         - lfb3.hm1.com\n\
         - lfb3.hm2.com\n\
--   name: config.parse2.healthmon.net\n\
+-   name: config.parse2.netchasm.net\n\
     allow-hosts: any\n\
     ttl: 60000\n\
     failure-response: dns\n\
@@ -85,12 +85,12 @@ socket.path: test_sock" << endl;
     port = 10052;
     server.set(ipaddr);
     setupCommon();
-    string mdbm = "healthmon.mdbm";
+    string mdbm = "netchasm.mdbm";
     remove(mdbm.c_str());
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     string host1 = "lfb3.hm1.com";
     string host2 = "lfb3.hm2.com";
-    string hostgroup1 = "config.parse2.healthmon.net";
+    string hostgroup1 = "config.parse2.netchasm.net";
     HMDataHostGroupMap groupMap;
     string checkInfo = "hm-hello";
 
@@ -208,7 +208,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master3.yaml");
     remove("conf/hm");
     remove("conf");
-    remove("healthmon.mdbm");
+    remove("netchasm.mdbm");
     sm->shutdown();
     std::this_thread::sleep_for(1s);
     sm_thr.join();
@@ -225,8 +225,8 @@ void TESTNAME::test_cmdlstnr1()
     in_addr addr3;
     inet_pton(AF_INET, "192.168.1.5", &addr3);
 
-    string hostGroupName = "config.parse1.healthmon.net";
-    string hostgroup1 = "config.parse2.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
+    string hostgroup1 = "config.parse2.netchasm.net";
     HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
     HMAPICheckInfo checkInfo;
     vector<HMAPICheckResult> hostResults;
@@ -263,7 +263,7 @@ void TESTNAME::test_cmdlstnr1()
 
 void TESTNAME::test_cmdlstnr2()
 {
-    string hostGroupName = "config.parse3.healthmon.net";
+    string hostGroupName = "config.parse3.netchasm.net";
     HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
     HMAPICheckInfo checkInfo;
     vector<HMAPICheckResult> hostResults;
@@ -280,7 +280,7 @@ void TESTNAME::test_cmdlstnr3()
     in_addr addr3;
     inet_pton(AF_INET, "192.168.1.5", &addr3);
     HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
-    string hostGroupName = "config.parse1.healthmon.net";
+    string hostGroupName = "config.parse1.netchasm.net";
     string hostName = "lfb3.hm1.com";
     vector<HMAPICheckResult> results;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostGroupName, hostName, results));

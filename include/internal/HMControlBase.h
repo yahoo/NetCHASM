@@ -20,7 +20,7 @@ const std::string HM_CMD_LOADFBIP = "loadfbip";
 const std::string HM_CMD_THREADINFO = "threadinfo";
 const std::string HM_CMD_WORKQUEUEINFO = "workqueueinfo";
 const std::string HM_CMD_SCHDQUEUEINFO = "schdqueueinfo";
-const std::string HM_CMD_SETHOSTSTATUS = "host_set";
+const std::string HM_CMD_SETHOSTSTATUS = "hostset";
 const std::string HM_CMD_HOSTGROUPLIST = "hostgrouplist";
 const std::string HM_CMD_HOSTLIST = "hostlist";
 const std::string HM_CMD_HOSTCHECK = "hostcheck";
@@ -50,7 +50,9 @@ const std::string HM_CMD_GETREMOTEQUERY = "getremotequery";
 const std::string HM_CMD_ADDDNSADDRESSES = "adddnsaddresses";
 const std::string HM_CMD_REMOVEDNSADDRESSES = "removednsaddresses";
 const std::string HM_CMD_GETDNSADDRESSES = "getdnsaddresses";
-
+const std::string HM_CMD_SETHOSTMARK = "sethostmark";
+const std::string HM_CMD_REMOVEHOSTMARK = "removehostmark";
+const std::string HM_CMD_GETHOSTMARK = "gethostmark";
 
 class HMStateManager;
 //! Class to handle external communications
@@ -195,6 +197,35 @@ class HMCommandListenerBase
      \return unique pointer containing the data.
   */
   std::unique_ptr<char[]> getHostResults(std::unique_ptr<HMDataPacking>& dataPacking, const std::string& hostName, const HMIPAddress& address, HMDataHostCheck& hostCheck, uint64_t& dataSize);
+
+  /*!
+       set mark to a particular host in a host-group.
+       \param host-groupname  the host belongs
+       \param host-name to sdd the mark
+       \param address of the host to set the mark
+       \param mark value
+       \return true if successful.
+   */
+  bool setHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, int value);
+
+  /*!
+       remove mark to a particular host in a host-group.
+       \param host-groupname  the host belongs
+       \param host-name to remove the mark
+       \param address of the host to remove the mark
+       \return true if successful.
+   */
+  bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address);
+
+  /*!
+       get mark that is set to a particular host in a host-group.
+       \param host-groupname  the host belongs
+       \param host-name to get the mark
+       \param address of the host to get the mark
+       \param variable to store the mark value
+       \return true if successful.
+   */
+  bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, int& value);
 
   //! clean the handler thread after communication completes
   void cleanHandlerThreads();
