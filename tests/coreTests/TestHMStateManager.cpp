@@ -1,5 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+
+#if defined( USE_ARES ) || defined( USE_MDBM )
 #include "common.h"
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -38,7 +40,7 @@ void TESTNAME::setUp()
     //verify loading configs from backend
     std::ofstream fout11("conf/dummy_masterbackend.yaml");
     std::ofstream fout12("conf/dummy_masterbackendempty.yaml");
-    
+
     //child host group
     std::ofstream fout13("conf/dummy_master9.yaml");
     std::ofstream fout14("conf/hm/testconf12.yaml");
@@ -367,7 +369,7 @@ void TESTNAME::tearDown()
     remove("conf/dummy_masterbackend.yaml");
     remove("conf/dummy_masterbackendempty.yaml");
     //remove("conf/hm/testconf2.yaml");
-    //remove("conf/dummy_master9.yaml");    
+    //remove("conf/dummy_master9.yaml");
     remove("conf/hm");
     remove("conf");
     remove("netchasm.mdbm");
@@ -502,7 +504,7 @@ void TESTNAME::test_indirect_host1()
 }
 
 void TESTNAME::test_master_yaml_conf_parse()
-{   
+{
     HMState sm;
     string non_exist_config = "dummy.yaml";
     HMIPAddress ip;
@@ -664,3 +666,4 @@ void TESTNAME::test_childhostgroup_2()
     CPPUNIT_ASSERT_EQUAL(false, sm.loadDaemonState(master_config, HM_LOG_ERROR));
 
 }
+#endif

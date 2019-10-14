@@ -1,5 +1,6 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+#ifdef USE_MDBM
 #include "TestHMStorageHostGroupMDBM.h"
 #include "common.h"
 #include "HMState.h"
@@ -1009,7 +1010,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     store->closeStore();
 
     delete store;
-    
+
     //neg tests
     store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore(true));
@@ -1017,7 +1018,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     CPPUNIT_ASSERT(!store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
     std::this_thread::sleep_for(10ms);
     CPPUNIT_ASSERT(store->getAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, recieveInfo));
-       
+
     store->closeStore();
 
     delete store;
@@ -1028,10 +1029,10 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     CPPUNIT_ASSERT(!store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
     std::this_thread::sleep_for(10ms);
     CPPUNIT_ASSERT(!store->getAuxInfo("host1", address_1, dataHostCheck, params, recieveInfo));
-       
+
     store->closeStore();
 
-    delete store;    
+    delete store;
 
     remove(filename.c_str());
 
@@ -1449,4 +1450,4 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
 
 
 }
-
+#endif

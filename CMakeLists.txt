@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.11)
 
 include(ExternalProject)
+include(GNUInstallDirs)
 enable_testing()
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 set(OBJECT_DIR ${CMAKE_BINARY_DIR})
-set(CMAKE_INSTALL_PREFIX "/bin")
 set(MAJOR_VERSION 1)
 
 option(ASAN "enable ASAN options" OFF)
@@ -14,18 +14,20 @@ option(SKIP-LIBEVENT "skip LIBEVENT library and related code" OFF)
 option(SKIP-ARES "skip ARES library and related code" OFF)
 option(SKIP-MDBM "skip MDBM library and related code" OFF)
 
-link_directories(/lib64)
-
 add_custom_target(build
     COMMAND ${CMAKE_MAKE_PROGRAM}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 
+if(NOT SKIP-MDBM)
+   set( EXTERNALIO_CMD COMMAND ${CMAKE_MAKE_PROGRAM} externalio )
+endif()
+
 add_custom_target(testbuild
     COMMAND ${CMAKE_MAKE_PROGRAM}
     COMMAND ${CMAKE_MAKE_PROGRAM} configparsertests
     COMMAND ${CMAKE_MAKE_PROGRAM} coretests
-    COMMAND ${CMAKE_MAKE_PROGRAM} externalio
+    ${EXTERNALIO_CMD}
     COMMAND ${CMAKE_MAKE_PROGRAM} logtests
     COMMAND ${CMAKE_MAKE_PROGRAM} storetests
     COMMAND ${CMAKE_MAKE_PROGRAM} worktests
@@ -48,3 +50,5 @@ add_subdirectory(src/hm_reload)
 add_subdirectory(src/hm_remote)
 add_subdirectory(src/hm_staticdns)
 add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(include/NetCHASM)
+add_subdirectory(include/internal)

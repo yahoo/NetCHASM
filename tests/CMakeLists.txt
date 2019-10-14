@@ -19,7 +19,10 @@ link_libraries (netchasm)
 
 add_subdirectory(configParserTests)
 add_subdirectory(coreTests)
+if(NOT SKIP-MDBM)
 add_subdirectory(externalIO)
+endif()
+
 add_subdirectory(logTests)
 add_subdirectory(storeTests)
 add_subdirectory(workTests)

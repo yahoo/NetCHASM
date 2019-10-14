@@ -1,5 +1,6 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+#ifdef USE_ARES
 #include "TestHMWork.h"
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
@@ -127,6 +128,4 @@ TESTNAME::test_HMWorkReloadState()
 
     delete hmWorkState;
 }
-
-
-
+#endif

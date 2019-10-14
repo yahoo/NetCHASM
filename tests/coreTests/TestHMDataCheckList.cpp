@@ -5,7 +5,9 @@
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
 #include "HMStorage.h"
-#include "HMWorkDNSLookupAres.h"
+#ifdef USE_ARES
+   #include "HMWorkDNSLookupAres.h"
+#endif
 #include "HMWorkHealthCheckRemote.h"
 #include "common.h"
 #include <unistd.h>
@@ -52,8 +54,10 @@ void TESTNAME::test_basic_datachecklist()
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.initDNSCache(cache, waitlist);
+#ifdef USE_ARES
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     cache.getAddresses(host_name, HM_DUALSTACK_BOTH, dnsHostCheckT, vip_ret);
+#endif
     check_list.checkNeeded(host_name, ip, data_host);
     cout<<check_list.printChecks(true);
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
@@ -80,7 +84,7 @@ void TESTNAME::test_basic_datachecklist()
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
-    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());    
+    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
 
@@ -111,8 +115,10 @@ void TESTNAME::test_ip_dns_failed()
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.initDNSCache(cache, waitlist);
+#ifdef USE_ARES
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     cache.getAddresses(host_name, HM_DUALSTACK_BOTH, dnsHostCheckT, vip_ret);
+#endif
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
     check_list.checkNeeded(host_name, ip, data_host));
 }
@@ -168,7 +174,7 @@ void TESTNAME::test_basic_healthPlugins_tcp()
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
     check_list.queueCheck(host_name, ip, data_host, queue);
-    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());    
+    CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
 void TESTNAME::test_basic_healthPlugins_remoteDisabled()
@@ -369,6 +375,7 @@ void TESTNAME::test_basic_healthPlugins_ftp()
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
+#ifdef USE_ARES
 void TESTNAME::test_basic_healthPlugins_dnsvc()
 {
     HMDataHostCheck data_host;
@@ -421,6 +428,7 @@ void TESTNAME::test_basic_healthPlugins_dnsvc()
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 
 }
+#endif
 
 void TESTNAME::test_basic_healthPlugins_none()
 {

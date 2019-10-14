@@ -1,5 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+
+#ifdef USE_ARES
 #include "TestHMWorkQueue.h"
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
@@ -130,3 +132,4 @@ void TESTNAME::test_multi_insert() {
     CPPUNIT_ASSERT_EQUAL(3, (int )work_queue->queueSize());
     delete work_queue;
 }
+#endif

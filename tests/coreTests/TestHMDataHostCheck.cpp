@@ -4,7 +4,9 @@
 
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
-#include "HMWorkDNSLookupAres.h"
+#ifdef USE_ARES
+   #include "HMWorkDNSLookupAres.h"
+#endif
 #include "common.h"
 #include <unistd.h>
 
@@ -201,6 +203,7 @@ void TESTNAME::test_operations_nequal_dualstack()
     CPPUNIT_ASSERT((data_host != data_host1));
 }
 
+#ifdef USE_ARES
 void TESTNAME::test_operations_equal_checkplugin()
 {
     HMDataHostCheck data_host;
@@ -259,6 +262,7 @@ void TESTNAME::test_operations_nequal_remote_check()
 	data_host1.setCheckParams(hostGroup);
     CPPUNIT_ASSERT((data_host != data_host1));
 }
+#endif
 
 void TESTNAME::test_print_entry()
 {
@@ -1780,7 +1784,7 @@ TESTNAME::test_parseCheckInfo_40()
 }
 
 void TESTNAME::test_basic_data_host_check2()
-{   
+{
     HMDataHostCheck data_host;
     string check_info = "DummyCheckInfo";
     string remote_check = "remote.hm.com";
