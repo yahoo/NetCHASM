@@ -190,7 +190,6 @@ public:
      */
     void setWorkPerThreadRatio(uint32_t workPerThreadRatio);
 
-
     //! Set the current thread pool to use thread recycle.
     /*!
          Set the current thread pool to use thread recycling. Thread recycling will periodically flush thread state for long running Curl and Ares library state.
@@ -218,7 +217,10 @@ public:
 
     //! register a storage observer to receive notifications with probe
     //  check results
-    void registerStorageObserver(std::shared_ptr<HMStorageObserver> observer);
+    void registerStorageObserver(std::shared_ptr<HMStorageObserver> &observer);
+
+    //! register a log object for tracing.
+    void registerLog(std::shared_ptr<HMLogBase> &log);
 
 private:
     // setup signal handlers.  Used when NetCHASM is not a library
@@ -242,6 +244,8 @@ private:
     bool m_enableRemoteQueryReply;
     std::mutex m_storageObserverMutex;
     std::vector<std::shared_ptr<HMStorageObserver>> m_storageObserver;
+    std::shared_ptr<HMLogBase> m_registeredLog;
+    bool m_useAsLib;
 };
 
 #endif /* HMSTATEMANAGER_H_ */

@@ -206,7 +206,7 @@ private:
 private:
 
     bool m_loaded;
-    HMLogAPI* log;
+    std::shared_ptr<HMLogBase> log;
     std::shared_ptr<HMState> m_currentState;
     std::mutex m_reloadConfigsMutex;
 };

@@ -101,18 +101,21 @@ public:
          \param the logfile to create/write to.
          \param the HM_LOG_LEVEL to log.
          \param true to write the log in a dedicated thread.
+         \param true to install sigaction for log rotate
          \return true when the log is ready to go.
      */
-    bool initLogging(std::string logFile, HM_LOG_LEVEL level, bool threaded);
+    bool initLogging(std::string logFile, HM_LOG_LEVEL level, bool threaded,
+          bool installSigAction=true);
 
     //! Initialize the logging.
     /*!
          Initialize the logging. This function calls the open log and does all the work to get the logging ready to go. This will write to the default log location.
          \param the HM_LOG_LEVEL to log.
          \param true to write the log in a dedicated thread.
+         \param true to install sigaction for log rotate
          \return true when the log is ready to go.
      */
-    bool initLogging(HM_LOG_LEVEL level, bool threaded);
+    bool initLogging(HM_LOG_LEVEL level, bool threaded, bool installSigAction=true);
 
     //! Set the date format string.
     /*!
@@ -178,11 +181,6 @@ public:
      */
     void clearError();
 
-    //! Set the current log object as the default logger
-    void setAsDefaultLogger();
-
-    //! Remove the current log object as the default logger
-    void unsetAsDefaultLogger();
 
 protected:
 
@@ -244,7 +242,13 @@ protected:
     std::mutex m_mutex;
 };
 
-extern HMLogBase* hlog;
+extern std::shared_ptr<HMLogBase> hlog;
+//! Set the current log object as the default logger
+void setAsDefaultLogger(std::shared_ptr<HMLogBase> &newLog);
+
+//! Remove the current log object as the default logger
+void unsetAsDefaultLogger();
+
 //!  Template allowing the HMLog convenience function.
 /*
     This template is inline wrapping the log level so the variadic parameter are only evaluated if the log should be written.

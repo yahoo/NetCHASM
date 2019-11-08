@@ -14,7 +14,7 @@
 
 using namespace std;
 
-HMLogBase* hlog = nullptr;
+std::shared_ptr<HMLogBase> hlog = nullptr;
 
 static void usr1Handler(int s)
 {
@@ -22,21 +22,43 @@ static void usr1Handler(int s)
     hlog->rotate();
 }
 
-bool
-HMLogBase::initLogging(string logfile, HM_LOG_LEVEL level, bool threaded)
+void
+setAsDefaultLogger(std::shared_ptr<HMLogBase> & newLog)
 {
-    m_logFile = logfile;
-    return initLogging(level,threaded);
+    if(hlog.get() == nullptr)
+    {
+        hlog = newLog;
+    }
+    else if(hlog != newLog)
+    {
+        hlog->shutDownLogging();
+        hlog = newLog;
+    }
+}
+
+void
+unsetAsDefaultLogger()
+{
+    hlog.reset();
 }
 
 bool
-HMLogBase::initLogging(HM_LOG_LEVEL level, bool threaded)
+HMLogBase::initLogging(string logfile, HM_LOG_LEVEL level, bool threaded, bool installSigAction)
 {
-    struct sigaction sigUsr1Handler;
-    sigUsr1Handler.sa_handler = usr1Handler;
-    sigemptyset(&sigUsr1Handler.sa_mask);
-    sigUsr1Handler.sa_flags = 0;
-    sigaction(SIGUSR1, &sigUsr1Handler, NULL);
+    m_logFile = logfile;
+    return initLogging(level,threaded,installSigAction);
+}
+
+bool
+HMLogBase::initLogging(HM_LOG_LEVEL level, bool threaded, bool installSigAction)
+{
+    if(installSigAction){
+        struct sigaction sigUsr1Handler;
+        sigUsr1Handler.sa_handler = usr1Handler;
+        sigemptyset(&sigUsr1Handler.sa_mask);
+        sigUsr1Handler.sa_flags = 0;
+        sigaction(SIGUSR1, &sigUsr1Handler, NULL);
+    }
     m_threaded = threaded;
     m_logLevel = level;
 
@@ -112,7 +134,10 @@ HMLogBase::shutDownLogging()
         m_keepRunning = false;
         m_dataReadyCond.notify_one();
         lock.unlock();
-        m_thread.join();
+        if(m_thread.joinable())
+        {
+            m_thread.join();
+        }
     }
     closeLog();
 }
@@ -291,22 +316,6 @@ HMLogBase::clearError()
     m_lastLogMessages.clear();
 }
 
-void
-HMLogBase::setAsDefaultLogger()
-{
-    if(hlog != nullptr)
-    {
-        hlog->shutDownLogging();
-        delete hlog;
-    }
-    hlog = this;
-}
-
-void
-HMLogBase::unsetAsDefaultLogger()
-{
-    hlog = nullptr;
-}
 
 void
 HMLogBase::getEntry(struct LogEntry*& entry)

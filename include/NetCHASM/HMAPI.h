@@ -62,6 +62,7 @@ enum HM_DNS_CHECK_TYPE : uint8_t
 
 
 class HMState;
+class HMLogBase;
 class HMLogAPI;
 class HMDataCheckResult;
 class HMDataHostGroup;

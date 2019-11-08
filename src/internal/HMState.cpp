@@ -1190,6 +1190,10 @@ HMState::parseMasterYaml(const string& masterConfig)
             {
                 m_logClass = HM_LOG_PLUGIN_TEXT;
             }
+            else if(val == "registered")
+            {
+                m_logClass = HM_LOG_PLUGIN_REGISTERED;
+            }
         }
         else if(key == "log.verbosity")
         {
