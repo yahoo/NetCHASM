@@ -13,6 +13,7 @@
 #include "HMDNSCache.h"
 #include "HMLogBase.h"
 #include "HMHostMark.h"
+#include "HMStorageObserver.h"
 
 class HMThreadPool;
 class HMCommandListenerBase;
@@ -211,6 +212,10 @@ public:
 
     HMHostMark m_hostMark;
 
+    //! register a storage observer to receive notifications with probe
+    //  check results
+    void registerStorageObserver(std::shared_ptr<HMStorageObserver> observer);
+
 private:
 
     bool m_keepRunning;
@@ -228,6 +233,8 @@ private:
     std::shared_ptr<HMState> m_newState;
     std::vector<std::unique_ptr<HMCommandListenerBase>> m_listener;
     bool m_enableRemoteQueryReply;
+    std::mutex m_storageObserverMutex;
+    std::vector<std::shared_ptr<HMStorageObserver>> m_storageObserver;
 };
 
 #endif /* HMSTATEMANAGER_H_ */

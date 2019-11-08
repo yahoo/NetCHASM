@@ -442,6 +442,22 @@ void TESTNAME::test_master_conf_parse1()
 
 }
 
+void TESTNAME::test_master_conf_parse2()
+{
+    // Check the new notifier type
+    HMState sm;
+    HMIPAddress ip,ip_ret;
+    in_addr addr;
+    inet_aton("192.168.1.1",&addr);
+    ip.set((char*)&addr,AF_INET);
+    string master_config = "conf/dummy_master3.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.parseMasterConfig(master_config));
+    CPPUNIT_ASSERT_EQUAL(4, (int)sm.getMaxThreads());
+    CPPUNIT_ASSERT_EQUAL(3, (int)sm.getMinThreads());
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_PLUGIN_HTTP_CURL, (int)sm.getDefaultHTTPCheckype());
+    CPPUNIT_ASSERT_EQUAL((int)HM_STORAGE_NOTIFIER, (int)sm.getStorageType());
+}
+
 void TESTNAME::test_set_state()
 {
     HMStateManager sm;

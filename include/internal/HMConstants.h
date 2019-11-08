@@ -134,7 +134,8 @@ enum HM_STORAGE_CLASS : uint8_t
 {
     HM_STORAGE_DEFAULT,
     HM_STORAGE_MDBM,
-    HM_STORAGE_TEXT
+    HM_STORAGE_TEXT,
+    HM_STORAGE_NOTIFIER
 };
 
 //! The supported commit strategies to the backend

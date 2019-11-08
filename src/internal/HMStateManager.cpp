@@ -383,6 +383,12 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
     }
     m_newState->m_datastore->storeConfigs(*m_newState);
     m_newState->storeConfigInfo();
+    m_storageObserverMutex.lock();
+    for(auto it = m_storageObserver.begin(); it != m_storageObserver.end(); ++it)
+    {
+       m_newState->m_datastore->registerObserver(*it);
+    }
+    m_storageObserverMutex.unlock();
     m_currentState.swap(m_newState);
     m_newState.reset();
 
@@ -663,4 +669,11 @@ bool HMStateManager::isEnableRemoteQueryReply() const
 void HMStateManager::setEnableRemoteQueryReply(bool enableRemoteQueryReply)
 {
     m_enableRemoteQueryReply = enableRemoteQueryReply;
+}
+
+void
+HMStateManager::registerStorageObserver(shared_ptr<HMStorageObserver> observer)
+{
+    lock_guard<mutex> lg(m_storageObserverMutex);
+    m_storageObserver.push_back(observer);
 }
