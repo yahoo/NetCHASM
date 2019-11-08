@@ -13,6 +13,7 @@
 #include "HMDNSCache.h"
 #include "HMLogBase.h"
 #include "HMHostMark.h"
+#include "HMStorageObserver.h"
 
 class HMThreadPool;
 class HMCommandListenerBase;
@@ -75,12 +76,16 @@ public:
          Catches interrupt signals to force the Daemon to shut down.
          \param the master config to parse when loading the Daemon.
          \parma the log level to use for all event logging.
+         \parma true if the NetCHASM is used as a library. The function is non blocking for this case.
          \return false upon failure.
      */
-    bool healthCheck(std::string masterConfig, HM_LOG_LEVEL logLevel);
+    bool healthCheck(std::string masterConfig, HM_LOG_LEVEL logLevel, bool libMode=false);
 
     //! Shutdown the Daemon.
     void shutdown();
+
+    //! Wait for all the threads to shutdown
+    void shutdownThreads();
 
     //! Start logging.
     /*!
@@ -185,7 +190,6 @@ public:
      */
     void setWorkPerThreadRatio(uint32_t workPerThreadRatio);
 
-
     //! Set the current thread pool to use thread recycle.
     /*!
          Set the current thread pool to use thread recycling. Thread recycling will periodically flush thread state for long running Curl and Ares library state.
@@ -211,7 +215,16 @@ public:
 
     HMHostMark m_hostMark;
 
+    //! register a storage observer to receive notifications with probe
+    //  check results
+    void registerStorageObserver(std::shared_ptr<HMStorageObserver> &observer);
+
+    //! register a log object for tracing.
+    void registerLog(std::shared_ptr<HMLogBase> &log);
+
 private:
+    // setup signal handlers.  Used when NetCHASM is not a library
+    void setupSignals();
 
     bool m_keepRunning;
 
@@ -220,6 +233,7 @@ private:
 
     HMEventLoop* m_eventLoop;
     HMThreadPool* m_threadPool;
+    std::thread  m_threadMonitor;
     HMEventLoopLibEvent* m_libEvent;
 
     std::mutex m_reloadMutex;
@@ -228,6 +242,10 @@ private:
     std::shared_ptr<HMState> m_newState;
     std::vector<std::unique_ptr<HMCommandListenerBase>> m_listener;
     bool m_enableRemoteQueryReply;
+    std::mutex m_storageObserverMutex;
+    std::vector<std::shared_ptr<HMStorageObserver>> m_storageObserver;
+    std::shared_ptr<HMLogBase> m_registeredLog;
+    bool m_useAsLib;
 };
 
 #endif /* HMSTATEMANAGER_H_ */

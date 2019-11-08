@@ -8,14 +8,13 @@ void setupCommon()
 {
     string logPath = "HM.log";
     HM_LOG_LEVEL logLevel = HM_LOG_DEBUG3;
-    hlog = new HMLogStdout();
+    hlog = make_shared<HMLogStdout>();
     hlog->initLogging(logPath, logLevel, true);
 }
 
 void teardownCommon()
 {
     hlog->shutDownLogging();
-    delete hlog;
     hlog = nullptr;
 }
 

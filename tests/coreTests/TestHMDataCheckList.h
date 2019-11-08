@@ -20,7 +20,9 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_basic_healthPlugins_remoteEnabled);
     CPPUNIT_TEST(test_basic_healthPlugins_ftp);
     CPPUNIT_TEST(test_basic_healthPlugins_dns);
+#ifdef USE_ARES
     CPPUNIT_TEST(test_basic_healthPlugins_dnsvc);
+#endif
     CPPUNIT_TEST(test_basic_healthPlugins_none);
     CPPUNIT_TEST(test_add_hostgroup);
     CPPUNIT_TEST(test_ip_dns_failed);
@@ -48,4 +50,4 @@ protected:
 };
 
 #endif /* TEST_HMDataCheckList_H_ */
- 
+

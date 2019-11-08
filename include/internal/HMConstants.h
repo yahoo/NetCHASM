@@ -126,7 +126,8 @@ enum HM_REMOTE_CHECK_TYPE : uint8_t
 enum HM_LOG_PLUGIN_CLASS : uint8_t
 {
     HM_LOG_PLUGIN_DEFAULT,
-    HM_LOG_PLUGIN_TEXT
+    HM_LOG_PLUGIN_TEXT,
+    HM_LOG_PLUGIN_REGISTERED
 };
 
 //! The supported types of backend storage classes.
@@ -134,7 +135,8 @@ enum HM_STORAGE_CLASS : uint8_t
 {
     HM_STORAGE_DEFAULT,
     HM_STORAGE_MDBM,
-    HM_STORAGE_TEXT
+    HM_STORAGE_TEXT,
+    HM_STORAGE_NOTIFIER
 };
 
 //! The supported commit strategies to the backend

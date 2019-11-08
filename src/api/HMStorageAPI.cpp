@@ -17,18 +17,17 @@ using namespace std;
 HMStorageAPI::HMStorageAPI() :
     m_loaded(false)
 {
-    log = new HMLogAPI();
+    log = make_shared<HMLogAPI>();
     log->initLogging(HM_LOG_ERROR, false);
     log->clearError();
-    log->setAsDefaultLogger();
+    setAsDefaultLogger(log);
 }
 
 HMStorageAPI::~HMStorageAPI()
 {
     m_currentState.reset();
     log->shutDownLogging();
-    log->unsetAsDefaultLogger();
-    delete log;
+    unsetAsDefaultLogger();
 }
 
 bool
@@ -109,7 +108,7 @@ HMStorageAPI::getConfigInfo(HMAPIConfigInfo& result)
     }
     std::shared_ptr<HMState> currentState;
     updateState(currentState);
-    HMConfigInfo configInfo; 
+    HMConfigInfo configInfo;
     if(!currentState->m_datastore->getConfigInfo(configInfo))
     {
         return false;

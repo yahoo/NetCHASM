@@ -1,5 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+
+#ifdef USE_MDBM
 #include "TestHMControlTCPSocket2.h"
 
 #include <sys/stat.h>
@@ -77,7 +79,7 @@ socket.path: test_sock" << endl;
     fout3.close();
 //    host-group:\n\
 //            - test.hostgroup.net\n\
-            
+
     string ipaddr = "127.0.0.1";
     port = 10052;
     server.set(ipaddr);
@@ -304,3 +306,4 @@ void TESTNAME::test_cmdlstnr3()
             (uint64_t )infop1.m_checkTime);
 
 }
+#endif

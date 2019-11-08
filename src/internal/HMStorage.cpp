@@ -150,6 +150,13 @@ HMStorage::runStore()
     while(commitHealthCheck() || commitAuxInfo()) {}
 }
 
+void
+HMStorage::registerObserver(shared_ptr<HMStorageObserver> observer)
+{
+    lock_guard<mutex> lg(m_observerMutex);
+    m_observer.push_back(observer);
+}
+
 bool HMHash::operator ==(const HMHash& k) const
 {
     if(m_hashSize == 0 || k.m_hashSize == 0)

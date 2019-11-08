@@ -18,7 +18,9 @@ class TESTNAME : public CppUnit::TestFixture
 {
 
     CPPUNIT_TEST_SUITE(TESTNAME);
+#ifdef USE_ARES
     CPPUNIT_TEST(test_basic_DNS_eventqueue);
+#endif
     CPPUNIT_TEST(test_basic_HC_eventqueue);
     CPPUNIT_TEST(test_ordering_HC_eventqueue);
     CPPUNIT_TEST(test_delay_HC_eventqueue);
@@ -41,4 +43,4 @@ protected:
 };
 
 #endif /* TestEventQueue_H_ */
- 
+

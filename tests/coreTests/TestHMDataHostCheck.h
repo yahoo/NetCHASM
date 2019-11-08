@@ -20,8 +20,10 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_operations_nequal_checkport);
     CPPUNIT_TEST(test_operations_nequal_checkinfo);
     CPPUNIT_TEST(test_operations_nequal_dualstack);
+#ifdef USE_ARES
     CPPUNIT_TEST(test_operations_equal_checkplugin);
     CPPUNIT_TEST(test_operations_nequal_remote_check);
+#endif
     CPPUNIT_TEST(test_print_entry);
     CPPUNIT_TEST(test_operations_less_checktype);
     CPPUNIT_TEST(test_operations_less_port);

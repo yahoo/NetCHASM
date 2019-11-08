@@ -1,5 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+
+#ifdef USE_MDMB
 #include "TestHMControlLinuxSocket5.h"
 
 #include <sys/stat.h>
@@ -708,3 +710,4 @@ void TESTNAME::test_cmdlstnr7()
     CPPUNIT_ASSERT_EQUAL(1, (int )addrsret.size());
     CPPUNIT_ASSERT(std::find(addrsret.begin(), addrsret.end(), addr3) != addrsret.end());
 }
+#endif

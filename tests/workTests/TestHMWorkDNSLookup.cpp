@@ -1,5 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+
+#ifdef USE_ARES
 #include "TestHMWorkDNSLookup.h"
 #include "common.h"
 #include "TestStorage.h"
@@ -759,3 +761,4 @@ TESTNAME::test_HMWorkDNSLookup_DnsFailed()
     }
     delete dnsLookup;
 }
+#endif

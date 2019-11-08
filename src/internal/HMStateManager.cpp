@@ -42,6 +42,10 @@ HMStateManager::HMStateManager() :
           m_libEvent(nullptr),
           m_enableRemoteQueryReply(true)
 {
+    if(hlog)
+    {
+       hlog->shutDownLogging();
+    }
     hlog = nullptr;
 }
 
@@ -51,7 +55,6 @@ HMStateManager::~HMStateManager()
     if(hlog != nullptr)
     {
         hlog->shutDownLogging();
-        delete hlog;
         hlog = nullptr;
     }
 
@@ -85,13 +88,9 @@ HMStateManager::updateState(shared_ptr<HMState>& current)
     return true;
 }
 
-// The main Daemon HealthCheck Function
-bool
-HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
+void
+HMStateManager::setupSignals()
 {
-    // Setup the exit conditions from Ctrl-c
-    monitor = this;
-    FIPS_mode_set(0);
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = ctrlC_Callback;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -109,8 +108,20 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     sigemptyset(&sigPipeHandler.sa_mask);
     sigPipeHandler.sa_flags = 0;
     sigaction(SIGPIPE, &sigPipeHandler, NULL);
+}
 
-    thread threadMonitor;
+// The main Daemon HealthCheck Function
+bool
+HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel, bool libMode)
+{
+    // Setup the exit conditions from Ctrl-c
+    monitor = this;
+    FIPS_mode_set(0);
+    m_useAsLib = libMode;
+    if(!libMode) {
+        setupSignals();
+    }
+
     // Main function to do all the health checking
 
     // Step 1. Load the Master Config that maintains how YHealthCheck runs
@@ -188,7 +199,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // Step 5. Start the worker threads
     HMLog(HM_LOG_INFO, "[CORE] Starting Worker Threads");
     m_threadPool = new HMThreadPool(this, m_eventLoop);
-    threadMonitor = thread(&HMThreadPool::monitorThreads, m_threadPool);
+    m_threadMonitor = thread(&HMThreadPool::monitorThreads, m_threadPool);
 
     // Step 6: Listen for commands on the socket
     for (auto &it : m_listener)
@@ -206,15 +217,23 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
 
     m_eventLoop->runThread();
 
-    // block until shutdown
-    std::unique_lock<std::mutex> lk(m_shutdownMutex, std::defer_lock);
-    while(m_keepRunning)
-    {
-        lk.lock();
-        m_shutdownCond.wait(lk, [this](){return !m_keepRunning;});
-        lk.unlock();
+    if(!libMode) {
+        // block until shutdown
+        std::unique_lock<std::mutex> lk(m_shutdownMutex, std::defer_lock);
+        while(m_keepRunning)
+        {
+           lk.lock();
+           m_shutdownCond.wait(lk, [this](){return !m_keepRunning;});
+           lk.unlock();
+        }
+        shutdownThreads();
     }
+    return true;
+}
 
+// Block until all threads have shutdown
+void
+HMStateManager::shutdownThreads(){
     // Begin shutdown code
     m_eventLoop->shutDown();
 
@@ -227,6 +246,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // The tracker is now shutdown
     // Shutdown the threads
     HMLog(HM_LOG_NOTICE, "[CORE] Shutting Down");
+    shared_ptr<HMState> current;
     updateState(current);
     current->closeBackend();
     m_threadPool->shutdown();
@@ -234,7 +254,6 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     if(hlog != nullptr)
     {
         hlog->shutDownLogging();
-        delete hlog;
         hlog = nullptr;
     }
     for (auto &it : m_listener)
@@ -244,8 +263,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
             it->shutDown();
         }
     }
-    threadMonitor.join();
-    return true;
+    m_threadMonitor.join();
 }
 
 void
@@ -327,24 +345,41 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
     }
     else
     {
-        // This is a new load. Setup the syslog logger
-        HMLogBase* newLog = new HMLogSyslog();
-        if(newLog->initLogging(logLevel, false))
+        shared_ptr<HMLogBase> newLog;
+        // This is a new load. Check if there is a registered
+        // log and use it otherwise try setting up syslog logger.
+        if(!m_registeredLog)
         {
-            newLog->setAsDefaultLogger();
-        }
-        else
-        {
-            delete newLog;
-            newLog = new HMLogStdout();
-            if(newLog->initLogging(logLevel, false))
+            // and the StateManager was initialized without a log.
+            newLog = make_shared<HMLogSyslog>();
+            if(newLog->initLogging(logLevel, false, !m_useAsLib))
             {
-                newLog->setAsDefaultLogger();
+                setAsDefaultLogger(newLog);
             }
             else
             {
-                cout << "Critical Log failure: Could not open any loggers" << endl;
-                delete newLog;
+                newLog = make_shared<HMLogStdout>();
+                if(newLog->initLogging(logLevel, false, !m_useAsLib))
+                {
+                    setAsDefaultLogger(newLog);
+                }
+                else
+                {
+                    cout << "Critical Log failure: Could not open any loggers" << endl;
+                    return false;
+                }
+            }
+        } else {
+            lastLogType = HM_LOG_PLUGIN_REGISTERED;
+            lastLogPath = "";
+            if(m_registeredLog->initLogging(logLevel, true, !m_useAsLib))
+            {
+                HMLog(HM_LOG_NOTICE, "[CORE] Using a registered log at init" );
+                setAsDefaultLogger(m_registeredLog);
+            }
+            else
+            {
+                cout << "Critical Log failure: Could not open registered log" << endl;
                 return false;
             }
         }
@@ -383,6 +418,12 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
     }
     m_newState->m_datastore->storeConfigs(*m_newState);
     m_newState->storeConfigInfo();
+    m_storageObserverMutex.lock();
+    for(auto it = m_storageObserver.begin(); it != m_storageObserver.end(); ++it)
+    {
+       m_newState->m_datastore->registerObserver(*it);
+    }
+    m_storageObserverMutex.unlock();
     m_currentState.swap(m_newState);
     m_newState.reset();
 
@@ -478,6 +519,7 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
 
     // Now we destroy the state
     m_newState.reset();
+    HMLog(HM_LOG_DEBUG3, "End reload");
     return true;
 }
 
@@ -489,24 +531,35 @@ HMStateManager::startLogging(uint32_t lastLogClass, const string& lastLogPath, H
             || lastLogClass != m_newState->getDefaultLogType()
             || lastLogPath != m_newState->getLogPath())
     {
-        HMLogBase* oldLog = hlog;
-        HMLogBase* newLog;
+        shared_ptr<HMLogBase> newLog;
         switch(m_newState->getDefaultLogType())
         {
         case HM_LOG_PLUGIN_DEFAULT:
         case HM_LOG_PLUGIN_TEXT:
-            newLog = new HMLogText();
+            newLog = make_shared<HMLogText>();
+            break;
+        case HM_LOG_PLUGIN_REGISTERED:
+            if(!m_registeredLog)
+            {
+                HMLog(HM_LOG_ERROR, "No registered log but config is trying to use it" );
+                return false;
+            }
+            m_registeredLog->shutDownLogging();
+            newLog = m_registeredLog;
+            HMLog(HM_LOG_NOTICE, "Using a registered log" );
+            break;
+        default:
+            return false;
         }
 
-        if(!newLog->initLogging(m_newState->getLogPath(), m_newState->getLogLevel(), true))
+        if(!newLog->initLogging(m_newState->getLogPath(), m_newState->getLogLevel(), true, !m_useAsLib))
         {
             // If this fails, then we want to try syslog
             string fail1 = newLog->getLastError();
 
-            delete newLog;
-            newLog = new HMLogSyslog();
+            newLog = make_shared<HMLogSyslog>();
 
-            if(newLog->initLogging( m_newState->getLogLevel(), true))
+            if(newLog->initLogging(m_newState->getLogLevel(), true, !m_useAsLib))
             {
                 newLog->log(HM_LOG_ERROR, "Failed to open backend logger: %s", fail1.c_str());
             }
@@ -514,10 +567,9 @@ HMStateManager::startLogging(uint32_t lastLogClass, const string& lastLogPath, H
             {
                 // Syslog failed too
                 string fail2 = newLog->getLastError();
-                delete newLog;
 
-                newLog = new HMLogStdout();
-                if(newLog->initLogging( m_newState->getLogLevel(), true))
+                newLog = make_shared<HMLogStdout>();
+                if(newLog->initLogging( m_newState->getLogLevel(), true, !m_useAsLib))
                 {
                     // Ok the stdout worked
                     newLog->log(HM_LOG_ERROR, "Failed to open backend logger: %s", fail1.c_str());
@@ -526,23 +578,20 @@ HMStateManager::startLogging(uint32_t lastLogClass, const string& lastLogPath, H
                 else
                 {
                     // Something when seriously wrong. If we have an old logger we can stay with that
-                    if(oldLog)
+                    if(hlog)
                     {
-                        newLog->log(HM_LOG_ERROR, "Failed to open backend logger: %s", fail1.c_str());
-                        newLog->log(HM_LOG_ERROR, "Failed to open syslog logger: %s", fail2.c_str());
-                        newLog->log(HM_LOG_ERROR, "Failed to open stdout logger: %s", newLog->getLastError().c_str());
-                        delete newLog;
-                        newLog = oldLog;
-                        oldLog = nullptr;
+                        hlog->log(HM_LOG_ERROR, "Failed to open backend logger: %s", fail1.c_str());
+                        hlog->log(HM_LOG_ERROR, "Failed to open syslog logger: %s", fail2.c_str());
+                        hlog->log(HM_LOG_ERROR, "Failed to open stdout logger: %s", newLog->getLastError().c_str());
+                        newLog = hlog;
                     }
                     else
                     {
-                        delete newLog;
                         return false;
                     }
                 }
             }
-        }
+        } // plugin == HM_LOG_PLUGIN_REGISTERED
 
         if(!m_newState->getLogFormat().empty())
         {
@@ -555,7 +604,7 @@ HMStateManager::startLogging(uint32_t lastLogClass, const string& lastLogPath, H
             newLog->setMaxLogQueue(m_newState->getMaxLogQueueLength());
         }
 
-        newLog->setAsDefaultLogger();
+        setAsDefaultLogger(newLog);
     }
     else if(lastLogLevel != m_newState->getLogLevel())
     {
@@ -663,4 +712,17 @@ bool HMStateManager::isEnableRemoteQueryReply() const
 void HMStateManager::setEnableRemoteQueryReply(bool enableRemoteQueryReply)
 {
     m_enableRemoteQueryReply = enableRemoteQueryReply;
+}
+
+void
+HMStateManager::registerStorageObserver(shared_ptr<HMStorageObserver> &observer)
+{
+    lock_guard<mutex> lg(m_storageObserverMutex);
+    m_storageObserver.push_back(observer);
+}
+
+void
+HMStateManager::registerLog(shared_ptr<HMLogBase> &log)
+{
+    m_registeredLog = log;
 }

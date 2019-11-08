@@ -1,5 +1,6 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
+#ifdef USE_MDBM
 #include <sys/stat.h>
 #include <fstream>
 #include <sys/socket.h>
@@ -394,3 +395,4 @@ void TESTNAME::test_cmdlstnr4()
 	CPPUNIT_ASSERT(!infop1.m_forceHostDown);
 
 }
+#endif

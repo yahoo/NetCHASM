@@ -10,6 +10,7 @@
 #include "HMStorageHostGroupMDBM.h"
 #endif
 #include "HMStorageHostText.h"
+#include "HMStorageHostNotifier.h"
 #include "HMLogBase.h"
 
 using namespace std;
@@ -382,7 +383,7 @@ HMState::loadAllConfigs()
                 break;
             }
         }
-        
+
          //add hosts of child host groups
         for(auto jt = it->second.getHostGroupList()->begin();jt!= it->second.getHostGroupList()->end(); ++jt)
         {
@@ -404,7 +405,7 @@ HMState::loadAllConfigs()
                         jt->c_str(), it->first.c_str());
                 return false;
             }
-        }        
+        }
     }
 
     m_configsLoaded = true;
@@ -660,6 +661,9 @@ HMState::openBackend(bool readOnly)
 #endif
         break;
     }
+    case HM_STORAGE_NOTIFIER:
+        m_datastore = make_unique<HMStorageHostNotifier>(&m_hostGroups, &m_dnsCache);
+        break;
     case HM_STORAGE_TEXT:
     default:
         m_datastore = make_unique<HMStorageHostText>(m_storagePath, &m_hostGroups, &m_dnsCache);
@@ -1127,6 +1131,11 @@ HMState::parseMasterYaml(const string& masterConfig)
                 m_storageClass = HM_STORAGE_TEXT;
                 HMLog(HM_LOG_NOTICE, "[CORE] Using a raw text file for the backend database");
             }
+            else if(val == "notifier")
+            {
+                m_storageClass = HM_STORAGE_NOTIFIER;
+                HMLog(HM_LOG_NOTICE, "[CORE] Using a notifier for the backend database");
+            }
         }
         else if(key == "db.path")
         {
@@ -1180,6 +1189,10 @@ HMState::parseMasterYaml(const string& masterConfig)
             if(val == "text")
             {
                 m_logClass = HM_LOG_PLUGIN_TEXT;
+            }
+            else if(val == "registered")
+            {
+                m_logClass = HM_LOG_PLUGIN_REGISTERED;
             }
         }
         else if(key == "log.verbosity")
@@ -1382,7 +1395,7 @@ HMState::parseMasterYaml(const string& masterConfig)
     return true;
 }
 
-void 
+void
 HMState::HashHostGroupMap(HMHashMD5& hash, HMHash& hashValue)
 {
       for(auto it = m_hostGroups.begin();it != m_hostGroups.end();++it)

@@ -23,6 +23,7 @@
 class HMDataCheckList;
 class HMStorageHostGroup;
 class HMState;
+class HMStorageObserver;
 
 //! Convenience class to pass an entire host group check result.
 /*!
@@ -563,6 +564,13 @@ public:
      */
     void updateLockPolicy(HM_STORAGE_LOCK_POLICY lockPolicy);
 
+    //! Register a storage observer.
+    /*!
+         Register a storage observer this is done from the loadDaemon routine.
+         We will not register new observers without a reload.
+     */
+    void registerObserver(std::shared_ptr<HMStorageObserver> observer);
+
 protected:
 
     //! Internal function to handle opening the database and initializing the data structures.
@@ -599,6 +607,8 @@ protected:
 
     HMDataHostGroupMap* m_hostGroupMap;
     HMDNSCache* m_dnsCache;
+    std::mutex m_observerMutex;
+    std::vector<std::shared_ptr<HMStorageObserver>> m_observer;
 };
 
 #endif /* HMSTORAGEBASE_H_ */

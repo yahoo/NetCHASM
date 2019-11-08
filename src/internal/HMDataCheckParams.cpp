@@ -2,6 +2,7 @@
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include <sstream>
 #include <iostream>
+#include <inttypes.h>
 
 #include "HMConstants.h"
 #include "HMDataCheckParams.h"
@@ -107,7 +108,7 @@ void
 HMDataCheckParams::setHostStatus(const HMIPAddress& address, bool forceHostStatus)
 {
     lock_guard<shared_timed_mutex> lock(m_sharedMutex);
-    
+
     if (address.isSet())
     {
         //IP address is set if we want to force the status of a ip
@@ -147,7 +148,7 @@ HMDataCheckParams::nextCheckTime(const HMIPAddress& address)
     {
         return now;
     }
-    
+
     HMTimeStamp nextchecktime;
     nextchecktime =  now + HMTimeStamp::HOURINMS;
     if(it->second.m_queryState == HM_CHECK_INACTIVE || it->second.m_queryState == HM_CHECK_FAILED)
@@ -332,11 +333,11 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     }
 
     unsigned long flap = m_flapThreshold  ?m_flapThreshold : HM_DEFAULT_FLAP_THRESHOLD;
-    
+
     //Failed on Retry
     if((it->second.m_status & HM_HOST_STATUS_UP)
             && (!(it->second.m_softStatus & HM_HOST_STATUS_UP))
-            && ++(it->second.m_numFailedChecks) <= m_numCheckRetries) 
+            && ++(it->second.m_numFailedChecks) <= m_numCheckRetries)
     {
         HMLog(HM_LOG_NOTICE,
                 "[CHECK] Check failed for %s(%s). Check %d of %d failed reason %s for hostgroups %s ",
@@ -424,7 +425,7 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
             it->second.m_numFailedChecks = 0;
         }
     }
-    else if(start - it->second.m_flapTime >= flap) 
+    else if(start - it->second.m_flapTime >= flap)
     {
         it->second.m_numFlaps = 0;
     }
@@ -662,7 +663,8 @@ HMDataCheckParams::setResponse(string& hostname,
                 && ++it->second.m_numSlowResponses <= m_numCheckRetries)
         {
             HMLog(HM_LOG_NOTICE,
-                    "[CHECK]%s(%15s): skip slow response (%d of %d): rt = %u,  total rt= %u, (smth rt=%u,st=%u,d=%u)",
+                    "[CHECK]%s(%15s): skip slow response (%d of %d): rt = %" PRIu64 "\
+                    ,  total rt= %" PRIu64 ", (smth rt=%u,st=%u,d=%" PRIu64 ")",
                     hostname.c_str(),
                     it->first.toString().c_str(),
                     it->second.m_numSlowResponses,
@@ -694,7 +696,8 @@ HMDataCheckParams::setResponse(string& hostname,
     {
         it->second.m_reason = HM_REASON_RESPONSE_TIMEOUT;
         HMLog(HM_LOG_NOTICE,
-              "[CHECK] %s: responded t=%us (rt =%us, total rt=%us)  after timeout: %ums with reason %s",
+              "[CHECK] %s: responded t=%" PRIu64 "s (rt =%" PRIu64 "s, total rt=%" PRIu64 "\
+              s)  after timeout: %" PRIu64 "ms with reason %s",
               it->first.toString().c_str(),
               srt,
               rt,

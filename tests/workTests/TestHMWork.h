@@ -34,8 +34,10 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_HMWork_Construction);
     CPPUNIT_TEST(test_HMWork_updateState);
+#ifdef USE_ARES
     CPPUNIT_TEST(test_HMWorkState_Construction);
     CPPUNIT_TEST(test_HMWorkReloadState);
+#endif
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -52,4 +54,4 @@ protected:
 };
 
 #endif // TEST_MDBMSTORE_H_
- 
+

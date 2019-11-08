@@ -4,7 +4,6 @@
 
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
-#include "HMWorkDNSLookupAres.h"
 #include "HMConstants.h"
 #include "common.h"
 #include <unistd.h>
@@ -708,4 +707,3 @@ void TESTNAME::test_retry_200()
     CPPUNIT_ASSERT(result.m_status & HM_HOST_STATUS_UP);
     CPPUNIT_ASSERT((result.m_softStatus & HM_HOST_STATUS_UP));
 }
-

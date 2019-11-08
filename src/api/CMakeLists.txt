@@ -24,5 +24,4 @@ set_property(TARGET netchasm PROPERTY CXX_STANDARD 14)
 
 target_link_libraries (netchasm netchasm_core)
 
-install(TARGETS netchasm LIBRARY DESTINATION lib64)
-
+install(TARGETS netchasm LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
