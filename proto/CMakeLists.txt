@@ -43,3 +43,6 @@ endif(COV)
 
 set_property(TARGET netchasm_proto PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET netchasm_proto PROPERTY CXX_STANDARD 14)
+
+install(DIRECTORY "." DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/netchasm
+   FILES_MATCHING PATTERN "*.h")
