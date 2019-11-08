@@ -76,12 +76,16 @@ public:
          Catches interrupt signals to force the Daemon to shut down.
          \param the master config to parse when loading the Daemon.
          \parma the log level to use for all event logging.
+         \parma true if the NetCHASM is used as a library. The function is non blocking for this case.
          \return false upon failure.
      */
-    bool healthCheck(std::string masterConfig, HM_LOG_LEVEL logLevel);
+    bool healthCheck(std::string masterConfig, HM_LOG_LEVEL logLevel, bool libMode=false);
 
     //! Shutdown the Daemon.
     void shutdown();
+
+    //! Wait for all the threads to shutdown
+    void shutdownThreads();
 
     //! Start logging.
     /*!
@@ -217,6 +221,8 @@ public:
     void registerStorageObserver(std::shared_ptr<HMStorageObserver> observer);
 
 private:
+    // setup signal handlers.  Used when NetCHASM is not a library
+    void setupSignals();
 
     bool m_keepRunning;
 
@@ -225,6 +231,7 @@ private:
 
     HMEventLoop* m_eventLoop;
     HMThreadPool* m_threadPool;
+    std::thread  m_threadMonitor;
     HMEventLoopLibEvent* m_libEvent;
 
     std::mutex m_reloadMutex;

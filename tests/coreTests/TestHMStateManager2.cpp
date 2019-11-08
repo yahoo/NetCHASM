@@ -41,8 +41,8 @@ socket.path: test_sock" << endl;
     check-port: 123\n\
     check-retries: 3\n\
     check-retry-delay: 0\n\
-    timeout: 2000\n\
-    ttl: 60000\n\
+    timeout: 2\n\
+    ttl: 6\n\
     source-address: 10.10.10.1\n\
     host:\n\
        - nhg1_172_20_10_1\n\
@@ -76,5 +76,19 @@ void TESTNAME::test_load_configs_backend()
     CPPUNIT_ASSERT_EQUAL(HM_CHECK_MARK_HTTPS, it->second.getCheckType());
     CPPUNIT_ASSERT_EQUAL(123, (int)it->second.getCheckPort());
     current.reset();
+    delete sm;
+}
+
+void TESTNAME::test_initShutdown()
+{
+    // Test the healthCheck init routine and shuting down the threads
+    HMStateManager *sm = new HMStateManager();
+    string master_config = "conf2/dummy_master.yaml";
+    // Init shouldn't block
+    CPPUNIT_ASSERT_EQUAL(true, sm->healthCheck(master_config, HM_LOG_DEBUG3, true));
+    // Give time for the threads to stabilize
+    sleep(5);
+    // Shutdown all threads should terminate
+    sm->shutdownThreads();
     delete sm;
 }

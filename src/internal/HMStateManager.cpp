@@ -85,13 +85,9 @@ HMStateManager::updateState(shared_ptr<HMState>& current)
     return true;
 }
 
-// The main Daemon HealthCheck Function
-bool
-HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
+void
+HMStateManager::setupSignals()
 {
-    // Setup the exit conditions from Ctrl-c
-    monitor = this;
-    FIPS_mode_set(0);
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = ctrlC_Callback;
     sigemptyset(&sigIntHandler.sa_mask);
@@ -109,8 +105,19 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     sigemptyset(&sigPipeHandler.sa_mask);
     sigPipeHandler.sa_flags = 0;
     sigaction(SIGPIPE, &sigPipeHandler, NULL);
+}
 
-    thread threadMonitor;
+// The main Daemon HealthCheck Function
+bool
+HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel, bool libMode)
+{
+    // Setup the exit conditions from Ctrl-c
+    monitor = this;
+    FIPS_mode_set(0);
+    if(!libMode) {
+        setupSignals();
+    }
+
     // Main function to do all the health checking
 
     // Step 1. Load the Master Config that maintains how YHealthCheck runs
@@ -188,7 +195,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // Step 5. Start the worker threads
     HMLog(HM_LOG_INFO, "[CORE] Starting Worker Threads");
     m_threadPool = new HMThreadPool(this, m_eventLoop);
-    threadMonitor = thread(&HMThreadPool::monitorThreads, m_threadPool);
+    m_threadMonitor = thread(&HMThreadPool::monitorThreads, m_threadPool);
 
     // Step 6: Listen for commands on the socket
     for (auto &it : m_listener)
@@ -206,15 +213,23 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
 
     m_eventLoop->runThread();
 
-    // block until shutdown
-    std::unique_lock<std::mutex> lk(m_shutdownMutex, std::defer_lock);
-    while(m_keepRunning)
-    {
-        lk.lock();
-        m_shutdownCond.wait(lk, [this](){return !m_keepRunning;});
-        lk.unlock();
+    if(!libMode) {
+        // block until shutdown
+        std::unique_lock<std::mutex> lk(m_shutdownMutex, std::defer_lock);
+        while(m_keepRunning)
+        {
+           lk.lock();
+           m_shutdownCond.wait(lk, [this](){return !m_keepRunning;});
+           lk.unlock();
+        }
+        shutdownThreads();
     }
+    return true;
+}
 
+// Block until all threads have shutdown
+void
+HMStateManager::shutdownThreads(){
     // Begin shutdown code
     m_eventLoop->shutDown();
 
@@ -227,6 +242,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // The tracker is now shutdown
     // Shutdown the threads
     HMLog(HM_LOG_NOTICE, "[CORE] Shutting Down");
+    shared_ptr<HMState> current;
     updateState(current);
     current->closeBackend();
     m_threadPool->shutdown();
@@ -244,8 +260,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
             it->shutDown();
         }
     }
-    threadMonitor.join();
-    return true;
+    m_threadMonitor.join();
 }
 
 void

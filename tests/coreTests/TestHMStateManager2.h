@@ -15,11 +15,13 @@ class TESTNAME : public CppUnit::TestFixture
 
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_load_configs_backend);
+    CPPUNIT_TEST(test_initShutdown);
     CPPUNIT_TEST_SUITE_END();
 
 public:
     void setUp();
     void tearDown();
+    void test_initShutdown();
     void test_load_configs_backend();
 };
 
