@@ -29,35 +29,36 @@ class HMHostMark
 public:
 
     /*!
-         set mark to a particular host and datahostcheck.
+         set mark values to a particular host and datahostcheck.
          \param hostname to add the mark
          \param address of the host to set the mark
          \param datahostcheck for the mark
-         \param mark value
+         \param mark values
          \return true if successful.
      */
-    bool setSocketOption(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck, int value);
+    bool setSocketOptionValues(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck, const std::set<int>& values);
 
     /*!
-         get mark that is set to a particular host and datahostcheck.
+         get mark values that is set to a particular host and datahostcheck.
          \param hostname to get the mark
          \param address of the host to get the mark
          \param datahostcheck for the mark
-         \param variable to store the mark value
+         \param variable to store the mark values
          \return true if successful.
      */
-    bool getSocketOption(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck, int& value);
+    bool getSocketOptionValues(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck, std::set<int>& values);
 
     /*!
-         remove mark to a particular host and datahostcheck.
+         remove mark values to a particular host and datahostcheck.
          \param hostname to remove the mark
          \param address of the host to remove the mark
          \param datahostcheck for the mark
+         \param mark values to be removed
          \return true if successful.
      */
-    bool removeSocketOption(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck);
+    bool removeSocketOptionValues(const std::string& hostName, const HMIPAddress& address, const HMDataHostCheck& hostCheck, const std::set<int>& values);
 private:
-    std::map<HMHostMarkOptKey, int> m_hostSockOptMap;
+    std::map<HMHostMarkOptKey, std::set<int>> m_hostSockOptMap;
     std::shared_timed_mutex m_mutex;
 };
 

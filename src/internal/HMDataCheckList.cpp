@@ -3,6 +3,7 @@
 #include <memory>
 #include <limits.h>
 
+#include "HMResultPublisher.h"
 #include "HMDataCheckList.h"
 #include "HMAuxCache.h"
 #include "HMStorage.h"
@@ -17,7 +18,7 @@
 #include "HMWorkHealthCheckRemote.h"
 #include "HMWorkHealthCheckRemoteTLS.h"
 #include "HMWorkHealthCheckTCPS.h"
-#include "HMWorkMarkFetchCurl.h"
+#include "HMWorkHealthMultiWork.h"
 using namespace std;
 
 HM_SCHEDULE_STATE
@@ -256,8 +257,10 @@ HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDat
             {
             case HM_CHECK_PLUGIN_DEFAULT:
             case HM_CHECK_PLUGIN_MARK_CURL:
-                healthCheck = make_unique<HMWorkMarkFetchCurl>(
-                        HMWorkMarkFetchCurl(hostname, ip, check));
+                healthCheck = make_unique<HMWorkHealhMultiWork>(
+                        HMWorkHealhMultiWork(hostname, ip, check));
+                healthCheck->setStoreResults(false);
+                healthCheck->setPublish(false);
                 break;
             default:
                 HMLog(HM_LOG_ERROR,
@@ -398,6 +401,26 @@ HMDataCheckList::storeCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIP
         }
     }
 }
+
+
+void
+HMDataCheckList::publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMResultPublisher& publisher)
+{
+    auto key = make_pair(work->m_hostname, hostCheck);
+    auto ret = m_checklist.equal_range(key);
+    for(auto it = ret.first; it != ret.second; ++it)
+    {
+        HMDataCheckResult result(it->second.getTimeout());
+        bool status = it->second.getCheckResult(address, result);
+        if (status)
+        {
+            set<string> hostGroups;
+            it->second.getHostGroups(hostGroups);
+            publisher.publishResult(work->m_hostname, result, work->getMark(), hostGroups, result.m_statusChanged);
+        }
+    }
+}
+
 
 void
 HMDataCheckList::storeAux(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, string  auxData, HMStorage* store, HMAuxCache& aux, HM_AUX_DATA_TYPE auxDataType)

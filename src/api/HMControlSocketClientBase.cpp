@@ -710,41 +710,51 @@ HMControlSocketClientBase::getDNSAddresses(const string& hostName, vector<HMAPII
 
 
 bool
-HMControlSocketClientBase::setHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, int value)
+HMControlSocketClientBase::addHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, const set<int>& values)
 {
+    uint64_t dataSize = 0;
+    unique_ptr<char[]> data = dataPacking.packListInt64(values, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
-            + HM_CMD_SETHOSTMARK + " " + hostGroupName + " " + hostName + " " + address.toString() + " " + to_string(value);
+            + HM_CMD_SETHOSTMARK + " " + hostGroupName + " " + hostName + " " + address.toString() + " " + to_string(dataSize);
     if (sendMessage(cmd))
     {
-        uint64_t packetSize;
-        unique_ptr<char[]> recvbuf;
-        if (receivePacket(recvbuf, packetSize, true))
+        if (sendData(data.get(), dataSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize, true))
+            {
+                return dataPacking.unpackBool(recvbuf, packetSize);
+            }
         }
     }
     return false;
 }
 
 bool
-HMControlSocketClientBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address)
+HMControlSocketClientBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, const set<int>& values)
 {
+    uint64_t dataSize = 0;
+    unique_ptr<char[]> data = dataPacking.packListInt64(values, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
-            + HM_CMD_REMOVEHOSTMARK + " " + hostGroupName + " " + hostName+ " " + address.toString();
+            + HM_CMD_REMOVEHOSTMARK + " " + hostGroupName + " " + hostName+ " " + address.toString() + " " + to_string(dataSize);
     if (sendMessage(cmd))
     {
-        uint64_t packetSize;
-        unique_ptr<char[]> recvbuf;
-        if (receivePacket(recvbuf, packetSize, true))
+        if (sendData(data.get(), dataSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize, true))
+            {
+                return dataPacking.unpackBool(recvbuf, packetSize);
+            }
         }
     }
     return false;
 }
 
 bool
-HMControlSocketClientBase::getHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, int& value)
+HMControlSocketClientBase::getHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, set<int>& values)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
             + HM_CMD_GETHOSTMARK + " " + hostGroupName + " " + hostName + " " + address.toString();
@@ -754,7 +764,7 @@ HMControlSocketClientBase::getHostMark(const string& hostGroupName, const string
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, false))
         {
-            return dataPacking.unpackInt(recvbuf, packetSize, value);
+            return dataPacking.unpackListInt64(recvbuf, packetSize, values);
         }
     }
     return false;

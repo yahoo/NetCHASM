@@ -188,6 +188,7 @@ public:
     uint16_t m_status;
     uint8_t m_response;
     uint8_t m_reason;
+    uint8_t m_softReason;
     uint8_t m_numFailedChecks;
     uint8_t m_numSlowResponses;
     uint16_t m_port;

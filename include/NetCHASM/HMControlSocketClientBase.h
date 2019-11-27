@@ -340,33 +340,34 @@ public:
     bool getDNSAddresses(const std::string& hostName, std::vector<HMAPIIPAddress>& addresses);
 
     /*!
-         set mark to a particular host in a host-group.
+         add mark to a particular host in a host-group.
          \param host-groupname  the host belongs
          \param host-name to sdd the mark
          \param address of the host to set the mark
-         \param mark value
+         \param mark values
          \return true if successful.
      */
-    bool setHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, int value);
+    bool addHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, const std::set<int>& value);
 
     /*!
          remove mark to a particular host in a host-group.
          \param host-groupname  the host belongs
          \param host-name to remove the mark
          \param address of the host to remove the mark
+         \param mark values to remove
          \return true if successful.
      */
-    bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address);
+    bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, const std::set<int>& value);
 
     /*!
          get mark that is set to a particular host in a host-group.
          \param host-groupname  the host belongs
          \param host-name to get the mark
          \param address of the host to get the mark
-         \param variable to store the mark value
+         \param variable to store the mark values
          \return true if successful.
      */
-    bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, int& value);
+    bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, std::set<int>& value);
 
     /*!
          Get error message on failure.

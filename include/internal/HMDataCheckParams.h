@@ -310,6 +310,14 @@ public:
      */
     bool getHostGroups(std::vector<std::string>& hostGroups) const;
 
+    //! Get the host groups which are associated with this check params structure.
+    /*
+         Get the host groups which are associated with this check params structure.
+         \param a set of strings to store the host group list.
+         \return true if the set contains the host groups associates with this params structure.
+     */
+    bool getHostGroups(std::set<std::string>& hostGroups) const;
+
     //! Add a host group to be associated with this check params structure.
     /*
          Add a host group to be associated with this check params structure.

@@ -42,7 +42,7 @@ public:
     {
       // To suppress compiler warning
       (void)state;
-    };
+    }
 
 private:
     std::string rcvdBuffer;

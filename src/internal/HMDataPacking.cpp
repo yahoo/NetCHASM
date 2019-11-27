@@ -18,7 +18,7 @@ uint64_t HMDataPacking::ntoh64(uint64_t x)
 }
 
 void
-HMDataPacking::packIPAddress(const HMIPAddress& address, netchasm::IPAddress* pAddress)
+HMDataPacking::packIPAddress(const HMIPAddress& address, netchasm::IPAddress* pAddress) const
 {
     pAddress->set_type(address.getType());
     if(address.getType() == AF_INET)
@@ -70,7 +70,7 @@ HMDataPacking::unpackIPAddress(const netchasm::IPAddress& pAddress, HMAPIIPAddre
 }
 
 void
-HMDataPacking::unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress& address)
+HMDataPacking::unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress& address) const
 {
     if(pAddress.type() == AF_INET)
     {
@@ -89,7 +89,7 @@ HMDataPacking::unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress&
 }
 
 void
-HMDataPacking::packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult)
+HMDataPacking::packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const
 {
     netchasm::IPAddress *address = new netchasm::IPAddress;
     packIPAddress(dataCheckResult.m_address, address);
@@ -111,6 +111,7 @@ HMDataPacking::packDataCheckResult(const HMDataCheckResult& dataCheckResult, net
     pDataCheckResult->set_status(dataCheckResult.m_status);
     pDataCheckResult->set_response(dataCheckResult.m_response);
     pDataCheckResult->set_reason(dataCheckResult.m_reason);
+    pDataCheckResult->set_softreason(dataCheckResult.m_softReason);
     pDataCheckResult->set_numfailedchecks(dataCheckResult.m_numFailedChecks);
     pDataCheckResult->set_numslowresponses(dataCheckResult.m_numSlowResponses);
     pDataCheckResult->set_port(dataCheckResult.m_port);
@@ -151,7 +152,7 @@ HMDataPacking::unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheck
 }
 
 void
-HMDataPacking::unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMDataCheckResult& dataCheckResult)
+HMDataPacking::unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMDataCheckResult& dataCheckResult) const
 {
     unpackIPAddress(pDataCheckResult.address(), dataCheckResult.m_address);
     HMTimeStamp time;
@@ -174,6 +175,7 @@ HMDataPacking::unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheck
     dataCheckResult.m_status = (HM_HOST_STATUS)pDataCheckResult.status();
     dataCheckResult.m_response = (HM_RESPONSE)pDataCheckResult.response();
     dataCheckResult.m_reason = (HM_REASON)pDataCheckResult.reason();
+    dataCheckResult.m_softReason = (HM_REASON)pDataCheckResult.softreason();
     dataCheckResult.m_numFailedChecks = pDataCheckResult.numfailedchecks();
     dataCheckResult.m_numSlowResponses = pDataCheckResult.numslowresponses();
     dataCheckResult.m_port = pDataCheckResult.port();
@@ -934,6 +936,7 @@ HMDataPacking::unpackList(unique_ptr<char[]>& data, uint64_t dataSize, vector<st
     return false;
 }
 
+
 unique_ptr<char[]>
 HMDataPacking::packIPAddresses(set<HMIPAddress>& addresses, uint64_t& dataSize)
 {
@@ -1032,6 +1035,40 @@ HMDataPacking::unpackBool(unique_ptr<char[]>& data, uint64_t dataSize)
     if(pBool.ParseFromArray(data.get(), dataSize))
     {
         return pBool.data();
+    }
+    return false;
+}
+
+unique_ptr<char[]>
+HMDataPacking::packListInt64(const set<int>& listItems, uint64_t& dataSize)
+{
+    netchasm::ListInt64 pListItems;
+    for( const int value : listItems)
+    {
+        pListItems.add_items(value);
+    }
+    unique_ptr<char[]> data;
+    if(!pListItems.IsInitialized())
+    {
+        return data;
+    }
+    dataSize = pListItems.ByteSize();
+    data = make_unique<char[]>(dataSize);
+    pListItems.SerializeToArray(data.get(), dataSize);
+    return data;
+}
+
+bool
+HMDataPacking::unpackListInt64(unique_ptr<char[]>& data, uint64_t dataSize, set<int>& listItems)
+{
+    netchasm::ListInt64 pListItems;
+    if(pListItems.ParseFromArray(data.get(), dataSize))
+    {
+        for(const int value : pListItems.items())
+        {
+            listItems.insert(value);
+        }
+        return true;
     }
     return false;
 }

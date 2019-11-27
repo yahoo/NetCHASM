@@ -121,7 +121,6 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     }
     HM_COMMAND_TASKS task = convert(cmd_args[0]);
     bool result = true;
-    int int_result;
     uint64_t buflen;
     unique_ptr<char[]> returnResult;
     vector<string> returnList;
@@ -591,13 +590,43 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case SETHOSTMARK:
         if (cmd_args.size() > 4)
         {
-            int value = std::stoi(cmd_args[4], NULL, 0);
             HMIPAddress address;
             if (address.set(cmd_args[3]))
             {
-                result = setHostMark(cmd_args[1], cmd_args[2], address, value);
-                returnResult = dataPacking->packBool(result, buflen);
-                socketBase.sendMessage(returnResult.get(), buflen);
+                uint32_t size;
+                try
+                {
+                    size = std::stoul(cmd_args[4], NULL, 0);
+                }
+                catch (const invalid_argument& ia)
+                {
+                    HMLog(HM_LOG_ERROR, "Failed to convert size value for command :%s, error: %s",
+                                                    HM_CMD_SETHOSTMARK.c_str(), ia.what());
+                    socketBase.sendMessage(nullptr, 0);
+                    return;
+                }
+                set<int> values;
+                unique_ptr<char[]> data = make_unique<char[]>(size);
+                if (socketBase.receiveMessage(data.get(), size))
+                {
+                    if (dataPacking->unpackListInt64(data, size, values))
+                    {
+                        result = setHostMark(cmd_args[1], cmd_args[2], address,
+                                values);
+                        returnResult = dataPacking->packBool(result, buflen);
+                        socketBase.sendMessage(returnResult.get(), buflen);
+                    }
+                    else
+                    {
+                        HMLog(HM_LOG_ERROR, "Failed to unpack mark values for command:%s",
+                                HM_CMD_SETHOSTMARK.c_str());
+                    }
+                }
+                else
+                {
+                    HMLog(HM_LOG_ERROR, "Failed to receive mark values for command %s", HM_CMD_SETHOSTMARK.c_str());
+                    socketBase.sendMessage(nullptr, 0);
+                }
             }
             else
             {
@@ -608,19 +637,42 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         }
         else
         {
-            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address value for command:%s",
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address, size for command:%s",
                     HM_CMD_SETHOSTMARK.c_str());
         }
         break;
     case REMOVEHOSTMARK:
-        if (cmd_args.size() > 3)
+        if (cmd_args.size() > 4)
         {
             HMIPAddress address;
             if (address.set(cmd_args[3]))
             {
-                result = removeHostMark(cmd_args[1], cmd_args[2], address);
-                returnResult = dataPacking->packBool(result, buflen);
-                socketBase.sendMessage(returnResult.get(), buflen);
+                uint32_t size = std::stoul(cmd_args[4], NULL, 0);
+                set<int> values;
+                unique_ptr<char[]> data = make_unique<char[]>(size);
+                if (socketBase.receiveMessage(data.get(), size))
+                {
+                    if (dataPacking->unpackListInt64(data, size, values))
+                    {
+                        result = removeHostMark(cmd_args[1], cmd_args[2],
+                                address, values);
+                        returnResult = dataPacking->packBool(result, buflen);
+                        socketBase.sendMessage(returnResult.get(), buflen);
+                    }
+                    else
+                    {
+                        HMLog(HM_LOG_ERROR,
+                                "Failed to unpack mark values for command:%s",
+                                HM_CMD_SETHOSTMARK.c_str());
+                    }
+                }
+                else
+                {
+                    HMLog(HM_LOG_ERROR,
+                            "Failed to receive mark values for command %s",
+                            HM_CMD_SETHOSTMARK.c_str());
+                    socketBase.sendMessage(nullptr, 0);
+                }
             }
             else
             {
@@ -631,7 +683,7 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         }
         else
         {
-            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address for command:%s",
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, HostName, IP-Address, size for command:%s",
                     HM_CMD_REMOVEHOSTMARK.c_str());
         }
         break;
@@ -641,17 +693,8 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             HMIPAddress address;
             if (address.set(cmd_args[3]))
             {
-                result = getHostMark(cmd_args[1], cmd_args[2], address,
-                        int_result);
-                if (result)
-                {
-                    returnResult = dataPacking->packInt(int_result, buflen);
-                    socketBase.sendMessage(returnResult.get(), buflen);
-                }
-                else
-                {
-                    socketBase.sendMessage(nullptr, 0);
-                }
+                returnResult = getHostMark(dataPacking, buflen, cmd_args[1], cmd_args[2], address);
+                socketBase.sendMessage(returnResult.get(), buflen);
             }
             else
             {
@@ -975,7 +1018,7 @@ HMCommandListenerBase::getHostResults(unique_ptr<HMDataPacking>& dataPacking, co
 }
 
 bool
-HMCommandListenerBase::setHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, int value)
+HMCommandListenerBase::setHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, const set<int>& values)
 {
     string groupName = hostGroupName;
     HMDataHostGroup group(hostGroupName);
@@ -991,13 +1034,13 @@ HMCommandListenerBase::setHostMark(const string& hostGroupName, const string& ho
     HMDataHostCheck check;
     if(group.getHostCheck(check))
     {
-        return m_stateManager.m_hostMark.setSocketOption(hostName, address, check, value);
+        return m_stateManager.m_hostMark.setSocketOptionValues(hostName, address, check, values);
     }
     return false;
 }
 
 bool
-HMCommandListenerBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address)
+HMCommandListenerBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, const set<int>& values)
 {
     string groupName = hostGroupName;
     HMDataHostGroup group(hostGroupName);
@@ -1013,31 +1056,36 @@ HMCommandListenerBase::removeHostMark(const string& hostGroupName, const string&
     HMDataHostCheck check;
     if (group.getHostCheck(check))
     {
-        return m_stateManager.m_hostMark.removeSocketOption(hostName, address, check);
+        return m_stateManager.m_hostMark.removeSocketOptionValues(hostName, address, check, values);
     }
     return false;
 }
 
-bool
-HMCommandListenerBase::getHostMark(const string& hostGroupName, const string& hostName, const HMIPAddress& address, int& value)
+unique_ptr<char[]>
+HMCommandListenerBase::getHostMark(unique_ptr<HMDataPacking>& dataPacking, uint64_t& dataSize, const string& hostGroupName, const string& hostName, const HMIPAddress& address)
 {
+    unique_ptr<char[]> data;
+    dataSize = 0;
     string groupName = hostGroupName;
     HMDataHostGroup group(hostGroupName);
     shared_ptr<HMState> current;
     m_stateManager.updateState(current);
-
     auto hgi = current->m_hostGroups.find(groupName);
     if(hgi == current->m_hostGroups.end())
     {
-        return false;
+        return data;
     }
     group = hgi->second;
     HMDataHostCheck check;
+    set<int> values;
     if (group.getHostCheck(check))
     {
-        return m_stateManager.m_hostMark.getSocketOption(hostName, address,check, value);
+        if(m_stateManager.m_hostMark.getSocketOptionValues(hostName, address,check, values))
+        {
+            return dataPacking->packListInt64(values, dataSize);
+        }
     }
-    return false;
+    return data;
 }
 
 void

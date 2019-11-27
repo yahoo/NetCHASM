@@ -34,8 +34,6 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_HMWork_Construction);
     CPPUNIT_TEST(test_HMWork_updateState);
-    CPPUNIT_TEST(test_HMWorkState_Construction);
-    CPPUNIT_TEST(test_HMWorkReloadState);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -46,9 +44,6 @@ public:
 protected:
     void test_HMWork_Construction();
     void test_HMWork_updateState();
-    void test_HMWork_setThreadID();
-    void test_HMWorkState_Construction();
-    void test_HMWorkReloadState();
 };
 
 #endif // TEST_MDBMSTORE_H_

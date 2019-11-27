@@ -33,6 +33,7 @@ HMDataCheckResult::serialize(char* buf, uint32_t size) const
     ptr->m_status = m_status;
     ptr->m_response = m_response;
     ptr->m_reason = m_reason;
+    ptr->m_softReason = m_softReason;
     ptr->m_numFailedChecks = m_numFailedChecks;
     ptr->m_numSlowResponses = m_numSlowResponses;
     ptr->m_port = m_port;
@@ -73,6 +74,7 @@ HMDataCheckResult::deserialize(char* buf, uint32_t size)
     m_status = HM_HOST_STATUS(ptr->m_status);
     m_response = HM_RESPONSE(ptr->m_response);
     m_reason = HM_REASON(ptr->m_reason);
+    m_softReason = HM_REASON(ptr->m_softReason);
     m_numFailedChecks = ptr->m_numFailedChecks;
     m_numSlowResponses = ptr->m_numSlowResponses;
     m_port = ptr->m_port;

@@ -69,7 +69,8 @@ public:
         m_numSlowResponses(0),
         m_port(0),
         m_forceHostDown(0),
-        m_queryState(HM_CHECK_INACTIVE) {};
+        m_queryState(HM_CHECK_INACTIVE),
+        m_statusChanged(false) {};
 
     HMDataCheckResult(uint64_t checkTimeout) :
         m_responseTime(checkTimeout),
@@ -93,7 +94,8 @@ public:
         m_numSlowResponses(0),
         m_port(0),
         m_forceHostDown(0),
-        m_queryState(HM_CHECK_INACTIVE) {};
+        m_queryState(HM_CHECK_INACTIVE),
+        m_statusChanged(false) {};
 
     //! The IPAddress that was checked.
     HMIPAddress m_address;
@@ -133,8 +135,10 @@ public:
     HM_HOST_STATUS m_flapStatus;
     //! The current response code for this check.
     HM_RESPONSE m_response;
-    //! The current reason code for the status of this check.
+    //! The final reason code for the status after retries check.
     HM_REASON m_reason;
+    //! The current reason code for the status of this check.
+    HM_REASON m_softReason;
     //! The number of failed checks for any reason.
     uint8_t m_numFailedChecks;
     //! The number of slow responses for thsi check.
@@ -153,7 +157,10 @@ public:
     HMTimeStamp m_checkTime;
     //! The current WORK_STATE to track the current state of the check.
     HM_WORK_STATE m_queryState;
-
+    //! The last time this remote host was contacted.
+    HMTimeStamp m_remoteCheckTime;
+    //! Status showing Host went up to down or down to up
+    bool m_statusChanged;
     //! Function to serialize the current check result info into a raw buffer.
     /*!
          The serialize function supports two types of calls designed to be called consecutively.
@@ -196,6 +203,7 @@ private:
         uint16_t m_status;
         uint8_t m_response;
         uint8_t m_reason;
+        uint8_t m_softReason;
         uint8_t m_numFailedChecks;
         uint8_t m_numSlowResponses;
         uint16_t m_port;

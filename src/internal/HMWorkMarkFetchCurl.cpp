@@ -42,11 +42,11 @@ sockopt_mark_callback(void *sockopt, curl_socket_t curlfd,
         if (errno == EPERM)
         {
             HMLog(HM_LOG_ERROR,
-                    "[CURLCHECK] Failed to mark the socket. Operation not permitted. Need CAP_NET_ADMIN capability to set mark");
+                    "[CURLMARKCHECK] Failed to mark the socket. Operation not permitted. Need CAP_NET_ADMIN capability to set mark");
         }
         else
         {
-            HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to mark the socket. %s",
+            HMLog(HM_LOG_ERROR, "[CURLMARKCHECK] Failed to mark the socket. %s",
                     strerror(errno));
         }
     }
@@ -55,7 +55,7 @@ sockopt_mark_callback(void *sockopt, curl_socket_t curlfd,
     getsockopt(curlfd, SOL_SOCKET, SO_MARK, (char *) &val_verify, &len);
     if (val != val_verify)
     {
-        HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to mark the socket");
+        HMLog(HM_LOG_ERROR, "[CURLMARKCHECK] Failed to mark the socket");
     }
     return CURL_SOCKOPT_OK;
 }
@@ -75,7 +75,9 @@ HMWorkMarkFetchCurl::healthCheck()
     {
         shared_ptr<HMState> currentState;
         m_stateManager->updateState(currentState);
-
+        HMLog(HM_LOG_DEBUG,
+                "[CURLMARKCHECK] Curl check with socket mark %d for host %s",
+                m_mark, m_hostname.c_str());
         string uri;
         string url;
         string checkInfoHost;
@@ -89,7 +91,7 @@ HMWorkMarkFetchCurl::healthCheck()
 
         if(!curl)
         {
-            HMLog(HM_LOG_ERROR, "[CURLCHECK] Failed to initialize CURL");
+            HMLog(HM_LOG_ERROR, "[CURLMARKCHECK] Failed to initialize CURL");
             return HM_WORK_COMPLETE;
         }
 
@@ -123,7 +125,7 @@ HMWorkMarkFetchCurl::healthCheck()
                 //check for special cases checkinfo //<host>, //<host:port>, //xx
                 hostname = m_hostCheck.parseCheckInfo(m_hostname, checkInfoPort, checkInfoHost);
                 HMLog(HM_LOG_DEBUG3,
-                        "[CURLCHECK] Curl slist %s for %s : %d at %s with checkinfo %s",
+                        "[CURLMARKCHECK] Curl slist %s for %s : %d at %s with checkinfo %s",
                         hostname.c_str(),
                         m_hostname.c_str(),
                         port,
@@ -138,7 +140,7 @@ HMWorkMarkFetchCurl::healthCheck()
                 {
                     uri = checkInfo.substr(index);
                     HMLog(HM_LOG_DEBUG3,
-                            "[CURLCHECK] Curl uri %s for %s : %d at %s with checkinfo %s",
+                            "[CURLMARKCHECK] Curl uri %s for %s : %d at %s with checkinfo %s",
                             uri.c_str(),
                             m_hostname.c_str(),
                             port,
@@ -151,7 +153,7 @@ HMWorkMarkFetchCurl::healthCheck()
                 // checkInfo /// uri = /,  checkinfo ///xx uri = /xx
                 uri = checkInfo.substr(2); // checkInfo ///
                 HMLog(HM_LOG_DEBUG3,
-                        "[CURLCHECK] Curl uri %s for %s : %d at %s with checkinfo %s",
+                        "[CURLMARKCHECK] Curl uri %s for %s : %d at %s with checkinfo %s",
                         uri.c_str(),
                         m_hostname.c_str(),
                         port,
@@ -186,11 +188,10 @@ HMWorkMarkFetchCurl::healthCheck()
             curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &tos);
         }
 
-        int mark;
-        if (m_stateManager->m_hostMark.getSocketOption(m_hostname, m_ipAddress, m_hostCheck, mark))
+        if (m_mark)
         {
             curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, sockopt_mark_callback);
-            curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &mark);
+            curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &m_mark);
         }
         
         if(m_hostCheck.getCheckType() == HM_CHECK_MARK_HTTPS_NO_PEER_CHECK)
@@ -275,7 +276,7 @@ HMWorkMarkFetchCurl::healthCheck()
                 }
             }
             HMLog(HM_LOG_DEBUG3,
-                "[CURLCHECK] curl SNI host header %s for CurlCheck for %s at %s with checkinfo %s",
+                "[CURLMARKCHECK] curl SNI host header %s for CurlCheck for %s at %s with checkinfo %s",
                 hostsni.c_str(),
                 m_hostname.c_str(),
                 m_ipAddress.toString().c_str(),
@@ -294,7 +295,7 @@ HMWorkMarkFetchCurl::healthCheck()
             url = url + uri;
         }
         curl_easy_setopt(curl,CURLOPT_URL,url.c_str());
-        HMLog(HM_LOG_DEBUG3, "[CURLCHECK] curl fetching http url for CurlCheck %s",url.c_str());
+        HMLog(HM_LOG_DEBUG3, "[CURLMARKCHECK] curl fetching http url for CurlCheck %s",url.c_str());
 
         rcvdBuffer = "";
         curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, &curl_Callback);
@@ -362,7 +363,7 @@ HMWorkMarkFetchCurl::healthCheck()
         }
 
                
-        HMLog(HM_LOG_DEBUG3, "[CURLCHECK] curl fetching http url for CurlCheck %s returned reason %s ",
+        HMLog(HM_LOG_DEBUG3, "[CURLMARKCHECK] curl fetching http url for CurlCheck %s returned reason %s ",
                  url.c_str(),
                  printReason(m_reason).c_str());
 
@@ -375,7 +376,7 @@ HMWorkMarkFetchCurl::healthCheck()
 
     else 
     {
-        HMLog(HM_LOG_ERROR, "[CURLCHECK] Invalid Check type for CurlCheck %s",
+        HMLog(HM_LOG_ERROR, "[CURLMARKCHECK] Invalid Check type for CurlCheck %s",
                 printCheckType(m_hostCheck.getCheckType()).c_str());
     }
     return HM_WORK_COMPLETE;

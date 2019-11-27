@@ -206,26 +206,29 @@ class HMCommandListenerBase
        \param mark value
        \return true if successful.
    */
-  bool setHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, int value);
+  bool setHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, const std::set<int>& values);
 
   /*!
        remove mark to a particular host in a host-group.
        \param host-groupname  the host belongs
        \param host-name to remove the mark
        \param address of the host to remove the mark
+       \param mark values to be removed
        \return true if successful.
    */
-  bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address);
+  bool removeHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, const std::set<int>& values);
 
   /*!
        get mark that is set to a particular host in a host-group.
+       \param unique ptr of the data packing class.
+       \param size of the packed data.
        \param host-groupname  the host belongs
        \param host-name to get the mark
        \param address of the host to get the mark
        \param variable to store the mark value
        \return true if successful.
    */
-  bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address, int& value);
+  std::unique_ptr<char[]> getHostMark(std::unique_ptr<HMDataPacking>& dataPacking, uint64_t& dataSize, const std::string& hostGroupName, const std::string& hostName, const HMIPAddress& address);
 
   //! clean the handler thread after communication completes
   void cleanHandlerThreads();

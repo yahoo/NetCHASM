@@ -61,6 +61,7 @@ HMAPICheckResult::HMAPICheckResult(HMDataCheckResult& k)
     m_status = k.m_status;
     m_response = k.m_response;
     m_reason = k.m_reason;
+    m_softReason = k.m_softReason;
     m_numFailedChecks = k.m_numFailedChecks;
     m_numSlowResponses = k.m_numSlowResponses;
     m_port = k.m_port;
@@ -100,6 +101,7 @@ HMAPICheckResult::HMAPICheckResult(HMGroupCheckResult& k)
     m_status = k.m_result.m_status;
     m_response = k.m_result.m_response;
     m_reason = k.m_result.m_reason;
+    m_softReason = k.m_result.m_softReason;
     m_numFailedChecks = k.m_result.m_numFailedChecks;
     m_numSlowResponses = k.m_result.m_numSlowResponses;
     m_port = k.m_result.m_port;
