@@ -20,6 +20,7 @@ class HMDataHostCheck;
 class HMCheckHeader;
 class HMAuxCache;
 class HMAuxInfo;
+class HMResultPublisher;
 //! Class to hold the list of health checks to perform
 /*!
  * This is the main class that holds all health checks that NetCHASM will perform.
@@ -140,6 +141,17 @@ public:
         \param pointer to the current backend data storage class.
      */
     void storeCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMStorage* store);
+
+    //! This function is called by the worker thread to commit the check information to the publisher.
+    /*
+         This function is called by the worker thread to commit the check information to the publisher.
+         It takes care of updating all results associated with the check.
+         \param work pointer to the work base class defining the check parameters that need updated in the backend storage.
+         \param hostCheck to update in the backend store.
+         \param ip address to update in the backend store.
+         \param reference to the publisher class.
+     */
+    void publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMResultPublisher& publisher);
 
     //! This function is called by the worker thread to commit the aux information to the backend data store.
     /*

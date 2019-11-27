@@ -22,6 +22,10 @@ if(NOT SKIP-RAPIDXML)
   list(APPEND SOURCES ./rapidxml_parser/HMAuxParserRapidXML.cpp)
 endif()
 
+if(NOT SKIP-KAFKA)
+  list(APPEND SOURCES ./publisher_kafka/HMPublisherKafka.cpp)
+endif()
+
 set(CMAKE_BUILD_TYPE Debug)
 set(CPP_FLAGS "-Wall -Wextra -Wchkp -Wfloat-equal -Wl,--copy-dt-needed-entries -Wl,--as-needed -Wl,--no-undefined")
 set(COV_FLAGS "-fprofile-arcs -ftest-coverage")
@@ -43,6 +47,11 @@ target_link_libraries (netchasm_core PUBLIC netchasm_proto)
 target_link_libraries (netchasm_core PUBLIC curl ssl crypto pthread gcov protobuf)
 target_link_libraries (netchasm_core PRIVATE yaml-cpp)
 
+if(NOT SKIP-KAFKA)
+  ADD_DEFINITIONS(-DUSE_KAFKA)
+  target_link_libraries (netchasm_core PUBLIC rdkafka rdkafka++)
+endif()
+
 if(NOT SKIP-ARES)
   ADD_DEFINITIONS(-DUSE_ARES)
   target_link_libraries (netchasm_core PRIVATE cares)
@@ -61,6 +70,7 @@ endif()
 if(NOT SKIP-RAPIDXML)
   ADD_DEFINITIONS(-DUSE_RAPIDXML)
 endif()
+
 
 set_property(TARGET netchasm_core PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET netchasm_core PROPERTY CXX_STANDARD 14)

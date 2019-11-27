@@ -73,3 +73,28 @@ void HMWork::updateState(HMStateManager* stateManager, HMEventLoop* eventLoop)
     m_stateManager = stateManager;
     m_eventLoop = eventLoop;
 }
+
+void HMWork::setMark(int mark)
+{
+    m_mark = mark;
+}
+
+void HMWork::setReschedule(bool reschedule)
+{
+    m_reschedule = reschedule;
+}
+
+void HMWork::setStoreResults(bool storeResults)
+{
+    m_storeResults = storeResults;
+}
+
+int HMWork::getMark() const
+{
+    return m_mark;
+}
+
+void HMWork::setPublish(bool publish)
+{
+    m_publish = publish;
+}

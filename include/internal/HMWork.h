@@ -81,7 +81,11 @@ public:
         m_ID(0),
         m_workStatus(HM_WORK_IDLE),
         m_stateManager(nullptr),
-        m_eventLoop(nullptr) {};
+        m_eventLoop(nullptr),
+        m_reschedule(true),
+        m_storeResults(true),
+        m_publish(true),
+        m_mark(0) {};
 
     HMWork(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
         m_hostname(hostname),
@@ -92,7 +96,11 @@ public:
         m_ID(0),
         m_workStatus(HM_WORK_IDLE),
         m_stateManager(nullptr),
-        m_eventLoop(nullptr) {};
+        m_eventLoop(nullptr),
+        m_reschedule(true),
+        m_storeResults(true),
+        m_publish(true),
+        m_mark(0) {};
 
     //! Called to update the state manager and event loop in case of a reload.
     /*!
@@ -126,6 +134,41 @@ public:
      */
     virtual HM_WORK_TYPE getWorkType() = 0;
 
+    //! Called to set the mark value used to mark a socket.
+    /*!
+         Called to get mark value used to mark a socket.
+         \param set the mark for the current work.
+     */
+    void setMark(int mark);
+
+    //! Called to set the reschedule flag value .
+    /*!
+         Called to set if the reschedule is needed for the work.
+         \param value to set the reschedule on/off .
+     */
+    void setReschedule(bool reschedule);
+
+    //! Called to set the storage flag value .
+    /*!
+         Called to set if the storage to backend is needed for the work.
+         \param value to set the storage on/off .
+     */
+    void setStoreResults(bool storeResults);
+
+    //! Called to get the mark value used.
+    /*!
+         Called to get the mark value used for the work.
+         \return the mark malue set for the work.
+     */
+    int getMark() const;
+
+    //! Called to set the publish flag value .
+    /*!
+         Called to set if the publish is needed for the work.
+         \param value to set the publish on/off .
+     */
+    void setPublish(bool publish);
+
     std::string m_hostname;
     HMIPAddress m_ipAddress;
     HMDataHostCheck m_hostCheck;
@@ -138,11 +181,15 @@ public:
     std::map<HMDataCheckParams, HMDataCheckResult> m_hostResults;
     HMAuxInfo m_auxInfo;
 
+
 protected:
     HMTimeStamp m_timeout;
     HMStateManager* m_stateManager;
     HMEventLoop* m_eventLoop;
-
+    bool m_reschedule;
+    bool m_storeResults;
+    bool m_publish;
+    int m_mark;
 };
 
 #endif /* HMWORKBASE_H_ */

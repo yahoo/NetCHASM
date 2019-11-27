@@ -7,7 +7,6 @@
 #include "HMStateManager.h"
 #include "HMEventLoopQueue.h"
 #include "HMThreadPool.h"
-#include "HMWorkDNSLookupAres.h"
 #include "common.h"
 #include "TestHMThreadPool.h"
 

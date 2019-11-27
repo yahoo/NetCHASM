@@ -60,21 +60,29 @@ HMWorkHealthCheck::processWork()
         {
             currentState->m_checkList.updateCheck(this, this->m_hostCheck);
         }
-
-        currentState->m_checkList.storeCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_datastore.get());
-
-        HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
-        HMDNSLookup dnsHostCheck(m_hostCheck.getDnsPlugin(), m_ipAddress.getType() == AF_INET6);
-        bool isValidAddress = currentState->m_dnsCache.isValidAddress(m_hostname, m_hostCheck.getDualStack(), dnsHostCheck, m_ipAddress);
-        if (isValidAddress)
+        if (m_publish)
         {
-            if (checkTime <= HMTimeStamp::now())
+            currentState->m_checkList.publishCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_resultPublisher);
+        }
+        if (m_storeResults)
+        {
+            currentState->m_checkList.storeCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_datastore.get());
+        }
+        if (m_reschedule)
+        {
+            HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
+            HMDNSLookup dnsHostCheck(m_hostCheck.getDnsPlugin(), m_ipAddress.getType() == AF_INET6);
+            bool isValidAddress = currentState->m_dnsCache.isValidAddress(m_hostname, m_hostCheck.getDualStack(), dnsHostCheck, m_ipAddress);
+            if (isValidAddress)
             {
-                currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
-            }
-            else
-            {
-                m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+                if (checkTime <= HMTimeStamp::now())
+                {
+                    currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
+                }
+                else
+                {
+                    m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+                }
             }
         }
     }

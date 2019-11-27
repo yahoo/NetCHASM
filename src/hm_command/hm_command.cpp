@@ -59,8 +59,8 @@ static void usage(char* name)
                 << "\t" <<"getremotequery \t get the remote query enable status of daemon" << endl
                 << "\t" <<"setremotequery <on/off>\t enable/disable the remote query state of the daemon " << endl
                 << "\t" <<"gethostmark <hostgroupname> <hostname> <ip-address>\tReturns host mark value for the host" <<endl
-                << "\t" <<"removehostmark <hostgroupname> <hostname> <ip-address>\tRemove host mark values for a host" <<endl
-                << "\t" <<"sethostmark <hostgroupname> <hostname> <ip-address> <value>\tSet host mark value for a host" <<endl;
+                << "\t" <<"removehostmark <hostgroupname> <hostname> <ip-address> <value1> <value2> ..\tRemove host mark values for a host" <<endl
+                << "\t" <<"sethostmark <hostgroupname> <hostname> <ip-address> <value1> <value2> ...\tAdd host mark values for a host" <<endl;
     }
 }
 
@@ -294,8 +294,21 @@ bool runCommand(const vector<string> &strArgs)
             cerr << "Invalid address:" << strArgs[3] << endl;
             return false;
         }
-        return socketAPI.setHostMark(strArgs[1], strArgs[2], address,
-                std::stoi(strArgs[4], NULL, 0));
+        set<int> values;
+        for(uint64_t i = 4; i < strArgs.size(); ++i)
+        {
+            try
+            {
+                int value = std::stoi(strArgs[i], NULL, 0);
+                values.insert(value);
+            }
+            catch (const invalid_argument& ia)
+            {
+                cerr << "Invalid argument: " << ia.what() << '\n';
+                exit(1);
+            }
+        }
+        return socketAPI.addHostMark(strArgs[1], strArgs[2], address, values);
     }
     else if (strArgs[0] == HM_CMD_REMOVEHOSTMARK)
     {
@@ -305,7 +318,21 @@ bool runCommand(const vector<string> &strArgs)
             cerr << "Invalid address:" << strArgs[3] << endl;
             return false;
         }
-        return socketAPI.removeHostMark(strArgs[1], strArgs[2], address);
+        set<int> values;
+        for (uint64_t i = 4; i < strArgs.size(); ++i)
+        {
+            try
+            {
+                int value = std::stoi(strArgs[i], NULL, 0);
+                values.insert(value);
+            }
+            catch (const invalid_argument& ia)
+            {
+                std::cerr << "Invalid argument: " << ia.what() << '\n';
+                exit(1);
+            }
+        }
+        return socketAPI.removeHostMark(strArgs[1], strArgs[2], address, values);
     }
     else if (strArgs[0] == HM_CMD_GETHOSTMARK)
     {
@@ -315,14 +342,18 @@ bool runCommand(const vector<string> &strArgs)
             cerr << "Invalid address:" << strArgs[3] << endl;
             return false;
         }
-        int value;
+        set<int> values;
         bool status = socketAPI.getHostMark(strArgs[1], strArgs[2], address,
-                value);
+                values);
         if (status)
         {
             cout << "Mark value for HostGroup: " << strArgs[1] << " host: "
-                    << strArgs[2] << " Address: " << address.toString() << " = "
-                    << value << endl;
+                    << strArgs[2] << " Address: " << address.toString()<<endl;
+            cout << "Values:" << endl;
+            for(int value : values)
+            {
+                cout << "\t" << value << endl;
+            }
         }
         else
         {
@@ -426,7 +457,6 @@ int main(int argc, char* argv[])
         }
         bSuccess = runCommand(strArgs);
         return (bSuccess) ? 0 : 1;
-    case REMOVEHOSTMARK:
     case GETHOSTMARK:
     case SETHOSTSTATUS:
         if (strArgs.size() < 4)
@@ -436,6 +466,7 @@ int main(int argc, char* argv[])
         bSuccess = runCommand(strArgs);
         break;
     case SETHOSTMARK:
+    case REMOVEHOSTMARK:
         if (strArgs.size() < 5)
         {
             handleError(argv[0], strArgs[0]);

@@ -7,6 +7,8 @@
 #include <vector>
 #include <openssl/ossl_typ.h>
 #include <openssl/ssl.h>
+#include "HMPublisherBase.h"
+#include "HMResultPublisher.h"
 #include "HMConstants.h"
 #include "HMStorage.h"
 #include "HMDataCheckList.h"
@@ -291,11 +293,19 @@ public:
      */
     bool loadAllConfigs();
 
+    //! Load all the pub-sub configuration.
+    /*!
+         Load all the pub-sub configuration.
+         \return true if the configs loaded successfully.
+     */
+    bool loadPubSubConfig();
+
     //! Generate the host check list based on the loaded configs.
     /*!
          Generate the host list based on the loaded configs. Call after filling in the host groups and individual host checks to complete the initial set of health checks required.
          Also fills in the callback host groups in the check params data structure.
      */
+
     void generateHostCheckList();
 
     //! Generate the DNS checks required in the DNS check list.
@@ -468,6 +478,8 @@ public:
     //! SSL context
     SSL_CTX* m_ctx;
     
+    HMResultPublisher m_resultPublisher;
+
 private:
 
     //! Parse the master config in the YAML format.
@@ -527,6 +539,7 @@ private:
     std::string m_certFile;
     std::string m_keyFile;
     std::string m_caFile;
+    std::string m_PubSubConfigFile;
     bool m_enableMutualAuth;
     bool m_libEventEnabled;
 };

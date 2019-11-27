@@ -28,8 +28,17 @@ message DataCheckResult {
         bool forceHostDown = 23;
         uint64 queueCheckTime = 24;
         uint64 checkTime = 25;
+        uint32 softReason = 26;
 }
 
 message DataCheckResults {
     repeated DataCheckResult results = 1;
+}
+
+message PublishResults {
+    uint32 publisherVersion = 1;
+    string hostName = 2;
+    int32 mark = 3;
+    repeated string hostGroups = 4;
+    DataCheckResult results = 5;
 }

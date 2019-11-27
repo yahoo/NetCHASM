@@ -20,7 +20,6 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_basic_healthPlugins_remoteEnabled);
     CPPUNIT_TEST(test_basic_healthPlugins_ftp);
     CPPUNIT_TEST(test_basic_healthPlugins_dns);
-    CPPUNIT_TEST(test_basic_healthPlugins_dnsvc);
     CPPUNIT_TEST(test_basic_healthPlugins_none);
     CPPUNIT_TEST(test_add_hostgroup);
     CPPUNIT_TEST(test_ip_dns_failed);
@@ -38,7 +37,6 @@ public:
     void test_basic_healthPlugins_remoteEnabled();
     void test_basic_healthPlugins_ftp();
     void test_basic_healthPlugins_dns();
-    void test_basic_healthPlugins_dnsvc();
     void test_basic_healthPlugins_none();
     void test_add_hostgroup();
     void test_hostgroup_distributed_fallback();

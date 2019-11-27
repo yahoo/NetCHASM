@@ -235,6 +235,7 @@ HMStorageHostText::storeHostCheckResult(HMCheckData& checkData)
             << checkData.m_address.toString() << "\t"
             << (uint32_t)checkData.m_result.m_response << "\t"
             << (uint32_t)checkData.m_result.m_reason << "\t"
+            << (uint32_t)checkData.m_result.m_softReason << "\t"
             << checkData.m_result.m_start.getTimeSinceEpoch() << "\t"
             << checkData.m_result.m_end.getTimeSinceEpoch() << "\n"
             << "Check Result:" << "\t"
@@ -252,6 +253,7 @@ HMStorageHostText::storeHostCheckResult(HMCheckData& checkData)
             << checkData.m_result.m_numTimeouts << "\t"
             << checkData.m_result.m_port << "\t"
             << (uint32_t)checkData.m_result.m_reason << "\t"
+            << (uint32_t)checkData.m_result.m_softReason << "\t"
             << checkData.m_result.m_responseTime << "\t"
             << checkData.m_result.m_smoothedResponseTime << "\t"
 

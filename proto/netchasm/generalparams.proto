@@ -20,3 +20,7 @@ message Int {
 message List {
     repeated string items = 1;
 }
+
+message ListInt64 {
+    repeated int64 items = 1;
+}

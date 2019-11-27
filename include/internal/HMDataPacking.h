@@ -28,13 +28,13 @@ public:
     virtual ~HMDataPacking() {}
     static uint64_t hton64(uint64_t);
     static uint64_t ntoh64(uint64_t);
-    virtual void packIPAddress(const HMIPAddress& address, netchasm::IPAddress* pAddress);
+    virtual void packIPAddress(const HMIPAddress& address, netchasm::IPAddress* pAddress) const;
     virtual void packIPAddress(const HMAPIIPAddress& address, netchasm::IPAddress* pAddress);
     virtual void unpackIPAddress(const netchasm::IPAddress& pAddress, HMAPIIPAddress& address);
-    virtual void unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress& address);
-    virtual void packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult);
+    virtual void unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress& address) const;
+    virtual void packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const;
     virtual void unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMAPICheckResult& dataCheckResult);
-    virtual void unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMDataCheckResult& dataCheckResult);
+    virtual void unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMDataCheckResult& dataCheckResult) const;
     virtual void packDataCheckParam(const HMDataCheckParams& dataCheckParam, netchasm::DataCheckParam* pDataCheckParam);
     virtual void unpackDataCheckParam(const netchasm::DataCheckParam& pDataCheckParams, HMAPICheckInfo& dataCheckInfo);
     virtual void unpackDataCheckParam(const netchasm::DataCheckParam& pDataCheckParams, HMDataCheckParams& dataCheckParams);
@@ -74,6 +74,8 @@ public:
     virtual bool unpackIPAddresses(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMAPIIPAddress>& addresses);
     virtual std::unique_ptr<char[]> packBool(bool x, uint64_t& dataSize);
     virtual bool unpackBool(std::unique_ptr<char[]>& data, uint64_t dataSize);
+    virtual std::unique_ptr<char[]> packListInt64(const std::set<int>& listItems, uint64_t& dataSize);
+    virtual bool unpackListInt64(std::unique_ptr<char[]>& data, uint64_t dataSize, std::set<int>& listItems);
 
     template <class T>
     std::unique_ptr<char[]> packInt(T x, uint64_t& dataSize)

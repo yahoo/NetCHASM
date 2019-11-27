@@ -2,7 +2,7 @@
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include "TestHMStorage.h"
 
-#include <TestStorage.h>
+#include "TestStorage.h"
 #include "common.h"
 
 using namespace std;

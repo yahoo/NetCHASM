@@ -267,6 +267,7 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     {
         it->second.m_softStatus = (HM_HOST_STATUS)(it->second.m_softStatus & ~(HM_HOST_STATUS_UP));
     }
+    it->second.m_statusChanged = false;
     it->second.m_address = address;
     it->second.m_response = response;
     it->second.m_reason = reason;
@@ -324,7 +325,7 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
             it->second.m_numConnectFailures++;
         }
     }
-
+    it->second.m_softReason = it->second.m_reason;
     // Remote check failure will not go through retry or flapping logic
     if (reason == HM_REASON_REMOTE_NODATA)
     {
@@ -401,7 +402,7 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
                             "FLAPPING" :
                             ((it->second.m_softStatus & HM_HOST_STATUS_UP) ?
                                     "UP" : "DOWN");
-
+            it->second.m_statusChanged = true;
             HMLog(HM_LOG_NOTICE,
                     "[CHECK] Target %s host=%s(%s) port=%d reason=%s for hostgroups %s ",
                     status.c_str(), hostname.c_str(), address.toString().c_str(), it->second.m_port,
@@ -584,6 +585,13 @@ HMDataCheckParams::getHostGroups(vector<string>& hostGroups) const
     return true;
 }
 
+bool
+HMDataCheckParams::getHostGroups(set<string>& hostGroups) const
+{
+    hostGroups.insert(m_hostGroups.begin(), m_hostGroups.end());
+    return true;
+}
+
 void
 HMDataCheckParams::addHostGroup(string name)
 {
@@ -703,3 +711,4 @@ HMDataCheckParams::setResponse(string& hostname,
               printReason(it->second.m_reason).c_str());
     }
 }
+

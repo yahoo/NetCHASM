@@ -1,0 +1,60 @@
+# Sample pubsub Configuration
+-   name: kafka1
+    type: kafka
+    onchange: true
+    parameters:
+        topic: topic1
+        brokerlist:
+            - 192.168.1.1:9092
+            - 192.168.1.1:9093
+
+-   name: kafka2
+    type: kafka
+    hostgroups:
+        - hg1
+        - hg2
+    parameters:
+        topic: topic2
+        brokerlist:
+            - 192.168.1.1:9092
+
+       
+# pubsub options
+
+
+# name: <publisher name>
+#
+# Specifies the name of the publisher. It should be a unique for each publisher
+
+
+# type: <type>
+# values: kafka
+#
+# Specifies the type of publisher. We can have multiple published of same type.
+
+# onchange: <true/false>
+# default: true
+#
+# Publish results only when the host status changes.
+
+# hostgroups:
+#    - hostgroup1
+#    - hostgroup2
+#
+# Pubish results only for specified hostgroups. By default all hosts group results are published.
+
+# parameters:
+#
+# Specify publisher configuration parameters based the publisher type.
+
+## Kafka Publisher parameters
+# topic: <topic name>
+#
+# The kafka topic the results should be published to.
+
+# brokerlist: array of <host/ip:port>
+#
+# The kafka publisher brokers
+
+## End of Kafka publisher parameters
+

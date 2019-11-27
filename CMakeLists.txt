@@ -13,6 +13,8 @@ option(COV "enable CODE COVERAGE options" OFF)
 option(SKIP-LIBEVENT "skip LIBEVENT library and related code" OFF)
 option(SKIP-ARES "skip ARES library and related code" OFF)
 option(SKIP-MDBM "skip MDBM library and related code" OFF)
+option(SKIP-KAFKA "skip KAFKA library and related code" OFF)
+option(SKIP-IPV6 "skip IPv6 tests" OFF)
 
 link_directories(/lib64)
 

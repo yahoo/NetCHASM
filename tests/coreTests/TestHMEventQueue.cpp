@@ -36,9 +36,9 @@ void TESTNAME::tearDown()
 void TESTNAME::test_basic_DNS_eventqueue()
 {
     string dummy = "dummy.hm.com";
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
     m_currentState->m_dnsCache.insertDNSEntry(dummy,dnsHostCheckF,300,3000);
-    m_eventQueue->addDNSTimeout(dummy, false, HMTimeStamp::now());
+    m_eventQueue->addDNSTimeout(dummy, dnsHostCheckF, HMTimeStamp::now());
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());
     unique_ptr<HMWork> work;

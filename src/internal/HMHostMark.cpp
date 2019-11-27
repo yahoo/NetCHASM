@@ -39,38 +39,53 @@ HMHostMarkOptKey::operator ==(const HMHostMarkOptKey& k) const
 }
 
 
-bool HMHostMark::setSocketOption(const std::string& hostName,
-        const HMIPAddress& address, const HMDataHostCheck& hostCheck, int value)
+bool HMHostMark::setSocketOptionValues(const std::string& hostName,
+        const HMIPAddress& address, const HMDataHostCheck& hostCheck, const set<int>& values)
 {
     lock_guard<shared_timed_mutex> wLock(m_mutex);
     HMHostMarkOptKey key(hostName, address, hostCheck);
-    auto it = m_hostSockOptMap.insert(make_pair(key, value));
-    if(!it.second)
+    auto it = m_hostSockOptMap.find(key);
+    if(it == m_hostSockOptMap.end())
     {
-        it.first->second = value;
+        m_hostSockOptMap.insert(make_pair(key, values));
+        return true;
     }
+    it->second.insert(values.begin(), values.end());
     return true;
 }
 
-bool HMHostMark::getSocketOption(const std::string& hostName,
+bool HMHostMark::getSocketOptionValues(const std::string& hostName,
         const HMIPAddress& address, const HMDataHostCheck& hostCheck,
-        int& value)
+        set<int>& values)
 {
     shared_lock<shared_timed_mutex> rlock(m_mutex);
     const HMHostMarkOptKey key(hostName, address, hostCheck);
     auto it = m_hostSockOptMap.find(key);
     if (it != m_hostSockOptMap.end())
     {
-        value = it->second;
+        values = it->second;
         return true;
     }
     return false;
 }
 
-bool HMHostMark::removeSocketOption(const std::string& hostName,
-        const HMIPAddress& address, const HMDataHostCheck& hostCheck)
+bool HMHostMark::removeSocketOptionValues(const std::string& hostName,
+        const HMIPAddress& address, const HMDataHostCheck& hostCheck, const set<int>& values)
 {
     lock_guard<shared_timed_mutex> wLock(m_mutex);
     const HMHostMarkOptKey key(hostName, address, hostCheck);
-    return m_hostSockOptMap.erase(key);
+    auto it = m_hostSockOptMap.find(key);
+    if (it != m_hostSockOptMap.end())
+    {
+        for(const int value :values)
+        {
+            it->second.erase(value);
+        }
+        if(it->second.empty())
+        {
+            m_hostSockOptMap.erase(key);
+        }
+        return true;
+    }
+    return false;
 }

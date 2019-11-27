@@ -47,6 +47,9 @@ const uint8_t HM_MDBM_VERSION = 3;
 //! The Current Version of the Socket data structure. Used to verify data parsing and packing database compatibility.
 const uint8_t HM_CONTROL_SOCKET_VERSION = 1;
 
+//! The Current Version of the Pub-Sub data structure. Used to verify data parsing and packing database compatibility.
+const uint8_t HM_PUBSUB_VERSION = 1;
+
 //! The default path to create the log file.
 const std::string HM_DEFAULT_LOG_PATH = "/home/y/logs/HM.log";
 

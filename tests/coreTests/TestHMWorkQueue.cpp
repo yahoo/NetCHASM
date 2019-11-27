@@ -4,7 +4,7 @@
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
 #include "HMEventLoopQueue.h"
-#include "HMWorkDNSLookupAres.h"
+#include "HMWorkDNSLookupStatic.h"
 #include "common.h"
 #include <unistd.h>
 
@@ -25,9 +25,9 @@ void TESTNAME::test_basic_workqueue() {
     const string hostname = "dummy.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
-    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check, dnsHostCheckF);
-    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMWorkDNSLookupStatic dns_lookup(hostname, ip, host_check, dnsHostCheckF);
+    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup);
     HMWorkQueue work_queue;
     work_queue.insertWork(work);
@@ -45,18 +45,18 @@ void TESTNAME::test_workqueue() {
     const string hostname3 = "dummy3.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
-    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
-    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
-    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
-    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMWorkDNSLookupStatic dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupStatic dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupStatic dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
+    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup3);
     work_queue.insertWork(work);
     CPPUNIT_ASSERT_EQUAL(1, (int )work_queue.queueSize());
-    work = std::make_unique<HMWorkDNSLookupAres>(dns_lookup2);
+    work = std::make_unique<HMWorkDNSLookupStatic>(dns_lookup2);
     work_queue.insertWork(work);
     CPPUNIT_ASSERT_EQUAL(2, (int )work_queue.queueSize());
-    work = std::make_unique<HMWorkDNSLookupAres>(dns_lookup1);
+    work = std::make_unique<HMWorkDNSLookupStatic>(dns_lookup1);
     work_queue.insertWork(work);
     CPPUNIT_ASSERT_EQUAL(3, (int )work_queue.queueSize());
 
@@ -74,9 +74,9 @@ void TESTNAME::test_notify_workqueue() {
     const string hostname = "dummy.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
-    HMWorkDNSLookupAres dns_lookup(hostname, ip, host_check, dnsHostCheckF);
-    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupAres>(
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMWorkDNSLookupStatic dns_lookup(hostname, ip, host_check, dnsHostCheckF);
+    std::unique_ptr<HMWork> work = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup);
     std::unique_ptr<HMWork> work_temp;
     HMWorkQueue *work_queue = new HMWorkQueue;
@@ -107,15 +107,15 @@ void TESTNAME::test_multi_insert() {
     const string hostname3 = "dummy3.hm.com";
     const HMIPAddress ip;
     const HMDataHostCheck host_check;
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
-    HMWorkDNSLookupAres dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
-    HMWorkDNSLookupAres dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
-    HMWorkDNSLookupAres dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
-    std::unique_ptr<HMWork> work1 = std::make_unique<HMWorkDNSLookupAres>(
+    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMWorkDNSLookupStatic dns_lookup1(hostname1, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupStatic dns_lookup2(hostname2, ip, host_check, dnsHostCheckF);
+    HMWorkDNSLookupStatic dns_lookup3(hostname3, ip, host_check, dnsHostCheckF);
+    std::unique_ptr<HMWork> work1 = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup1);
-    std::unique_ptr<HMWork> work2 = std::make_unique<HMWorkDNSLookupAres>(
+    std::unique_ptr<HMWork> work2 = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup2);
-    std::unique_ptr<HMWork> work3 = std::make_unique<HMWorkDNSLookupAres>(
+    std::unique_ptr<HMWork> work3 = std::make_unique<HMWorkDNSLookupStatic>(
             dns_lookup3);
     HMWorkQueue *work_queue = new HMWorkQueue;
     std::thread get_thread1(&HMWorkQueue::insertWork, work_queue,

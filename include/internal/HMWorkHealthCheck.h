@@ -55,7 +55,6 @@ public:
          HM_WORK_IN_PROGRESS moves the work order to the work map in the queue. The work must schedule a callback to have the queue move the work from the map back into the active queue to finish the processing (continuation).
      */
     HM_WORK_STATUS processWork();
-
 };
 
 #endif /* HMWORKHEALTHCHECK_H_ */

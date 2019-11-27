@@ -10,7 +10,6 @@
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
 #include "HMConstants.h"
-#include "HMWorkDNSLookupAres.h"
 
 using namespace std;
 

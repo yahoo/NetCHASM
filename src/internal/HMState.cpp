@@ -9,7 +9,10 @@
 #ifdef USE_MDBM
 #include "HMStorageHostGroupMDBM.h"
 #endif
+#include "HMPubSubConfigParser.h"
 #include "HMStorageHostText.h"
+#include "HMPublisherBase.h"
+#include "HMPublisherDefault.h"
 #include "HMLogBase.h"
 
 using namespace std;
@@ -76,6 +79,11 @@ HMState::setupDaemonstate()
     {
        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading configs");
        return false;
+    }
+    if(!loadPubSubConfig())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading pub-sub config file");
+        return false;
     }
     generateHostCheckList();
     generateDNSCheckList();
@@ -410,6 +418,20 @@ HMState::loadAllConfigs()
     m_configsLoaded = true;
     return true;
 }
+
+bool
+HMState::loadPubSubConfig()
+{
+    HMPubSubConfigParser parser;
+    unique_ptr<HMPublisherBase> defaultPublisher = make_unique<HMPublisherDefault>();
+    this->m_resultPublisher.registerPublisher("default", defaultPublisher);
+    if(!m_PubSubConfigFile.empty())
+    {
+        return parser.parseConfig(m_PubSubConfigFile, *this) == 0;
+    }
+    return true;
+}
+
 
 void
 HMState::generateHostCheckList()
@@ -1361,6 +1383,11 @@ HMState::parseMasterYaml(const string& masterConfig)
                 HMLog(HM_LOG_ERROR,
                         "Invalid value for enable-mutual-auth, setting to default value");
             }
+        }
+        else if (key == "pubsub.config-file")
+        {
+            m_PubSubConfigFile = val;
+
         }
         else
         {
