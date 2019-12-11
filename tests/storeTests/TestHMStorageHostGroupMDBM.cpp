@@ -245,30 +245,38 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_TestRT()
     HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_1_2);
+    dnsCache.insertDNSEntry(host1, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_2_2);
+    dnsCache.insertDNSEntry(host2, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address_3_1);
+    dnsCache.insertDNSEntry(host3, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host3, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_3_2);
+    dnsCache.insertDNSEntry(host3, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host3, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address_4_1);
+    dnsCache.insertDNSEntry(host4, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host4, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_4_2);
+    dnsCache.insertDNSEntry(host4, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host4, dnsHostCheckv6, addresses);
 
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
@@ -490,18 +498,22 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_BackendTest()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
 
     addresses.clear();
     addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
 
     addresses.clear();
     addresses.insert(address_3_1);
+    dnsCache.insertDNSEntry(host3, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host3, dnsHostCheck, addresses);
 
     addresses.clear();
     addresses.insert(address_4_1);
+    dnsCache.insertDNSEntry(host4, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host4, dnsHostCheck, addresses);
 
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
@@ -663,6 +675,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadFile_StoreRetrieve()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
 
     store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
@@ -800,6 +813,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
 
     store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
@@ -948,6 +962,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
 
     store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
@@ -1098,9 +1113,11 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ZeroIp()
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     addresses.insert(address_1_3);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_1_2);
+    dnsCache.insertDNSEntry(host1, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheckv6, addresses);
 
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename,
@@ -1240,9 +1257,11 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_VersionChange()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 
@@ -1387,9 +1406,11 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
     HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 

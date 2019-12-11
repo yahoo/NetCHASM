@@ -32,12 +32,10 @@ void TESTNAME::test_basic_cache()
     string hostname = "Dummy.hm.com";
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
     hmdns.insertDNSEntry(hostname, dnsHostCheckF, 1000, 1000);
-    HMTimeStamp starttime = hmdns.startDNSQuery(hostname, dnsHostCheckF);
+    hmdns.startDNSQuery(hostname, dnsHostCheckF);
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
             hmdns.queryNeeded(hostname, false));
     sleep(2);
-    CPPUNIT_ASSERT(
-            ((starttime + 1000) <= hmdns.nextQueryTime(hostname, false)));
 }
 
 /*
@@ -53,6 +51,7 @@ void TESTNAME::test_update_results()
     set<HMIPAddress> vip, vip_ret;
     vip.insert(ip);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     CPPUNIT_ASSERT_EQUAL(false,
@@ -79,6 +78,7 @@ void TESTNAME::test_update_results_ipv4s()
     vip.insert(ip);
     vip.insert(ip1);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
 
@@ -109,6 +109,7 @@ void TESTNAME::test_get_expired_ipv4s()
     vip1.insert(ip2);
     vip1.insert(ip3);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     CPPUNIT_ASSERT_EQUAL(true,
@@ -143,6 +144,7 @@ void TESTNAME::test_update_results_ipv6s()
     vip.insert(ip);
     vip.insert(ip1);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     CPPUNIT_ASSERT_EQUAL(false,
@@ -176,6 +178,7 @@ void TESTNAME::test_get_expired_ipv6s()
     vip1.insert(ip2);
     vip1.insert(ip3);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
 
@@ -212,6 +215,8 @@ void TESTNAME::test_get_expired_ipv4_prefered()
     vip1.insert(ip1);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip1);
@@ -261,6 +266,8 @@ void TESTNAME::test_get_expired_ipv6_prefered()
     vip1.insert(ip1);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip1);
@@ -314,6 +321,8 @@ void TESTNAME::test_update_results_dualstack()
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     vip_ipv4.insert(ip1);
@@ -352,6 +361,8 @@ void TESTNAME::test_update_results_failed_ipv4()
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     vip_ipv4.insert(ip1);
@@ -388,6 +399,8 @@ void TESTNAME::test_update_results_failed_ipv6()
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     vip_ipv4.insert(ip1);
@@ -426,6 +439,8 @@ void TESTNAME::test_update_results_failed_dualstack()
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     vip_ipv4.insert(ip1);
@@ -462,6 +477,7 @@ void TESTNAME::test_update_results_dualstack_ipv4()
     set<HMIPAddress> vip_ipv4, vip_ret, vip_diff;
     vip_ipv4.insert(ip);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip_ipv4);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     CPPUNIT_ASSERT_EQUAL(false,
@@ -488,6 +504,7 @@ void TESTNAME::test_update_results_dualstack_ipv6()
     set<HMIPAddress> vip_ipv6, vip_ret, vip_diff;
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     CPPUNIT_ASSERT_EQUAL(false,
@@ -517,6 +534,7 @@ void TESTNAME::test_update_results_failure()
     set<HMIPAddress> vip_ipv6, vip_ret, vip_diff;
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, false);
     CPPUNIT_ASSERT_EQUAL(HM_SCHEDULE_IGNORE,
@@ -547,6 +565,7 @@ void TESTNAME::test_update_results_dualstack_v4()
     set<HMIPAddress> vip_ipv4, vip_ret;
     vip_ipv4.insert(ip);
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckF, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckF, vip_ipv4);
     hmdns.finishQuery(hostname, dnsHostCheckF, true);
     CPPUNIT_ASSERT_EQUAL(false,
@@ -572,6 +591,7 @@ void TESTNAME::test_update_results_dualstack_v6()
     set<HMIPAddress> vip_ipv6, vip_ret;
     vip_ipv6.insert(ip);
     HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    hmdns.insertDNSEntry(hostname, dnsHostCheckT, 10000,10000);
     hmdns.updateDNSEntry(hostname, dnsHostCheckT, vip_ipv6);
     hmdns.finishQuery(hostname, dnsHostCheckT, true);
     CPPUNIT_ASSERT_EQUAL(false,

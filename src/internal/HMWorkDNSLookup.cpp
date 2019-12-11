@@ -18,7 +18,10 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     shared_ptr<HMState> currentState;
     m_stateManager->updateState(currentState);
 
-    currentState->m_dnsCache.startDNSQuery(m_hostname, m_dnsHostCheck);
+    if(!currentState->m_dnsCache.startDNSQuery(m_hostname, m_dnsHostCheck))
+    {
+        return HM_WORK_COMPLETE;
+    }
 
     result = dnsLookup();
 

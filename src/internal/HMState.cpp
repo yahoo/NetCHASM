@@ -656,15 +656,37 @@ HMState::forceDNSCheck(const string &hostName,  HM_DNS_PLUGIN_CLASS dnsPlugin, c
         }
 
     }
+    map<pair<string,HMDNSLookup>,HMDNSResult>::const_iterator iter;
     if (ipv4)
     {
         HMDNSLookup dnsHostCheck(dnsPlugin, false);
-        m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+
+        if(m_dnsCache.getDNSResult(hostName, dnsHostCheck, iter))
+        {
+            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+        }
+        else
+        {
+            HMLog(HM_LOG_ERROR,
+                    "Force pushing a DNS check for invalid host %s or invalid DNS check type %s",
+                    hostName.c_str(),
+                    printDnsType(dnsHostCheck.getPlugin()).c_str());
+        }
     }
     if (ipv6)
     {
         HMDNSLookup dnsHostCheck(dnsPlugin, true);
-        m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+        if (m_dnsCache.getDNSResult(hostName, dnsHostCheck, iter))
+        {
+            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+        }
+        else
+        {
+            HMLog(HM_LOG_ERROR,
+                    "Force pushing a DNS check for invalid host %s or invalid DNS check type %s",
+                    hostName.c_str(),
+                    printDnsType(dnsHostCheck.getPlugin()).c_str());
+        }
     }
 }
 
