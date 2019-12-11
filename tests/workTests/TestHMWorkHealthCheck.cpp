@@ -120,6 +120,10 @@ TESTNAME::test_HMWorkHealthCheck_IPV4()
 
     m_currentState->m_checkList.insertCheck("HostGroup1", error, hostCheck, paramsNormal, ips);
     m_currentState->m_checkList.insertCheck("HostGroup2", error, hostCheck, paramsTimedout, ips);
+    m_currentState->m_dnsCache.insertDNSEntry(basic, dnsHostCheckF, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(success, dnsHostCheckF, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckF, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(error, dnsHostCheckF, 10000, 10000);
     m_currentState->m_dnsCache.updateDNSEntry(basic, dnsHostCheckF, ips1);
     m_currentState->m_dnsCache.updateDNSEntry(success, dnsHostCheckF, ips);
     m_currentState->m_dnsCache.updateDNSEntry(failure, dnsHostCheckF, ips);

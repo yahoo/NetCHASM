@@ -156,13 +156,16 @@ void TESTNAME::setUp()
     HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
     set<HMIPAddress> addressess;
     addressess.insert(address);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addressess);
     addressess.clear();
     addressess.insert(addressv6);
     addressess.insert(addressZero);
+    dnsCache.insertDNSEntry(host2, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheckv6, addressess);
     addressess.clear();
     addressess.insert(addressZero);
+    dnsCache.insertDNSEntry(host3, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host3, dnsHostCheckv6, addressess);
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(mdbm, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());

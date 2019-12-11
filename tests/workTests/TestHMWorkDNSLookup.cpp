@@ -738,6 +738,7 @@ TESTNAME::test_HMWorkDNSLookup_DnsFailed()
     HMDataHostCheck hostCheck;
     HMTimeStamp time = HMTimeStamp::now();
     HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckF, 10000, 10000);
     dnsLookup = new TestHMWorkDNSLookup(failure, addr, hostCheck, dnsHostCheckF);
     dnsLookup->updateState(&m_state, m_eventQueue);
     dnsLookup->m_response = HM_RESPONSE_DNS_FAILED;

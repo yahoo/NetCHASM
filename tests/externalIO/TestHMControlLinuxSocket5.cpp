@@ -247,12 +247,15 @@ socket.path: test_sock" << endl;
     HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
     set<HMIPAddress> addresses;
     addresses.insert(address);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address3);
+    dnsCache.insertDNSEntry(host1, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host1, dnsHostCheckv6, addresses);
     addresses.clear();
     addresses.insert(address2);
+    dnsCache.insertDNSEntry(host2, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheckv6, addresses);
 
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(mdbm, &groupMap, &dnsCache);

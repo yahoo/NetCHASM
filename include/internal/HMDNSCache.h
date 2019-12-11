@@ -124,9 +124,9 @@ public:
          Start a DNS query. Update the internal query state to in progress.
          \param the host name to resolve.
          \param structure holding DNS type and address type(v4 or v6).
-         \return the HMTimstamp of the timeout for the query.
+         \return true if succeeds.
      */
-    HMTimeStamp startDNSQuery(const std::string& name, HMDNSLookup& dnsHostCheck);
+    bool startDNSQuery(const std::string& name, HMDNSLookup& dnsHostCheck);
 
     //! Queue the DNS query.
     /*!

@@ -220,30 +220,38 @@ TESTNAME::test_HMStorageHostGroup_ReadWrite()
     HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
     set<HMIPAddress> addresses;
     addresses.insert(address1_1_1);
+    dnsCache.insertDNSEntry(hostname1_1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(hostname1_1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address1_1_2);
+    dnsCache.insertDNSEntry(hostname1_1, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(hostname1_1, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address1_2_1);
+    dnsCache.insertDNSEntry(hostname1_2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(hostname1_2, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address1_2_2);
+    dnsCache.insertDNSEntry(hostname1_2, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(hostname1_2, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address2_1_1);
+    dnsCache.insertDNSEntry(hostname2_1, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(hostname2_1, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address2_1_2);
+    dnsCache.insertDNSEntry(hostname2_1, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(hostname2_1, dnsHostCheckv6, addresses);
 
     addresses.clear();
     addresses.insert(address2_2_1);
+    dnsCache.insertDNSEntry(hostname2_2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(hostname2_2, dnsHostCheck, addresses);
     addresses.clear();
     addresses.insert(address2_2_2);
+    dnsCache.insertDNSEntry(hostname2_2, dnsHostCheckv6, 10000, 10000);
     dnsCache.updateDNSEntry(hostname2_2, dnsHostCheckv6, addresses);
 
 

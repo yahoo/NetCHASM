@@ -108,7 +108,10 @@ HMDNSCache::updateDNSEntry(string name, HMDNSLookup& dnsHostCheck, set<HMIPAddre
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        it = m_cache.insert(make_pair(key,HMDNSResult())).first;
+        HMLog(HM_LOG_ERROR,
+                "Missing DNS entry in cache in function updateDNSEntry for host %s - DNS check type %s",
+                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+        return;
     }
     it->second.updateQuery(addresses);
 }
@@ -120,7 +123,11 @@ HMDNSCache::finishQuery(string name, HMDNSLookup& dnsHostCheck, bool success)
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        it = m_cache.insert(make_pair(key,HMDNSResult())).first;
+        HMLog(HM_LOG_ERROR,
+                "Missing DNS entry in cache in function finishquery for host %s - DNS check type %s",
+                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+        return;
+
     }
     it->second.finishQuery(success);
 }
@@ -233,16 +240,20 @@ HMDNSCache::nextQueryTime(const string& name, const HMDNSLookup& dnsHostCheck) c
     return it->second.nextQueryTime();
 }
 
-HMTimeStamp
+bool
 HMDNSCache::startDNSQuery(const string& name, HMDNSLookup& dnsHostCheck)
 {
     auto key = make_pair(name, dnsHostCheck);
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        it = m_cache.insert(make_pair(key, HMDNSResult())).first;
+        HMLog(HM_LOG_ERROR,
+                "Missing DNS entry in cache in function startDNSQuery for host %s - DNS check type %s",
+                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+        return false;
     }
-    return it->second.startQuery();
+    it->second.startQuery();
+    return true;
 }
 
 void
@@ -255,7 +266,10 @@ HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& q
 
     if(it == m_cache.end())
     {
-        it = m_cache.insert(make_pair(key, HMDNSResult())).first;
+        HMLog(HM_LOG_ERROR,
+                "Missing DNS entry in cache in function queueDNSQuery for host %s - DNS check type %s",
+                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+        return;
     }
     unique_ptr<HMWork> dnslookup;
     switch(dnsHostCheck.getPlugin())
