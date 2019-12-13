@@ -23,6 +23,8 @@
 #include "HMControlLinuxSocket.h"
 #include "HMControlTLSSocket.h"
 #include "HMControlTCPSocket.h"
+#include "HMOpenSSL.h"
+
 using namespace std;
 
 static HMStateManager* monitor;
@@ -71,7 +73,7 @@ HMStateManager::~HMStateManager()
     {
         delete m_libEvent;
     }
-
+    thread_cleanup();
 }
 
 bool
@@ -111,6 +113,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     sigaction(SIGPIPE, &sigPipeHandler, NULL);
 
     thread threadMonitor;
+    thread_setup();
     // Main function to do all the health checking
 
     // Step 1. Load the Master Config that maintains how YHealthCheck runs
