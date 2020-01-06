@@ -117,6 +117,11 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel, bool lib
     // Setup the exit conditions from Ctrl-c
     monitor = this;
     FIPS_mode_set(0);
+    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
+    // if libcurl cannot be initialized we cannot do anything so might as well
+    // assert
+    assert( !result );
+
     m_useAsLib = libMode;
     if(!libMode) {
         setupSignals();
