@@ -101,7 +101,7 @@ HMLogText::writeLog(LogEntry *entry)
                 entry->tid,
                 PRINT_LOG_LEVEL[entry->level],
                 entry->entry);
-            file->flush(buf, bufsize);
+            file->flush(tbuf, bufsize);
             free(tbuf);
         }
         else

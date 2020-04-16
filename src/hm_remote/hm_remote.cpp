@@ -41,8 +41,8 @@ char delim = 0;
 
 static void usage(char* name)
 {
-    string command = "man ";
-    command.append(name);
+    string command = "man hm_remote";
+    if(system(command.c_str()))
     {
         cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
                 << "-i      <socket-ip-address> [default: " << server_address << "]" << endl
@@ -424,10 +424,10 @@ bool writeXML(string& fileName, string& xml)
     return true;
 }
 
-bool getHostResult(unique_ptr<HMControlSocketClientBase>& socketAPI, string hostGroup, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults, vector<string>& hosts)
+bool getHostResult(unique_ptr<HMControlSocketClientBase>& socketAPI, string hostGroup, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
 {
     vector<HMAPICheckResult> temp_hostResults;
-    if(!socketAPI->getHostGroupParams(hostGroup, checkInfo, hosts))
+    if(!socketAPI->getHostGroupParams(hostGroup, checkInfo))
     {
         return false;
     }
@@ -548,19 +548,30 @@ bool runCommand(const vector<string> &strArgs)
         }
         return false;
     }
+
+    if (strArgs[0] == HM_CMD_GETHANDLERTHREADSCOUNT)
+    {
+        uint64_t count;
+        if (socketAPI->getHandlerThreadCount(count))
+        {
+            cout << "Handler thread count = " << count << endl;
+            return true;
+        }
+        return false;
+    }
     if (strArgs[0] == HM_CMD_HOSTRESULTS)
     {
         HMAPICheckInfo checkInfo;
         vector<HMAPICheckResult> hostResults;
         vector<string> files;
         vector<string> hosts;
-        if(getHostResult(socketAPI, strArgs[1], checkInfo, hostResults, hosts))
+        if(getHostResult(socketAPI, strArgs[1], checkInfo, hostResults))
         {
             if (opt_load)
             {
                 getLFBInfo(socketAPI, strArgs[1], checkInfo, hostResults, files);
             }
-            printName(strArgs[1], checkInfo, hostResults, files, hosts, delim);
+            printName(strArgs[1], checkInfo, hostResults, files, checkInfo.m_hosts, delim);
             return true;
         }
         return false;
@@ -574,6 +585,7 @@ int main(int argc, char* argv[])
     bool bSuccess = false;
     int opt;
     uint32_t port;
+    server.set(server_address);
     while ((opt = getopt(argc, argv, "i:p:o:k:c:a:d:sLh")) != -1)
     {
         switch (opt) {
@@ -664,6 +676,7 @@ int main(int argc, char* argv[])
         bSuccess = runCommand(strArgs);
         break;
     case GETREMOTEQUERY:
+    case GETHANDLERTHEADSCOUNT:
         bSuccess = runCommand(strArgs);
         break;
     case HOSTRESULTS:
@@ -719,6 +732,16 @@ int main(int argc, char* argv[])
     case GETTTLTRESH:
     case GETWORKPERTHREAD:
     case GETRECYCLE:
+    case ADDHOSTGROUP:
+    case REMOVEHOSTGROUP:
+    case CLEARTRANSACTION:
+    case COMMITTRANSACTION:
+    case GETHOSTGROUPHASH:
+    case GETTRANSCONFIGHASH:
+    case REMOTEHOSTGROUPCHECK:
+    case REMOTESCHDINFO:
+    case LOADFBINFOHOST:
+    case REFRESH:
     case UNDEFINED:
         cerr << "Not all commands are supported at this time" << endl;
         return -3;

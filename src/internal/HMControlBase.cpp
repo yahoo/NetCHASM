@@ -9,15 +9,18 @@
 #include "HMStateManager.h"
 #include "HMLogBase.h"
 #include "HMDataPacking.h"
+#include "HMSocketUtilBase.h"
 
 using namespace std;
 
 map<string, HM_COMMAND_TASKS> commands =
 {
     { HM_CMD_RELOAD, RELOAD },
+    { HM_CMD_REFRESH, REFRESH },
     { HM_CMD_HOSTGROUP, HOSTGROUPINFO },
     { HM_CMD_LOADFB, LOADFBINFO },
     { HM_CMD_LOADFBIP, LOADFBINFOIP },
+    { HM_CMD_LOADFBHOST, LOADFBINFOHOST },
     { HM_CMD_THREADINFO, THREADINFO },
     { HM_CMD_WORKQUEUEINFO, WORKQUEUEINFO },
     { HM_CMD_SCHDQUEUEINFO, SCHDQUEUEINFO },
@@ -29,8 +32,10 @@ map<string, HM_COMMAND_TASKS> commands =
     { HM_CMD_HOSTIPRESULTS, HOSTIPRESULTS },
     { HM_CMD_HOSTGROUPPARAMS, HOSTGROUPPARAMS },
     { HM_CMD_HOSTSCHDINFO, HOSTSCHDINFO },
+    { HM_CMD_REMOTESCHDINFO, REMOTESCHDINFO },
     { HM_CMD_HEALTHCHECK, HEALTHCHECK },
     { HM_CMD_DNSCHECK, DNSCHECK },
+    { HM_CMD_REMOTEHOSTGROUPCHECK, REMOTEHOSTGROUPCHECK },
     { HM_CMD_SETLOGLEVEL, SETLOGLEVEL },
     { HM_CMD_GETLOGLEVEL, GETLOGLEVEL },
     { HM_CMD_SETCONNECTIONTIMEOUT, SETCONNECTIONTIMEOUT },
@@ -47,6 +52,13 @@ map<string, HM_COMMAND_TASKS> commands =
     { HM_CMD_SETRECYCLE, SETRECYCLE },
     { HM_CMD_SETREMOTEQUERY, SETREMOTEQUERY },
     { HM_CMD_GETREMOTEQUERY, GETREMOTEQUERY },
+    { HM_CMD_GETHANDLERTHREADSCOUNT, GETHANDLERTHEADSCOUNT},
+    { HM_CMD_ADDHOSTGROUP, ADDHOSTGROUP },
+    { HM_CMD_REMOVEHOSTGROUP, REMOVEHOSTGROUP },
+    { HM_CMD_CLEARTRANSACTION, CLEARTRANSACTION },
+    { HM_CMD_GETHOSTGROUPHASH, GETHOSTGROUPHASH },
+    { HM_CMD_GETTRANSCONFIGHASH, GETTRANSCONFIGHASH },
+    { HM_CMD_COMMITTRANSACTION, COMMITTRANSACTION },
     { HM_CMD_ADDDNSADDRESSES, ADDDNSADDRESSES },
     { HM_CMD_REMOVEDNSADDRESSES, REMOVEDNSADDRESSES },
     { HM_CMD_GETDNSADDRESSES, GETDNSADDRESSES },
@@ -124,7 +136,8 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     uint64_t buflen;
     unique_ptr<char[]> returnResult;
     vector<string> returnList;
-    shared_ptr<HMState> current;
+    shared_ptr<HMState> tState;
+    string configName = "config";
     switch (task)
     {
     case RELOAD:
@@ -139,10 +152,45 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         returnResult = dataPacking->packBool(result, buflen);
         socketBase.sendMessage(returnResult.get(), buflen);
         break;
+    case REFRESH:
+            result = m_stateManager.refreshDaemonConfigs();
+            returnResult = dataPacking->packBool(result, buflen);
+            socketBase.sendMessage(returnResult.get(), buflen);
+            break;
     case HOSTGROUPINFO:
         if(cmd_args.size() > 1)
         {
-            returnResult = createHostGroup(dataPacking, cmd_args[1], buflen);
+            HMHash hash;
+            bool verifyHash = false;
+            if(cmd_args.size() > 2)
+            {
+                verifyHash = true;
+                uint32_t size;
+                if(!socketBase.strtoul(cmd_args[2], size))
+                {
+                    result = false;
+                    break;
+                }
+                unique_ptr<char[]> data = make_unique<char[]>(size);
+                if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
+                {
+                    if(!dataPacking->unpackHash(data, size, hash))
+                    {
+                            socketBase.sendMessage(nullptr, 0);
+                            HMLog(HM_LOG_DEBUG, "Failed to unpack hash for command:%s",
+                                    HM_CMD_HOSTGROUP.c_str());
+                            break;
+                    }
+                }
+                else
+                {
+                    HMLog(HM_LOG_DEBUG, "Failed to receive Hash payload for command:%s",
+                                                        HM_CMD_HOSTGROUP.c_str());
+                    socketBase.sendMessage(nullptr, 0);
+                    break;
+                }
+            }
+            returnResult = createHostGroup(dataPacking, cmd_args[1], buflen, verifyHash, hash);
             socketBase.sendMessage(returnResult.get(), buflen);
         }
         else
@@ -153,7 +201,37 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case LOADFBINFO:
         if(cmd_args.size() > 1)
         {
-            returnResult = getloadfbdata(dataPacking, cmd_args[1], buflen);
+            HMHash hash;
+            bool verifyHash = false;
+            if(cmd_args.size() > 2)
+            {
+                verifyHash = true;
+                uint32_t size;
+                if(!socketBase.strtoul(cmd_args[2], size))
+                {
+                    result = false;
+                    break;
+                }
+                unique_ptr<char[]> data = make_unique<char[]>(size);
+                if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
+                {
+                    if(!dataPacking->unpackHash(data, size, hash))
+                    {
+                            socketBase.sendMessage(nullptr, 0);
+                            HMLog(HM_LOG_DEBUG, "Failed to unpack hash for command:%s",
+                                    HM_CMD_LOADFB.c_str());
+                            break;
+                    }
+                }
+                else
+                {
+                    HMLog(HM_LOG_DEBUG, "Failed to receive Hash payload for command:%s",
+                                                        HM_CMD_LOADFB.c_str());
+                    socketBase.sendMessage(nullptr, 0);
+                    break;
+                }
+            }
+            returnResult = getloadfbdata(dataPacking, cmd_args[1], buflen, verifyHash, hash);
             socketBase.sendMessage(returnResult.get(), buflen);
         }
         else
@@ -217,7 +295,7 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             vector<HMDataCheckResult> hostResults;
             if(getHostCheck(cmd_args[1], cmd_args[2], hostResults))
             {
-                returnResult = dataPacking->packDataCheckResults(hostResults, buflen);
+                returnResult = dataPacking->packDataCheckResults(cmd_args[2], hostResults, buflen);
             }
             socketBase.sendMessage(returnResult.get(), buflen);
         }
@@ -229,21 +307,65 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case HOSTRESULTS:
         if (cmd_args.size() > 2)
         {
-            uint32_t size = std::stoul(cmd_args[2], NULL, 0);
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[2], size))
+            {
+                result = false;
+                break;
+            }
             unique_ptr<char[]> data = make_unique<char[]>(size);
             HMDataHostCheck dataHostCheck;
-            if (socketBase.receiveMessage(data.get(), size)) {
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
+            {
                 if(dataPacking->unpackDataHostCheck(data, size, dataHostCheck))
                 {
                     returnResult = getHostResults(dataPacking, cmd_args[1], dataHostCheck, buflen);
+                    HMLog(HM_LOG_DEBUG, "Received check params successfully for %s and sending data for hostresults of size %llu", cmd_args[1].c_str(), buflen);
                     socketBase.sendMessage(returnResult.get(), buflen);
                 }
-            } else {
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR, "Failed to send data for %s", cmd_args[1].c_str());
                 socketBase.sendMessage(nullptr, 0);
             }
-        } else {
+        }
+        else
+        {
             HMLog(HM_LOG_DEBUG, "Missing HostName, size of data for command:%s",
                     HM_CMD_HOSTRESULTS.c_str());
+        }
+        break;
+
+    case LOADFBINFOHOST:
+        if(cmd_args.size() > 2)
+        {
+            uint32_t size;
+            if (!socketBase.strtoul(cmd_args[2], size))
+            {
+                result = false;
+                break;
+            }
+            unique_ptr<char[]> data = make_unique<char[]>(size);
+            HMDataHostCheck dataHostCheck;
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
+            {
+                if (dataPacking->unpackDataHostCheck(data, size, dataHostCheck))
+                {
+                    returnResult = getloadfbhostdata(dataPacking, cmd_args[1], dataHostCheck, buflen);
+                    socketBase.sendMessage(returnResult.get(), buflen);
+                }
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR, "Missing payload data for command:%s",
+                                    HM_CMD_LOADFBHOST.c_str());
+                socketBase.sendMessage(nullptr, 0);
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing hostname and size for command:%s", HM_CMD_LOADFBHOST.c_str());
         }
         break;
     case LOADFBINFOIP:
@@ -272,11 +394,16 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case HOSTIPRESULTS:
         if (cmd_args.size() > 3)
         {
-            uint32_t size = std::stoul(cmd_args[3], NULL, 0);
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[3], size))
+            {
+                result = false;
+                break;
+            }
             unique_ptr<char[]> data = make_unique<char[]>(size);
             HMDataHostCheck dataHostCheck;
             HMIPAddress address;
-            if (socketBase.receiveMessage(data.get(), size))
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
             {
                 if(dataPacking->unpackDataHostCheck(data, size, dataHostCheck))
                 {
@@ -314,7 +441,8 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
                 returnResult = dataPacking->packDataHostGroup(group, buflen);
             }
             socketBase.sendMessage(returnResult.get(), buflen);
-        } else
+        }
+        else
         {
             HMLog(HM_LOG_DEBUG, "Missing HostGroup name for command:%s", HM_CMD_HOSTGROUPPARAMS.c_str());
         }
@@ -328,6 +456,25 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         else
         {
             HMLog(HM_LOG_DEBUG, "Missing HostGroup name and Host name for command:%s", HM_CMD_HOSTSCHDINFO.c_str());
+        }
+        break;
+    case REMOTESCHDINFO:
+        if(cmd_args.size() > 1)
+        {
+            if(cmd_args.size() > 2)
+            {
+                returnResult = getRemoteSchdInfo(dataPacking, cmd_args[1], cmd_args[2], buflen);
+                socketBase.sendMessage((char*)returnResult.get(), buflen);
+            }
+            else
+            {
+                returnResult = getRemoteSchdInfo(dataPacking, cmd_args[1], buflen);
+                socketBase.sendMessage((char*)returnResult.get(), buflen);
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing HostGroup name for command:%s", HM_CMD_REMOTESCHDINFO.c_str());
         }
         break;
     case SETLOGLEVEL:
@@ -357,17 +504,24 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         }
         break;
     case GETCONNECTIONTIMEOUT:
+    {
+        shared_ptr<HMState> current;
         m_stateManager.updateState(current);
         returnResult = dataPacking->packUInt(current->getConnectionTimeout(), buflen);
         socketBase.sendMessage(returnResult.get(), buflen);
         break;
+    }
     case HEALTHCHECK:
         if(cmd_args.size() > 2)
         {
+            shared_ptr<HMState> current;
+            m_stateManager.updateState(current);
             current->forceHealthCheck(cmd_args[1], cmd_args[2], m_stateManager.m_workQueue);
         }
         else if(cmd_args.size() > 1)
         {
+            shared_ptr<HMState> current;
+            m_stateManager.updateState(current);
             current->forceHealthCheck(cmd_args[1], m_stateManager.m_workQueue);
         }
         else
@@ -378,10 +532,14 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case DNSCHECK:
         if(cmd_args.size() > 2)
         {
+            shared_ptr<HMState> current;
+            m_stateManager.updateState(current);
             current->forceDNSCheck(cmd_args[1], cmd_args[2], m_stateManager.m_workQueue);
         }
         else if(cmd_args.size() > 1)
         {
+            shared_ptr<HMState> current;
+            m_stateManager.updateState(current);
             current->forceDNSCheck(cmd_args[1], m_stateManager.m_workQueue);
         }
         else
@@ -389,10 +547,31 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             HMLog(HM_LOG_DEBUG, "Missing hostgroup name for command:%s", HM_CMD_DNSCHECK.c_str());
         }
         break;
+
+    case REMOTEHOSTGROUPCHECK:
+        if(cmd_args.size() > 1)
+        {
+            shared_ptr<HMState> current;
+            m_stateManager.updateState(current);
+            current->m_remoteCache.queueRemoteCheck(cmd_args[1], m_stateManager.m_workQueue, current->m_hostGroups);
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing hostgroup name for command:%s", HM_CMD_REMOTEHOSTGROUPCHECK.c_str());
+        }
+
+        break;
+
     case SETMONFREQ:
         if(cmd_args.size() > 1)
         {
-            m_stateManager.setMonitorFrequency(stoul(cmd_args[1]));
+            uint32_t frequency;
+            if(!socketBase.strtoul(cmd_args[1], frequency))
+            {
+                result = false;
+                break;
+            }
+            m_stateManager.setMonitorFrequency(frequency);
         }
         else
         {
@@ -406,7 +585,13 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case SETSTRIDE:
         if(cmd_args.size() > 1)
         {
-            m_stateManager.setStridePercent(stoul(cmd_args[1]));
+            uint32_t stride;
+            if(!socketBase.strtoul(cmd_args[1], stride))
+            {
+                result = false;
+                break;
+            }
+            m_stateManager.setStridePercent(stride);
         }
         else
         {
@@ -420,7 +605,13 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case SETWORKPERTHREAD:
         if(cmd_args.size() > 1)
         {
-            m_stateManager.setWorkPerThreadRatio(stoul(cmd_args[1]));
+            uint32_t threadRatio;
+            if(!socketBase.strtoul(cmd_args[1], threadRatio))
+            {
+                result = false;
+                break;
+            }
+            m_stateManager.setWorkPerThreadRatio(threadRatio);
         }
         else
         {
@@ -434,7 +625,13 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case SETTTLTRESH:
         if(cmd_args.size() > 1)
         {
-            m_stateManager.m_workQueue.setTtlTreshold(stoul(cmd_args[1]));
+            uint32_t ttlTreshold;
+            if(!socketBase.strtoul(cmd_args[1], ttlTreshold))
+            {
+                result = false;
+                break;
+            }
+            m_stateManager.m_workQueue.setTtlTreshold(ttlTreshold);
         }
         else
         {
@@ -503,20 +700,139 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
                 buflen);
         socketBase.sendMessage(returnResult.get(), buflen);
         break;
+    case GETHANDLERTHEADSCOUNT:
+        returnResult = getConnectionHandlerCount(dataPacking, buflen);
+        socketBase.sendMessage(returnResult.get(), buflen);
+        break;
+    case ADDHOSTGROUP:
+        if (cmd_args.size() > 2)
+        {
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[2], size))
+            {
+                result = false;
+                break;
+            }
+            unique_ptr<char[]> data = make_unique<char[]>(size);
+            HMDataHostGroup dataHostGroup(cmd_args[1]);
+            if (socketBase.receiveMessage(data.get(), size)== HM_SOCK_DATA_OK)
+            {
+                if (dataPacking->unpackDataHostGroup(data, size, dataHostGroup))
+                {
+                    result = addHostGroup(cmd_args[1], dataHostGroup);
+                    returnResult = dataPacking->packBool(result, buflen);
+                    socketBase.sendMessage(returnResult.get(), buflen);
+                }
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR, "Missing HostGroupData payload for command:%s", HM_CMD_ADDHOSTGROUP.c_str());
+                socketBase.sendMessage(nullptr, 0);
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG, "Missing HostGroupName, size of data for command:%s",
+                    HM_CMD_ADDHOSTGROUP.c_str());
+        }
+        break;
+    case REMOVEHOSTGROUP:
+        if (cmd_args.size() > 1)
+        {
+                result = removeHostGroup(cmd_args[1]);
+                returnResult = dataPacking->packBool(result, buflen);
+                socketBase.sendMessage(returnResult.get(), buflen);
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG,
+                    "Missing HostGroupName, size of data for command:%s",
+                    HM_CMD_ADDHOSTGROUP.c_str());
+        }
+        break;
+    case CLEARTRANSACTION:
+        result = clearTransaction();
+        returnResult = dataPacking->packBool(result, buflen);
+        socketBase.sendMessage(returnResult.get(), buflen);
+        break;
+    case GETHOSTGROUPHASH:
+        m_stateManager.updateTransactionState(tState);
+        returnResult = dataPacking->packHashInfo(tState->m_hostGroups, buflen);
+        tState.reset();
+        socketBase.sendMessage(returnResult.get(), buflen);
+        break;
+    case GETTRANSCONFIGHASH:
+        m_stateManager.updateTransactionState(tState);
+        tState->hashConfigs();
+        returnResult = dataPacking->packHash(configName, tState->getHash(), buflen);
+        tState.reset();
+        socketBase.sendMessage(returnResult.get(), buflen);
+        break;
+    case COMMITTRANSACTION:
+        if (cmd_args.size() > 1)
+        {
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[1], size))
+            {
+                result = false;
+                break;
+            }
+            unique_ptr<char[]> data = make_unique<char[]>(size);
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
+            {
+                HMHash hash;
+                if (dataPacking->unpackHash(data, size, hash))
+                {
+                    HM_COMMIT_TRANSACTION_STATUS status = m_stateManager.commitDaemonConfigs(hash);
+                    returnResult = dataPacking->packUInt(status, buflen);
+                    socketBase.sendMessage(returnResult.get(), buflen);
+                }
+                else
+                {
+                    HMLog(HM_LOG_ERROR,
+                            "Failure Unpacking payload for command:%s",
+                            HM_CMD_COMMITTRANSACTION.c_str());
+                    returnResult = dataPacking->packUInt(HM_COMMIT_TRANSACTION_FAILURE, buflen);
+                    socketBase.sendMessage(returnResult.get(), buflen);
+                }
+            }
+            else
+            {
+                HMLog(HM_LOG_ERROR,
+                        "Missing HASH payload for command:%s",
+                        HM_CMD_COMMITTRANSACTION.c_str());
+                returnResult = dataPacking->packUInt(HM_COMMIT_TRANSACTION_FAILURE, buflen);
+                socketBase.sendMessage(returnResult.get(), buflen);
+            }
+
+        }
+        else
+        {
+            HMLog(HM_LOG_DEBUG,
+                    "Missing HostGroupName, size of data for command:%s",
+                    HM_CMD_ADDHOSTGROUP.c_str());
+        }
+        break;
     case ADDDNSADDRESSES:
         if (cmd_args.size() > 2)
         {
-            uint32_t size = std::stoul(cmd_args[2], NULL, 0);
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[2], size))
+            {
+                result = false;
+                break;
+            }
             unique_ptr<char[]> data = make_unique<char[]>(size);
             set<HMIPAddress> addresses;
-            if (socketBase.receiveMessage(data.get(), size))
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
             {
                 if (dataPacking->unpackIPAddresses(data, size, addresses))
                 {
+                    shared_ptr<HMState> current;
                     m_stateManager.updateState(current);
                     result = current->m_dnsCache.addStaticDNSAddress(
                             cmd_args[1], addresses);
-                    current->forceDNSCheck(cmd_args[1], HM_DNS_PLUGIN_STATIC, addresses, m_stateManager.m_workQueue);
+                    current->forceDNSCheck(cmd_args[1], HM_DNS_TYPE_STATIC, addresses, m_stateManager.m_workQueue);
                     returnResult = dataPacking->packBool(result, buflen);
                     socketBase.sendMessage(returnResult.get(), buflen);
                     current.reset();
@@ -541,17 +857,23 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
     case REMOVEDNSADDRESSES:
         if (cmd_args.size() > 2)
         {
-            uint32_t size = std::stoul(cmd_args[2], NULL, 0);
+            uint32_t size;
+            if(!socketBase.strtoul(cmd_args[2], size))
+            {
+                result = false;
+                break;
+            }
             unique_ptr<char[]> data = make_unique<char[]>(size);
             set<HMIPAddress> addresses;
-            if (socketBase.receiveMessage(data.get(), size))
+            if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
             {
                 if (dataPacking->unpackIPAddresses(data, size, addresses))
                 {
+                    shared_ptr<HMState> current;
                     m_stateManager.updateState(current);
                     result = current->m_dnsCache.removeStaticDNSAddress(
                             cmd_args[1], addresses);
-                    current->forceDNSCheck(cmd_args[1], HM_DNS_PLUGIN_STATIC, addresses, m_stateManager.m_workQueue);
+                    current->forceDNSCheck(cmd_args[1], HM_DNS_TYPE_STATIC, addresses, m_stateManager.m_workQueue);
                     returnResult = dataPacking->packBool(result, buflen);
                     socketBase.sendMessage(returnResult.get(), buflen);
                     current.reset();
@@ -577,6 +899,7 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
         if (cmd_args.size() > 1)
         {
             set<HMIPAddress> addresses, addressesv6;
+            shared_ptr<HMState> current;
             m_stateManager.updateState(current);
             current->m_dnsCache.getStaticDNSAddress(cmd_args[1], false, addresses);
             current->m_dnsCache.getStaticDNSAddress(cmd_args[1], true, addressesv6);
@@ -594,20 +917,14 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             if (address.set(cmd_args[3]))
             {
                 uint32_t size;
-                try
+                if(!socketBase.strtoul(cmd_args[4], size))
                 {
-                    size = std::stoul(cmd_args[4], NULL, 0);
-                }
-                catch (const invalid_argument& ia)
-                {
-                    HMLog(HM_LOG_ERROR, "Failed to convert size value for command :%s, error: %s",
-                                                    HM_CMD_SETHOSTMARK.c_str(), ia.what());
-                    socketBase.sendMessage(nullptr, 0);
-                    return;
+                    result = false;
+                    break;
                 }
                 set<int> values;
                 unique_ptr<char[]> data = make_unique<char[]>(size);
-                if (socketBase.receiveMessage(data.get(), size))
+                if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
                 {
                     if (dataPacking->unpackListInt64(data, size, values))
                     {
@@ -647,10 +964,16 @@ HMCommandListenerBase::handleCommands(string& command, HMSocketUtilBase& socketB
             HMIPAddress address;
             if (address.set(cmd_args[3]))
             {
-                uint32_t size = std::stoul(cmd_args[4], NULL, 0);
+
+                uint32_t size;
+                if(!socketBase.strtoul(cmd_args[4], size))
+                {
+                    result = false;
+                    break;
+                }
                 set<int> values;
                 unique_ptr<char[]> data = make_unique<char[]>(size);
-                if (socketBase.receiveMessage(data.get(), size))
+                if (socketBase.receiveMessage(data.get(), size) == HM_SOCK_DATA_OK)
                 {
                     if (dataPacking->unpackListInt64(data, size, values))
                     {
@@ -773,9 +1096,9 @@ HMCommandListenerBase::getHostSchdInfo(unique_ptr<HMDataPacking>& dataPacking, c
     HMDataHostCheck check;
     HMDataCheckParams params;
     hostGroupInfo->second.getHostCheck(check);
-    HMDNSLookup dnsCheck(check.getDnsPlugin());
-    HMDNSLookup dnsCheckV4(check.getDnsPlugin(), false);
-    HMDNSLookup dnsCheckV6(check.getDnsPlugin(), true);
+    HMDNSLookup dnsCheck(check.getDnsType(), check.getRemoteCheck());
+    HMDNSLookup dnsCheckV4(check.getDnsType(), false, check.getRemoteCheck());
+    HMDNSLookup dnsCheckV6(check.getDnsType(), true, check.getRemoteCheck());
     hostGroupInfo->second.getCheckParameters(params);
     map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator v4Result;
     map<pair<string, HMDNSLookup>, HMDNSResult>::const_iterator v6Result;
@@ -827,6 +1150,58 @@ HMCommandListenerBase::getHostSchdInfo(unique_ptr<HMDataPacking>& dataPacking, c
     return dataPacking->packHostSchedInfo(dns, buflen);
 }
 
+unique_ptr<char[]>
+HMCommandListenerBase::getRemoteSchdInfo(unique_ptr<HMDataPacking>& dataPacking, const string& hostgroup, uint64_t& buflen)
+{
+    buflen = 0;
+    unique_ptr<char[]> data;
+    HMAPIHostSchedInfo schdinfo;
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+    HMDataHostGroupMap::iterator hostGroupInfo;
+    if ((hostGroupInfo = current->m_hostGroups.find(hostgroup))
+            == current->m_hostGroups.end())
+    {
+        return nullptr;
+    }
+    map<string, HMRemoteResult>::const_iterator result;
+    if (!current->m_remoteCache.getRemoteResult(hostgroup, result))
+    {
+        return nullptr;
+    }
+    schdinfo.m_lastCheckTime = result->second.getResultTime().getTimeSinceEpoch();
+    schdinfo.m_state = HM_API_WORK_STATE(result->second.getCheckState());
+    schdinfo.m_nextCheckTime = result->second.nextCheckTime().getTimeSinceEpoch();
+    return dataPacking->packRemoteHostGroupSchedInfo(schdinfo, buflen);
+}
+
+unique_ptr<char[]>
+HMCommandListenerBase::getRemoteSchdInfo(unique_ptr<HMDataPacking>& dataPacking, const string& hostgroup, const string& host, uint64_t& buflen)
+{
+    buflen = 0;
+    unique_ptr<char[]> data;
+    HMAPIHostSchedInfo schdinfo;
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+    HMDataHostGroupMap::iterator hostGroupInfo;
+    if ((hostGroupInfo = current->m_hostGroups.find(hostgroup))
+            == current->m_hostGroups.end())
+    {
+        return nullptr;
+    }
+    map<pair<string, HMDataHostCheck>,HMRemoteResult>::const_iterator result;
+    HMDataHostCheck dataHostCheck;
+    hostGroupInfo->second.getHostCheck(dataHostCheck);
+    if (!current->m_remoteHostCache.getRemoteResult(host, dataHostCheck, result))
+    {
+        return nullptr;
+    }
+    schdinfo.m_lastCheckTime = result->second.getResultTime().getTimeSinceEpoch();
+    schdinfo.m_state = HM_API_WORK_STATE(result->second.getCheckState());
+    schdinfo.m_nextCheckTime = result->second.nextCheckTime().getTimeSinceEpoch();
+    return dataPacking->packRemoteHostGroupSchedInfo(schdinfo, buflen);
+}
+
 uint32_t
 HMCommandListenerBase::getHostGroupResults(const string& name, vector<HMGroupCheckResult>& results)
 {
@@ -838,15 +1213,18 @@ HMCommandListenerBase::getHostGroupResults(const string& name, vector<HMGroupChe
 }
 
 unique_ptr<char[]>
-HMCommandListenerBase::createHostGroup(unique_ptr<HMDataPacking>& dataPacking, string& hostGroupName, uint64_t& buflen)
+HMCommandListenerBase::createHostGroup(unique_ptr<HMDataPacking>& dataPacking, string& hostGroupName, uint64_t& buflen, bool verifyHash, const HMHash& hash)
 {
     buflen = 0;
     HMDataHostGroup group(hostGroupName);
     vector<HMGroupCheckResult> results;
     if(!getHostGroupInfo(hostGroupName, group))
     {
-        std::unique_ptr<char[]> data;
-        return data;
+        return nullptr;
+    }
+    if(verifyHash && hash != group.getHashValue())
+    {
+        return nullptr;
     }
     getHostGroupResults(hostGroupName, results);
     return dataPacking->packHostGroupInfo(group, results, buflen);
@@ -854,16 +1232,19 @@ HMCommandListenerBase::createHostGroup(unique_ptr<HMDataPacking>& dataPacking, s
 
 
 unique_ptr<char[]>
-HMCommandListenerBase::getloadfbdata (unique_ptr<HMDataPacking>& dataPacking, string& rotationName, uint64_t& buflen)
+HMCommandListenerBase::getloadfbdata (unique_ptr<HMDataPacking>& dataPacking, string& rotationName, uint64_t& buflen, bool verifyHash, const HMHash& hash)
 {
     buflen = 0;
-    unique_ptr<char[]> data;
     shared_ptr<HMState> current;
     m_stateManager.updateState(current);
     HMDataHostGroup group(rotationName);
     if(!getHostGroupInfo(rotationName, group))
     {
-        return data;
+        return nullptr;
+    }
+    if (verifyHash && hash != group.getHashValue())
+    {
+        return nullptr;
     }
     std::vector<HMGroupAuxResult> results;
     current->m_datastore->getGroupAuxInfo(rotationName, true, true, results);
@@ -884,6 +1265,32 @@ HMCommandListenerBase::getloadfbdata (unique_ptr<HMDataPacking>& dataPacking, st
     }
     return dataPacking->packAuxInfo(auxInfo, hostName, address, buflen);
 }
+
+unique_ptr<char[]>
+HMCommandListenerBase::getloadfbhostdata (unique_ptr<HMDataPacking>& dataPacking, string& hostName, HMDataHostCheck& hostCheck, uint64_t& buflen)
+{
+    buflen = 0;
+    unique_ptr<char[]> data;
+    shared_ptr<HMState> current;
+    m_stateManager.updateState(current);
+    vector<HMGroupAuxResult> results;
+    set<HMIPAddress> addresses;
+    HMDNSLookup dnsHostCheck(hostCheck.getDnsType(), hostCheck.getRemoteCheck());
+    current->m_dnsCache.getAddresses(hostName, hostCheck.getDualStack(), dnsHostCheck, addresses);
+    for( const HMIPAddress address: addresses)
+    {
+        HMGroupAuxResult auxInfo;
+        if(current->m_auxCache.getAuxInfo(hostName, hostCheck.getCheckInfo(),
+                address, auxInfo.m_info))
+        {
+            auxInfo.m_address = address;
+            auxInfo.m_hostName = hostName;
+            results.push_back(std::move(auxInfo));
+        }
+    }
+    return dataPacking->packAuxInfo(results, 0, buflen);
+}
+
 
 bool
 HMCommandListenerBase::setHostStatus(const string& hostGroupName, const string& host, bool forceHostStatus)
@@ -991,18 +1398,18 @@ HMCommandListenerBase::getHostResults(unique_ptr<HMDataPacking>& dataPacking, co
     vector<pair<HMDataCheckParams, HMDataCheckResult>> tempResults;
     multimap<HMDataCheckParams, HMDataCheckResult> finalResults;
     set<HMIPAddress> addresses;
-    HMDNSLookup dnsHostCheck(hostCheck.getDnsPlugin());
+    HMDNSLookup dnsHostCheck(hostCheck.getDnsType(), hostCheck.getRemoteCheck());
     current->m_dnsCache.getAddresses(hostName, hostCheck.getDualStack(), dnsHostCheck, addresses);
     for( const HMIPAddress address: addresses)
     {
-        current->m_checkList.getCheckResults(hostName, hostCheck,
+        current->m_checkList.getCheckResultsRemoteChecks(hostName, hostCheck,
                 address, tempResults);
         for (auto it : tempResults)
         {
             finalResults.insert(make_pair(it.first, it.second));
         }
     }
-    return dataPacking->packHostResults(finalResults, dataSize);
+    return dataPacking->packHostResults(hostName, finalResults, dataSize);
 }
 
 unique_ptr<char[]>
@@ -1012,9 +1419,56 @@ HMCommandListenerBase::getHostResults(unique_ptr<HMDataPacking>& dataPacking, co
     shared_ptr<HMState> current;
     m_stateManager.updateState(current);
     vector<pair<HMDataCheckParams, HMDataCheckResult>> finalResults;
-    current->m_checkList.getCheckResults(hostName, hostCheck, address,
+    current->m_checkList.getCheckResultsRemoteChecks(hostName, hostCheck, address,
             finalResults);
-    return dataPacking->packHostResults(finalResults, dataSize);
+    return dataPacking->packHostResults(hostName, finalResults, dataSize);
+}
+
+unique_ptr<char[]>
+HMCommandListenerBase::getConnectionHandlerCount(unique_ptr<HMDataPacking>& dataPacking, uint64_t& dataSize)
+{
+    shared_lock<shared_timed_mutex> lg(m_handlerMutex);
+    return dataPacking->packUInt(m_handlerThreads.size(), dataSize);
+}
+
+bool
+HMCommandListenerBase::addHostGroup(const string& hostGroupName, HMDataHostGroup& hostGroup)
+{
+    lock_guard<mutex> lg(m_transactionMutex);
+    shared_ptr<HMState> tState;
+    m_stateManager.updateTransactionState(tState);
+    std::pair<std::map<string, HMDataHostGroup>::iterator,bool> it = tState->m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
+    if(!it.second)
+    {
+        HMHashMD5 hostGroupMD5;
+        if (hostGroupMD5.init())
+        {
+            HMHash hostGroupHash;
+            hostGroup.getHash(hostGroupMD5);
+            hostGroupMD5.final(hostGroupHash);
+            hostGroup.setHashValue(hostGroupHash);
+        }
+        it.first->second = hostGroup;
+    }
+    return true;
+}
+
+bool
+HMCommandListenerBase::removeHostGroup(const string& hostGroupName)
+{
+    lock_guard<mutex> lg(m_transactionMutex);
+    shared_ptr<HMState> tState;
+    m_stateManager.updateTransactionState(tState);
+    tState->m_hostGroups.erase(hostGroupName);
+    return true;
+}
+
+bool
+HMCommandListenerBase::clearTransaction()
+{
+    lock_guard<mutex> lg(m_transactionMutex);
+    m_stateManager.resetTransactionState();
+    return true;
 }
 
 bool
@@ -1091,7 +1545,7 @@ HMCommandListenerBase::getHostMark(unique_ptr<HMDataPacking>& dataPacking, uint6
 void
 HMCommandListenerBase::cleanHandlerThreads()
 {
-    lock_guard<std::mutex> lg(m_handlerMutex);
+    lock_guard<shared_timed_mutex> lg(m_handlerMutex);
     for(auto it = m_handlerThreads.begin(); it != m_handlerThreads.end();)
     {
         map<thread::id, bool>::iterator its = m_handlerThreadsStatus.find(it->get_id());

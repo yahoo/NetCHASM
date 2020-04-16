@@ -33,7 +33,7 @@ public:
          Handle client communications
          \param pointer of client socket.
      */
-    void handleClient(char* client);
+    void handleClient(int clientSock);
     //! Handle client connections
     void handleConnections();
 

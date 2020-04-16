@@ -29,6 +29,7 @@ message DataCheckResult {
         uint64 queueCheckTime = 24;
         uint64 checkTime = 25;
         uint32 softReason = 26;
+        string hostname = 27;
 }
 
 message DataCheckResults {

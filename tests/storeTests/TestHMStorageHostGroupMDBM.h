@@ -25,6 +25,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_HMStorageHostGroupYForMDBM_ZeroIp);
     CPPUNIT_TEST(test_HMStorageHostGroupYForMDBM_ClearBackend);
     CPPUNIT_TEST(test_HMStorageHostGroupYForMDBM_VersionChange);
+    CPPUNIT_TEST(test_HMStorageHostGroup_StoreHostGroup);
     CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -42,6 +43,7 @@ protected:
     void test_HMStorageHostGroupYForMDBM_ClearBackend();
     void test_HMStorageHostGroupYForMDBM_VersionChange();
     void test_HMStorageHostGroupYForMDBM_BackendTest();
+    void test_HMStorageHostGroup_StoreHostGroup();
 };
 
 #endif /* TESTS_STORETESTS_TESTHMSTORAGEHOSTGROUPMDBM_H_ */

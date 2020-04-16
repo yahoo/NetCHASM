@@ -9,6 +9,7 @@ help:
 	@echo " clean	  - cleans all build files."
 	@echo " build	  - builds the daemon, library and tools."
 	@echo " slimbuild - builds the daemon, library and tools without ARES, MDBM & LibEvent."
+	@echo " package   - create rpm packages."
 	@echo " doc	  - build the doxygen."
 	@echo " all	  - builds the daemon, library and tools, conducts unit tests, and generates the doxygen."
 	@echo " install   - installs the daemon, library and tools."
@@ -21,12 +22,16 @@ doc:
 	doxygen DoxyFile
 	
 build:
-	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc; make build; cd ..;
+	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=RelWithDebInfo; make build; cd ..;
 
 slimbuild:
-	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSKIP-MDBM=ON -DSKIP-ARES=ON -DSKIP-LIBEVENT=ON -DSKIP-KAFKA=ON -DSKIP-RAPIDXML=ON; make build
+	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DSKIP-MDBM=ON -DSKIP-ARES=ON -DSKIP-LIBEVENT=ON -DSKIP-KAFKA=ON -DSKIP-RAPIDXML=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo; make build; cd ..;
+
 test:
-	mkdir -p build_test; cd build_test; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCOV=ON -DSKIP-IPV6=ON; make testbuild; cd ..;
+	mkdir -p build_test; cd build_test; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCOV=ON -DSKIP-IPV6=ON -DCMAKE_BUILD_TYPE=Debug; make testbuild; cd ..;
+
+package:
+	mkdir -p build; cd build; cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=RelWithDebInfo; make package; cd ..;
 
 all: build test doc
 

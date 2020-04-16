@@ -21,6 +21,7 @@
 #include "netchasm/hostschdinfo.pb.h"
 #include "netchasm/datahostcheck.pb.h"
 #include "netchasm/generalparams.pb.h"
+#include "netchasm/hashinfo.pb.h"
 
 class HMDataPacking
 {
@@ -32,38 +33,46 @@ public:
     virtual void packIPAddress(const HMAPIIPAddress& address, netchasm::IPAddress* pAddress);
     virtual void unpackIPAddress(const netchasm::IPAddress& pAddress, HMAPIIPAddress& address);
     virtual void unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress& address) const;
-    virtual void packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const;
+    virtual void packDataCheckResult(const std::string& hostname, const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const;
     virtual void unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMAPICheckResult& dataCheckResult);
     virtual void unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheckResult, HMDataCheckResult& dataCheckResult) const;
     virtual void packDataCheckParam(const HMDataCheckParams& dataCheckParam, netchasm::DataCheckParam* pDataCheckParam);
     virtual void unpackDataCheckParam(const netchasm::DataCheckParam& pDataCheckParams, HMAPICheckInfo& dataCheckInfo);
     virtual void unpackDataCheckParam(const netchasm::DataCheckParam& pDataCheckParams, HMDataCheckParams& dataCheckParams);
-    virtual void packCheckParamCheckResult(const HMDataCheckParams& dataCheckParams, const HMDataCheckResult& dataCheckResult, netchasm::CheckParamsCheckResult* pCheckParamCheckResult);
+    virtual void packCheckParamCheckResult(const std::string& hostname, const HMDataCheckParams& dataCheckParams, const HMDataCheckResult& dataCheckResult, netchasm::CheckParamsCheckResult* pCheckParamCheckResult);
     virtual void unpackCheckParamCheckResult(netchasm::CheckParamsCheckResult& pCheckParamsCheckResults, HMAPICheckInfo& apiCheckInfo, HMAPICheckResult& apiCheckResult);
     virtual void unpackCheckParamCheckResult(netchasm::CheckParamsCheckResult& pCheckParamsCheckResults, HMDataCheckParams& dataCheckInfo, HMDataCheckResult& dataCheckResult);
     virtual void packDataHostGroup(const HMDataHostGroup& dataHostGroup, netchasm::DataHostGroup* pDataHostGroup);
-    virtual void unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMAPICheckInfo& apiCheckInfo, std::vector<std::string>& hosts);
+    virtual void unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMAPICheckInfo& apiCheckInfo);
+    virtual void unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMDataHostGroup& datahostGroup);
     virtual std::unique_ptr<char[]> packThreadInfo(HMAPIThreadInfo& tInfo, uint64_t& dataSize);
     virtual bool unpackThreadInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIThreadInfo& tInfo);
     virtual std::unique_ptr<char[]> packDataHostGroup(HMDataHostGroup& dataGroupInfo, uint64_t& dataSize);
-    virtual bool unpackDataHostGroup(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& dataGroupInfo, std::vector<std::string>& hosts);
-    virtual std::unique_ptr<char[]> packDataCheckResults(std::vector<HMDataCheckResult>& dataCheckResults, uint64_t& dataSize);
-    virtual bool unpackDataCheckResults(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMAPICheckResult>& apiResults, std::string& hostName);
-    virtual std::unique_ptr<char[]> packHostResults(std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>>& hostResults, uint64_t& dataSize);
-    virtual std::unique_ptr<char[]> packHostResults(std::multimap<HMDataCheckParams, HMDataCheckResult>& hostResults, uint64_t& dataSize);
+    virtual bool unpackDataHostGroup(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& dataGroupInfo);
+    virtual bool unpackDataHostGroup(std::unique_ptr<char[]>& data, uint64_t dataSize, HMDataHostGroup& dataHostGroup);
+    virtual std::unique_ptr<char[]> packDataCheckResults(const std::string& hostname, std::vector<HMDataCheckResult>& dataCheckResults, uint64_t& dataSize);
+    virtual bool unpackDataCheckResults(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMAPICheckResult>& apiResults);
+    virtual std::unique_ptr<char[]> packHostResults(const std::string& hostName, std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>>& hostResults, uint64_t& dataSize);
+    virtual std::unique_ptr<char[]> packHostResults(const std::string& hostName, std::multimap<HMDataCheckParams, HMDataCheckResult>& hostResults, uint64_t& dataSize);
     virtual bool unpackHostResults(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<std::pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults);
     virtual bool unpackHostResults(std::unique_ptr<char[]>& data, uint64_t dataSize, std::multimap<HMDataCheckParams, HMDataCheckResult>& hostResults);
     virtual bool unpackHostResults(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<HMDataCheckParams, HMDataCheckResult>& hostResults);
     virtual std::unique_ptr<char[]> packHostGroupInfo(HMDataHostGroup& group,  std::vector<HMGroupCheckResult>& results,uint64_t& dataSize);
-    virtual bool unpackHostGroupInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& apiCheckInfo, std::vector<std::string>& hosts, std::vector<HMAPICheckResult>& apiCheckResults);
+    virtual bool unpackHostGroupInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& apiCheckInfo, std::vector<HMAPICheckResult>& apiCheckResults);
+    virtual bool unpackHostGroupInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMDataHostGroup& dataHostGroup, std::vector<HMGroupCheckResult>& checkResults);
     virtual std::unique_ptr<char[]> packAuxInfo(HMAuxInfo& auxInfo, std::string& hostName, HMIPAddress& addr, uint64_t& dataSize);
     virtual bool unpackAuxInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIAuxInfo& apiAuxInfoResult);
     virtual bool unpackAuxInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAuxInfo& auxInfoResult);
 
     virtual std::unique_ptr<char[]> packAuxInfo(std::vector<HMGroupAuxResult>& auxResults, uint64_t checkTTL, uint64_t& dataSize);
     virtual bool unpackAuxInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMAPIAuxInfo>& apiAuxResults);
-    virtual std::unique_ptr<char[]> packHostSchedInfo(HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& dataSize);
+    bool unpackAuxInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMGroupAuxResult>& auxResults);
+    void packHostInfo(const HMAPIHostSchedInfo& schedInfo, netchasm::HostSchedInfo* hostSchedInfo);
+    virtual std::unique_ptr<char[]> packHostSchedInfo(const HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& dataSize);
+    std::unique_ptr<char[]> packRemoteHostGroupSchedInfo(const HMAPIHostSchedInfo& hostSchedInfo, uint64_t& dataSize);
+    void unpackHostSchedInfo(netchasm::HostSchedInfo& pHostSchdInfo, HMAPIHostSchedInfo& hostSchedInfo);
     virtual bool unpackHostSchedInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIDNSSchedInfo& dnsSchedInfo);
+    virtual bool unpackRemoteHostGroupSchedInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIHostSchedInfo& hostSchedInfo);
     virtual std::unique_ptr<char[]> packDataHostCheck(HMDataHostCheck& dataHostCheck, uint64_t& dataSize);
     virtual bool unpackDataHostCheck(std::unique_ptr<char[]>& data, uint64_t dataSize, HMDataHostCheck& dataHostCheck);
     virtual std::unique_ptr<char[]> packList(std::vector<std::string>& listItems, uint64_t& dataSize);
@@ -74,6 +83,13 @@ public:
     virtual bool unpackIPAddresses(std::unique_ptr<char[]>& data, uint64_t dataSize, std::vector<HMAPIIPAddress>& addresses);
     virtual std::unique_ptr<char[]> packBool(bool x, uint64_t& dataSize);
     virtual bool unpackBool(std::unique_ptr<char[]>& data, uint64_t dataSize);
+    virtual std::unique_ptr<char[]> packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize);
+    virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMHash>& hashInfo);
+    virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMAPIHash>& hashInfo);
+    virtual std::unique_ptr<char[]> packHash(std::string& name, const HMAPIHash& hash, uint64_t& dataSize);
+    virtual std::unique_ptr<char[]> packHash(std::string& name, const HMHash& hash, uint64_t& dataSize);
+    virtual bool unpackHash(std::unique_ptr<char[]>& data, uint64_t dataSize, HMHash& hash);
+    virtual bool unpackHash(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIHash& hash);
     virtual std::unique_ptr<char[]> packListInt64(const std::set<int>& listItems, uint64_t& dataSize);
     virtual bool unpackListInt64(std::unique_ptr<char[]>& data, uint64_t dataSize, std::set<int>& listItems);
 

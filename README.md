@@ -36,7 +36,7 @@ Other dependencies can be installed via package utilities.
 For example, on Fedora/CentOS:
 
 ```
-dnf install openssl-devel c-ares c-ares-devel yaml-cpp yaml-cpp-devel libevent libevent-devel make cmake gcc-c++ rapidxml-devel curl-devel cppunit-devel lcov protobuf protobuf-devel librdkafka librdkafka-devel
+dnf install openssl-devel c-ares c-ares-devel yaml-cpp yaml-cpp-devel libevent libevent-devel make cmake gcc-c++ rapidxml-devel curl-devel cppunit-devel lcov protobuf protobuf-devel librdkafka librdkafka-devel rpm-build
 
 make build
 sudo make install

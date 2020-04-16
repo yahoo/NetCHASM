@@ -39,15 +39,17 @@ HM_WORK_STATUS HMWorkAuxFetch::processWork()
     currentState->m_checkList.storeAux(this, this->m_hostCheck, this->m_ipAddress, this->m_auxData, currentState->m_datastore.get(), currentState->m_auxCache, this->getAuxDataType());
 
     // check to see if this check is complete
-    HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
-    if(checkTime <= HMTimeStamp::now())
+    if(m_reschedule)
     {
-        currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
+        HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
+        if(checkTime <= HMTimeStamp::now())
+        {
+            currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
+        }
+        else
+        {
+            m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+        }
     }
-    else
-    {
-        m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
-    }
-
     return result;
 }

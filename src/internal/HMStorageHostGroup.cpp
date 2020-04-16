@@ -11,11 +11,12 @@
 #include "HMDataHostGroup.h"
 #include "HMDataHostCheck.h"
 #include "HMDataCheckParams.h"
+#include "HMRemoteHostGroupCache.h"
 
 using namespace std;
 
 void
-HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache)
+HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache)
 {
 
     if(m_readonly)
@@ -113,7 +114,7 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
                     {
                         continue;
                     }
-                    HMDNSLookup dnsHostCheck(hostGroup->second.getDnsCheckPlugin(), it->second.m_address.getType() == AF_INET6);
+                    HMDNSLookup dnsHostCheck(hostGroup->second.getDNSType(), it->second.m_address.getType() == AF_INET6, hostGroup->second.getRemoteCheck());
                     pair<string, HMDNSLookup> key = make_pair(it->second.m_hostName,  dnsHostCheck);
                     auto res = dnsMap.insert(make_pair(key, set<HMIPAddress>()));
                     res.first->second.insert(it->second.m_address);
@@ -132,21 +133,15 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
         if (!hostGroup->second.isValidHost(it->second.m_hostName))
         {
             // Log a missing host group
-            HMDataHostCheck dataCheck;
-            HMDataCheckParams checkParams;
-            backendHostGroupData.getHostCheck(dataCheck);
-            backendHostGroupData.getCheckParameters(checkParams);
-            HMLog(HM_LOG_DEBUG, "[STORE] %s - %s found in backend but not configs", it->first.c_str(), it->second.m_hostName.c_str());
-            purgeCheckResult(it->second.m_hostName, it->second.m_address, dataCheck, checkParams);
             healthCheckUpdateList.insert(it->first);
-            ++it;
+            it = backendChecks.erase(it);
             continue;
         }
 
         HMLog(HM_LOG_DEBUG, "[STORE] %s - %s reloaded into DNS cache and checklist", it->first.c_str(), it->second.m_hostName.c_str());
 
         // Cache the DNS mapping
-        HMDNSLookup dnsHostCheck(hostGroup->second.getDnsCheckPlugin(), it->second.m_address.getType() == AF_INET6);
+        HMDNSLookup dnsHostCheck(hostGroup->second.getDNSType(), it->second.m_address.getType() == AF_INET6, hostGroup->second.getRemoteCheck());
         pair<string, HMDNSLookup> key = make_pair(it->second.m_hostName, dnsHostCheck);
         auto res = dnsMap.insert(make_pair(key, set<HMIPAddress>()));
         res.first->second.insert(it->second.m_address);
@@ -155,11 +150,14 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
             dnsResTimeMap.insert(make_pair(key, it->second.m_result.m_checkTime));
         }
 
-        HMDataHostCheck hostCheck;
-        HMDataCheckParams checkParams;
-        hostGroup->second.getHostCheck(hostCheck);
-        hostGroup->second.getCheckParameters(checkParams);
-        checkList.updateCheck(HMCheckHeader(it->second.m_hostName, it->second.m_address, hostCheck, checkParams), it->second.m_result);
+        if(hostGroup->second.getFlowType() != HM_FLOW_REMOTE_HOSTGROUP_TYPE)
+        {
+            HMDataHostCheck hostCheck;
+            HMDataCheckParams checkParams;
+            hostGroup->second.getHostCheck(hostCheck);
+            hostGroup->second.getCheckParameters(checkParams);
+            checkList.updateCheck(HMCheckHeader(it->second.m_hostName, it->second.m_address, hostCheck, checkParams), it->second.m_result);
+        }
         ++it;
     }
 
@@ -197,6 +195,10 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
     // Now update the internal DNS Cache
     for(auto it = dnsMap.begin(); it != dnsMap.end(); ++it)
     {
+        if(!it->first.second.getRemoteCheckGroup().empty())
+        {
+            continue;
+        }
         HMDNSResult v4Result;
         HMDNSResult v6Result;
         auto res = dnsResTimeMap.find(it->first);
@@ -208,7 +210,7 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
         {
             v6Result.setResultTime(res->second);
         }
-        dnsCache.updateReloadDNSEntry(it->first.first, it->second, v4Result, v6Result, res->first.second.getPlugin());
+        dnsCache.updateReloadDNSEntry(it->first.first, it->second, v4Result, v6Result, res->first.second);
     }
 
     // Now update the internal checkList
@@ -219,13 +221,26 @@ HMStorageHostGroup::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCach
         HMDataCheckParams checkParams;
         hostGroup->second.getHostCheck(hostCheck);
         hostGroup->second.getCheckParameters(checkParams);
-        checkList.updateCheck(HMCheckHeader(it->second.m_hostName,
-                        it->second.m_address,
-                        hostCheck,
-                        checkParams),
-                        it->second.m_result);
+        if(hostGroup->second.getFlowType() != HM_FLOW_REMOTE_HOSTGROUP_TYPE)
+        {
+            checkList.updateCheck(HMCheckHeader(it->second.m_hostName,
+                            it->second.m_address,
+                            hostCheck,
+                            checkParams),
+                            it->second.m_result);
+        }
         lock_guard<shared_timed_mutex> lock(m_checkUpdateMutex);
         m_hostGroupResults.insert(make_pair(it->first, it->second));
+
+        //Update the remote Cache result time
+        if(hostGroup->second.getFlowType() == HM_FLOW_REMOTE_HOSTGROUP_TYPE)
+        {
+            remoteCache.updateResultTime(it->first, it->second.m_result.m_checkTime);
+        }
+        if (hostGroup->second.getFlowType() == HM_FLOW_REMOTE_HOST_TYPE)
+        {
+            remoteHostCache.updateResultTime(it->second.m_hostName, hostCheck, it->second.m_result.m_checkTime);
+        }
     }
 
     // Now update the internal AuxInfo
@@ -395,7 +410,6 @@ HMStorageHostGroup::purgeCheckResult(const string& hostname,
     // iterate over active host maps
     for (auto it = hostGroups.begin(); it != hostGroups.end(); ++it)
     {
-        if (getHostGroupCheckResults(*it))
         {
             // Now parse out the result and return
             lock_guard<shared_timed_mutex> lock(m_checkUpdateMutex);
@@ -678,6 +692,48 @@ HMStorageHostGroup::updateHostGroups(set<string>& hostGroups)
 }
 
 bool
+HMStorageHostGroup::storeHostGroupCheckResult(const string& hostgroupname, vector<HMGroupCheckResult>& checkResult)
+{
+
+    if(m_readonly)
+    {
+        HMLog(HM_LOG_ERROR, "[STORE] Attempting to store check result in read only mode");
+        return false;
+    }
+    {
+        lock_guard<shared_timed_mutex> lock(m_checkUpdateMutex);
+        m_hostGroupResults.erase(hostgroupname);
+        for(auto& it: checkResult)
+        {
+            m_hostGroupResults.insert(make_pair(hostgroupname, it));
+        }
+    }
+    storeHostGroupCheckResults(hostgroupname);
+    return true;
+}
+
+bool
+HMStorageHostGroup::storeHostGroupAuxResult(const string& hostgroupname, vector<HMGroupAuxResult>& auxResult)
+{
+
+    if(m_readonly)
+    {
+        HMLog(HM_LOG_ERROR, "[STORE] Attempting to aux result in read only mode");
+        return false;
+    }
+    {
+        lock_guard<shared_timed_mutex> lock(m_auxUpdateMutex);
+        m_hostGroupAux.erase(hostgroupname);
+        for(auto& it: auxResult)
+        {
+            m_hostGroupAux.insert(make_pair(hostgroupname, it));
+        }
+    }
+    storeHostGroupAuxInfo(hostgroupname);
+    return true;
+}
+
+bool
 HMStorageHostGroup::getGroupCheckResults(const string& groupName, bool noCache, bool onlyResolved, vector<HMGroupCheckResult>& results)
 {
     results.clear();
@@ -727,6 +783,20 @@ HMStorageHostGroup::getGroupCheckResults(const string& groupName, bool noCache, 
     }
     return true;
 }
+
+bool
+HMStorageHostGroup::getGroupCheckResults(const string& groupName, vector<HMGroupCheckResult>& results)
+{
+    results.clear();
+    shared_lock<shared_timed_mutex> lock(m_checkUpdateMutex);
+    auto range = m_hostGroupResults.equal_range(groupName);
+    for(auto it = range.first; it != range.second; ++it)
+    {
+        results.push_back(it->second);
+    }
+    return true;
+}
+
 
 bool
 HMStorageHostGroup::getGroupAuxInfo(const string& groupName, bool noCache, bool onlyResolved, vector<HMGroupAuxResult>& results)
@@ -824,10 +894,10 @@ HMStorageHostGroup::commitHealthCheck()
     }
     else
     {
-        HMDNSLookup dnsHostCheck(it->second.getDnsCheckPlugin(), update.m_address.getType() == AF_INET6);
+        HMDNSLookup dnsHostCheck(it->second.getDNSType(), update.m_address.getType() == AF_INET6, it->second.getRemoteCheck());
         bool isValidAddress = m_dnsCache->isValidAddress(update.m_hostName,
                 it->second.getDualstack(), dnsHostCheck, update.m_address);
-        if (!isValidAddress)
+        if (!isValidAddress && it->second.getFlowType() == HM_FLOW_DNS_HEALTH_TYPE)
         {
             return true;
         }
@@ -942,10 +1012,10 @@ HMStorageHostGroup::commitAuxInfo()
     }
     else
     {
-        HMDNSLookup dnsHostCheck(it->second.getDnsCheckPlugin(), update.m_address.getType() == AF_INET6);
+        HMDNSLookup dnsHostCheck(it->second.getDNSType(), update.m_address.getType() == AF_INET6, it->second.getRemoteCheck());
         bool isValidAddress = m_dnsCache->isValidAddress(update.m_hostName,
                 it->second.getDualstack(), dnsHostCheck, update.m_address);
-        if (!isValidAddress)
+        if (!isValidAddress && it->second.getFlowType() == HM_FLOW_DNS_HEALTH_TYPE)
         {
             return true;
         }
@@ -999,10 +1069,11 @@ HMStorageHostGroup::commitAuxInfo()
     if (hostGroupIt != m_hostGroupMap->end())
     {
         // If we don't have the full health check complete return
-        if(hosts.size() < hostGroupIt->second.getHostList()->size())
+        // Had to comment this out because during remote hostgroup checks we may have results for one hoet only. We need to update it in such cases.
+        /*if(hosts.size() < hostGroupIt->second.getHostList()->size())
         {
             return true;
-        }
+        }*/
 
         // Now we choose if we should commit the entry.
         // No matter what our update strategy is, we push an update if this is the last host in the initial check cycle

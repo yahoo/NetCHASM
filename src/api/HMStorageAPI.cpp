@@ -61,18 +61,8 @@ HMStorageAPI::init(const string& masterConfig, bool localConfigs)
             m_currentState.reset();
             return false;
         }
-        m_currentState->generateHostCheckList();
-        m_currentState->generateDNSCheckList();
-        HMHashMD5 configHash;
-        HMConfigInfo configInfo;
-        configInfo.m_version = HM_MDBM_VERSION;
-        configInfo.m_configLoadTime = HMTimeStamp::now();
-        configInfo.m_configStatus = HM_CONFIG_STATUS_OK;
-        if (configHash.init())
-        {
-            m_currentState->HashHostGroupMap(configHash, configInfo.m_hash);
-        }
-        m_currentState->setHash(configInfo.m_hash);
+        m_currentState->generateCheckList();
+        m_currentState->hashConfigs();
     }
     else
     {
@@ -118,7 +108,11 @@ HMStorageAPI::getConfigInfo(HMAPIConfigInfo& result)
     result.m_version = configInfo.m_version;
     result.m_configError = (configInfo.m_configStatus == HM_CONFIG_STATUS_ERROR);
     result.m_timestamp = configInfo.m_configLoadTime.getTimeSinceEpoch();
-    std::memcpy(result.m_hash, configInfo.m_hash.m_hashValue, HASH_MAX_SIZE);
+    result.m_hash.m_hashSize = configInfo.m_hash.m_hashSize;
+    if(result.m_hash.m_hashSize)
+    {
+        memcpy(result.m_hash.m_hashValue, configInfo.m_hash.m_hashValue, result.m_hash.m_hashSize);
+    }
     return true;
 }
 
@@ -337,7 +331,7 @@ HMStorageAPI::getHostGroupInfo(const string& group, HMAPICheckInfo& info, vector
     info.m_checkTTL = hgi->second.getCheckTTL();
     info.m_flapThreshold = hgi->second.getFlapThreshold();
     info.m_passthroughInfo = hgi->second.getPassthroughInfo();
-
+    info.m_remoteCheck = hgi->second.getRemoteCheck();
     for(auto it = hgi->second.getHostList()->begin(); it != hgi->second.getHostList()->end(); ++it)
     {
         hosts.push_back(*it);

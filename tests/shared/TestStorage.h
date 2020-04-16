@@ -8,12 +8,12 @@
 class TestStorage : public HMStorage
 {
 public:
-    TestStorage(HMDataHostGroupMap* hostGroupMap, HMDNSCache *dnsCache) :
-            HMStorage(hostGroupMap, dnsCache){ m_commitCalls = 0;}
+    TestStorage(HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
+            HMStorage(hostGroupMap, m_dnsCache){ m_commitCalls = 0;}
 
     virtual ~TestStorage() {};
 
-    void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache);
+    void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache);
 
     //! Clear the backend datastore.
     /*! clear the backend datastore and any local caches in the store class.
@@ -86,6 +86,15 @@ public:
 
     void updateHostGroups(std::set<std::string>& hostGroups);
 
+    bool storeHostGroupCheckResult(const std::string& hostgroupname,
+            std::vector<HMGroupCheckResult>& checkResult);
+
+    bool storeHostGroupAuxResult(const std::string& hostgroupname,
+            std::vector<HMGroupAuxResult>& auxResult);
+
+    bool getGroupCheckResults(const std::string& groupName,
+                std::vector<HMGroupCheckResult>& results);
+
     bool getGroupCheckResults(const std::string& groupName,
             bool noCache,
             bool onlyResolved,
@@ -112,6 +121,7 @@ public:
     HMDataCheckParams m_checkParams;
 
     uint32_t m_commitCalls;
+    std::multimap<std::string, HMGroupCheckResult> m_hostGroupResults;
 protected:
     bool openBackend();
     bool closeBackend();

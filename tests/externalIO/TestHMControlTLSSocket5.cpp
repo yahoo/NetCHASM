@@ -32,6 +32,8 @@ dns.type: none\n\
 dns.host: 192.168.1.1\n\
 dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
+dns.statictype: none\n\
+dns.lookuptype: none\n\
 http.type: curl\n\
 ftp.type: curl\n\
 tcp.type: rawsocket\n\
@@ -61,7 +63,6 @@ socket.path: test_sock" << endl;
     check-info: hm-hello\n\
     group-threshold: 12\n\
     dual-stack-mode: both\n\
-    dns-type: none\n\
     host:\n\
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n\
@@ -75,7 +76,6 @@ socket.path: test_sock" << endl;
     check-info: hm-hello\n\
     group-threshold: 120\n\
     dual-stack-mode: both\n\
-    dns-type: none\n\
     host:\n\
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n\
@@ -89,7 +89,6 @@ socket.path: test_sock" << endl;
     check-info: hm-hello\n\
     group-threshold: 12\n\
     dual-stack-mode: both\n\
-    dns-type: none\n\
     host:\n\
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n"<< endl;
@@ -130,6 +129,10 @@ socket.path: test_sock" << endl;
     hostGroup.setCheckInfo(checkInfo);
     hostGroup.addHost(host1);
     hostGroup.addHost(host2);
+    HMHashMD5 hashMD5;
+    hashMD5.init();
+    hostGroup.getHash(hashMD5);
+    hashMD5.final(hash);
 
 	HMDataHostGroup hostGroup1(hostGroupName1);
 	hostGroup1.setMeasurementOptions(0);
@@ -141,6 +144,10 @@ socket.path: test_sock" << endl;
 	hostGroup1.setCheckInfo(checkInfo);
 	hostGroup1.addHost(host1);
 	hostGroup1.addHost(host2);
+    HMHashMD5 hashMD5_1;
+    hashMD5_1.init();
+    hostGroup1.getHash(hashMD5_1);
+    hashMD5_1.final(hash1);
 
 	HMDataHostGroup hostGroup2(hostGroupName2);
 	hostGroup2.setMeasurementOptions(0);
@@ -152,6 +159,10 @@ socket.path: test_sock" << endl;
 	hostGroup2.setCheckInfo(checkInfo);
 	hostGroup2.addHost(host1);
 	hostGroup2.addHost(host2);
+    HMHashMD5 hashMD5_2;
+    hashMD5_2.init();
+    hostGroup2.getHash(hashMD5_2);
+    hashMD5_2.final(hash2);
 
     groupMap.insert(make_pair(hostGroupName, hostGroup));
     groupMap.insert(make_pair(hostGroupName1, hostGroup1));
@@ -254,8 +265,8 @@ socket.path: test_sock" << endl;
     checkState.m_hostGroups.insert(make_pair(hostGroupName1, hostGroup1));
     checkState.m_hostGroups.insert(make_pair(hostGroupName2, hostGroup2));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
-    HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
     set<HMIPAddress> addresses;
     addresses.insert(address);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -372,7 +383,7 @@ void TESTNAME::test_cmdlstnr1()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostName, hostCheck, hostResults));
     CPPUNIT_ASSERT_EQUAL(4, (int)hostResults.size());
@@ -458,7 +469,7 @@ void TESTNAME::test_cmdlstnr2()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostName, hostCheck, hostResults));
 	CPPUNIT_ASSERT_EQUAL(2, (int )hostResults.size());
@@ -527,7 +538,7 @@ void TESTNAME::test_cmdlstnr3()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(!socketAPI.getHostResults(hostName, hostCheck, hostResults));
 	CPPUNIT_ASSERT_EQUAL(0, (int )hostResults.size());
@@ -556,7 +567,7 @@ void TESTNAME::test_cmdlstnr4()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostName, addr, hostCheck, hostResults));
     CPPUNIT_ASSERT_EQUAL(2, (int)hostResults.size());
@@ -625,7 +636,7 @@ void TESTNAME::test_cmdlstnr5()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostName, addr, hostCheck, hostResults));
     CPPUNIT_ASSERT_EQUAL(1, (int )hostResults.size());
@@ -673,7 +684,7 @@ void TESTNAME::test_cmdlstnr6()
     hostCheck.m_ipv4 = true;
     hostCheck.m_ipv6 = true;
     hostCheck.m_checkType = HM_API_CHECK_NONE;
-    hostCheck.m_dnsCheckType = HM_API_DNS_NONE;
+    hostCheck.m_dnsCheckType = HM_API_DNS_LOOKUP;
     vector<pair<HMAPICheckInfo, HMAPICheckResult>> hostResults;
     CPPUNIT_ASSERT(socketAPI.getHostResults(hostName, hostCheck, hostResults));
     CPPUNIT_ASSERT_EQUAL(2, (int )hostResults.size());
@@ -686,6 +697,26 @@ void TESTNAME::test_cmdlstnr6()
 void TESTNAME::test_cmdlstnr7()
 {
     HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
+    map<string, HMAPIHash> hashInfo;
+    CPPUNIT_ASSERT(socketAPI.getTransactionalHashInfo(hashInfo));
+    CPPUNIT_ASSERT_EQUAL(3, (int )hashInfo.size());
+    shared_ptr<HMState> currentState;
+    sm->updateState(currentState);
+    for(auto it : hashInfo)
+    {
+        auto iit = currentState->m_hostGroups.find(it.first);
+        CPPUNIT_ASSERT(iit != currentState->m_hostGroups.end());
+        HMHash hash = iit->second.getHashValue();
+        CPPUNIT_ASSERT_EQUAL(hash.m_hashSize, it.second.m_hashSize);
+        CPPUNIT_ASSERT(!memcmp(hash.m_hashValue, it.second.m_hashValue, it.second.m_hashSize));
+
+    }
+}
+
+void TESTNAME::test_cmdlstnr8()
+{
+    HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
+
     HMAPICheckInfo checkInfo;
     vector<HMAPICheckResult> results;
 
@@ -716,4 +747,77 @@ void TESTNAME::test_cmdlstnr7()
     CPPUNIT_ASSERT(socketAPI.getDNSAddresses(hostName, addrsret));
     CPPUNIT_ASSERT_EQUAL(1, (int )addrsret.size());
     CPPUNIT_ASSERT(std::find(addrsret.begin(), addrsret.end(), addr3) != addrsret.end());
+}
+
+void TESTNAME::test_cmdlstnr9()
+{
+    HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
+
+    HMAPICheckInfo checkInfo;
+    vector<HMAPICheckResult> results;
+
+    HMAPIIPAddress addr;
+    string ipaddr = "192.168.1.3";
+    string ipaddr2 = "2001::7334";
+    string ipaddr3 = "2002::7334";
+    addr.set(ipaddr);
+    HMAPIIPAddress addr2;
+    addr2.set(ipaddr2);
+    HMAPIIPAddress addr3;
+    addr3.set(ipaddr3);
+    string hostGroupName = "config.parse1.netchasm.net";
+    CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName, hash, checkInfo, results));
+    CPPUNIT_ASSERT_EQUAL(12, (int )checkInfo.m_groupThreshold);
+    CPPUNIT_ASSERT_EQUAL(0, (int )checkInfo.m_passthroughInfo);
+    CPPUNIT_ASSERT_EQUAL(60000, (int )checkInfo.m_checkTTL);
+    CPPUNIT_ASSERT_EQUAL(3, (int )results.size());
+
+    HMAPICheckResult infop = results[0];
+    CPPUNIT_ASSERT_EQUAL((unsigned int)HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr ==  infop.m_address);
+    infop = results[1];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr3 == infop.m_address);
+    infop = results[2];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm2.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr2 == infop.m_address);
+
+    CPPUNIT_ASSERT(!socketAPI.getHostGroupResults(hostGroupName, hash1, checkInfo, results));
+}
+
+
+void TESTNAME::test_cmdlstnr10()
+{
+    HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
+    HMAPICheckInfo checkInfo;
+    vector<HMAPICheckResult> results;
+
+    HMAPIIPAddress addr;
+    string ipaddr = "192.168.1.3";
+    string ipaddr2 = "2001::7334";
+    string ipaddr3 = "2002::7334";
+    addr.set(ipaddr);
+    HMAPIIPAddress addr2;
+    addr2.set(ipaddr2);
+    HMAPIIPAddress addr3;
+    addr3.set(ipaddr3);
+    string hostGroupName1 = "config1.parse1.netchasm.net";
+    CPPUNIT_ASSERT(socketAPI.getHostGroupResults(hostGroupName1, hash1, checkInfo, results));
+    CPPUNIT_ASSERT_EQUAL(3, (int )results.size());
+    HMAPICheckResult infop = results[0];
+    CPPUNIT_ASSERT_EQUAL((unsigned int)HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr ==  infop.m_address);
+    infop = results[1];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm1.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr3 == infop.m_address);
+    infop = results[2];
+    CPPUNIT_ASSERT_EQUAL((unsigned int )HM_REASON_SUCCESS, (unsigned int )infop.m_reason);
+    CPPUNIT_ASSERT("loadfb3.hm2.com" == infop.m_host);
+    CPPUNIT_ASSERT(addr2 == infop.m_address);
+    CPPUNIT_ASSERT(!socketAPI.getHostGroupResults(hostGroupName1, hash2, checkInfo, results));
 }

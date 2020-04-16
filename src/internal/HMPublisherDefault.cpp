@@ -12,4 +12,8 @@ void
 HMPublisherDefault::publish(const string& hostName, const HMDataCheckResult& dataCheckResult, const int mark, set<string>& hostGroups) const
 {
     // Code to handle result publishing
+    (void)hostName;
+    (void)dataCheckResult;
+    (void)mark;
+    (void)hostGroups;
 }

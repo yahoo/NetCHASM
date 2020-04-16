@@ -12,13 +12,15 @@
 #include "HMSocketUtilTCPS.h"
 
 using namespace std;
-
+string getSystemError();
 void
 HMSocketUtilTCPS::closeSocket()
 {
     if(m_ssl)
     {
         SSL_free(m_ssl);
+        m_ssl = NULL;
+        m_connected = false;
     }
     HMSocketUtilTCP::closeSocket();
 }
@@ -38,23 +40,25 @@ HMSocketUtilTCPS::connectSocket()
             if (cret > 0)
             {
                 m_connectTime = HMTimeStamp::now();
+                m_connected = true;
                 return true;
             }
             if (cret == 0)
             {
+                m_reason = HM_REASON_CONNECT_FAILURE;
                 return false;
-
             }
             fd_set fdsr, fdsw;
             FD_ZERO(&fdsr);
             FD_ZERO(&fdsw);
             FD_SET(m_socket, &fdsr);
             FD_SET(m_socket, &fdsw);
+            timeval tv = m_connectTimeInfo;
             switch (SSL_get_error(m_ssl, cret)) {
             case SSL_ERROR_WANT_READ:
             case SSL_ERROR_WANT_WRITE:
                 ret = select(m_socket + 1, &fdsr, &fdsw, NULL,
-                        &m_connectTimeInfo);
+                        &tv);
                 if (ret < 0)
                 {
                     m_reason = HM_REASON_CONNECT_FAILURE;
@@ -97,29 +101,27 @@ HMSocketUtilTCPS::connectSocket()
         }
         while (status == 1 && !SSL_is_init_finished(m_ssl));
     }
-
+    m_reason = HM_REASON_CONNECT_FAILURE;
     return false;
 }
-
-HMSocketUtilTCPS::HMSocketUtilTCPS(SSL_CTX* ctx, HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue) :
-        HMSocketUtilTCP(address, port, timeInfo, sourceAddress, tosValue),
-        m_ctx(ctx),
-        m_ssl(NULL)
-{
-    if (connectSocket())
-    {
-        m_connected = true;
-    }
-}
-
-HMSocketUtilTCPS::HMSocketUtilTCPS(SSL* ssl) :
-        HMSocketUtilTCP(SSL_get_fd(ssl)),
-        m_ctx(NULL),
-        m_ssl(ssl) { }
 
 HMSocketUtilTCPS::~HMSocketUtilTCPS()
 {
     closeSocket();
+}
+
+void
+HMSocketUtilTCPS::reconnect()
+{
+    closeSocket();
+    if (HMSocketUtilTCP::connectSocket() && connectSocket())
+    {
+        setConnectionReset(false);
+        if (isPersistent())
+        {
+            openPersistant();
+        }
+    }
 }
 
 bool
@@ -129,19 +131,28 @@ HMSocketUtilTCPS::sendData(const char* buffer, uint64_t size)
     {
         return false;
     }
-    if (SSL_write(m_ssl, buffer, size) == (int)size)
+    int tsize = SSL_write(m_ssl, buffer, size);
+    if ( tsize == (int)size)
     {
         return true;
     }
+    uint32_t error = ERR_get_error();
+    if (error)
+    {
+        HMLog(HM_LOG_ERROR,
+                "Error writing data from SSL socket, error desc: %s",
+                ERR_error_string(error, NULL));
+    }
+    HMLog(HM_LOG_ERROR, "[TCPSNBAPI] Failed to send data [sent:%d, Expected:%d]", tsize, size);
     return false;
 }
 
-bool
-HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval& tv)
+HM_SOCK_DATA_STATUS
+HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval tv)
 {
     if (!m_connected)
     {
-        return false;
+        return HM_SOCK_DATA_FAILED;
     }
     uint64_t ret = 0;
     while (ret < size)
@@ -155,12 +166,12 @@ HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval& tv)
         {
             m_reason = HM_REASON_INTERNAL_ERROR;
             m_errorMsg = "select error ";
-            return false;
+            return HM_SOCK_DATA_FAILED;
         }
         else if (s_ret == 0)
         {
             m_reason = HM_REASON_RESPONSE_TIMEOUT;
-            return false;
+            return HM_SOCK_DATA_TIMEOUT;
         }
         else if (FD_ISSET(m_socket, &fdsr))
         {
@@ -171,7 +182,6 @@ HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval& tv)
                 int ssl_error;
                 read_cont = 0;
                 int tret = SSL_read(m_ssl, data + ret, size - ret);
-
                 //check SSL errors
                 switch (ssl_error = SSL_get_error(m_ssl, tret))
                 {
@@ -201,7 +211,7 @@ HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval& tv)
                         HMLog(HM_LOG_DEBUG,
                                 "No more data available for reading data from SSL socket");
                     }
-                    return false;
+                    return HM_SOCK_DATA_FAILED;
                 }
             } while (SSL_pending(m_ssl) && !read_cont);
         }
@@ -210,6 +220,9 @@ HMSocketUtilTCPS::recvData(char* data, uint64_t size, timeval& tv)
             m_reason = HM_REASON_SUCCESS;
         }
     }
-
-    return ret == size;
+    if(ret != size)
+    {
+        return HM_SOCK_DATA_FAILED;
+    }
+    return HM_SOCK_DATA_OK;
 }

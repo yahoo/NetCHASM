@@ -213,6 +213,14 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
                     }
                 }
+                else if (val == "https-mtls")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_MTLS_HTTPS);
+                    if(!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
+                }
                 else if (val == "tcp")
                 {
                     currentHostGroup->second.setCheckType(HM_CHECK_TCP);
@@ -260,6 +268,14 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
                 else if (val == "https-no-peer-check")
                 {
                     currentHostGroup->second.setCheckType(HM_CHECK_HTTPS_NO_PEER_CHECK);
+                    if(!currentHostGroup->second.getCheckPort())
+                    {
+                        currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
+                    }
+                }
+                else if (val == "https-mtls-no-peer-check")
+                {
+                    currentHostGroup->second.setCheckType(HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK);
                     if(!currentHostGroup->second.getCheckPort())
                     {
                         currentHostGroup->second.setPort(HM_HTTPS_DEFAULT_PORT);
@@ -505,25 +521,41 @@ HMConfigParserYAML::parseConfig(const string& fileName, HMState& checkState, HMC
             }
             else if (key == "dns-type")
             {
-                if (val == "none")
+                if (val == "lookup")
                 {
-                    currentHostGroup->second.setDnsCheckPlugin(
-                            HM_DNS_PLUGIN_NONE);
-                }
-                else if (val == "ares")
-                {
-                    currentHostGroup->second.setDnsCheckPlugin(
-                            HM_DNS_PLUGIN_ARES);
+                    currentHostGroup->second.setDNSType(
+                            HM_DNS_TYPE_LOOKUP);
                 }
                 else if(val == "static")
                 {
-                    currentHostGroup->second.setDnsCheckPlugin(
-                            HM_DNS_PLUGIN_STATIC);
+                    currentHostGroup->second.setDNSType(
+                            HM_DNS_TYPE_STATIC);
                 }
                 else
                 {
                     nerr++;
                     HMLog(HM_LOG_ERROR, "%s(%d): Invalid dns mode",
+                            fileName.c_str(), n.second.Mark().line);
+                }
+            }
+            else if (key == "flow-type")
+            {
+                if(val == "dns-health")
+                {
+                    currentHostGroup->second.setFlowType(HM_FLOW_DNS_HEALTH_TYPE);
+                }
+                else if( val == "remote-hostgroup")
+                {
+                    currentHostGroup->second.setFlowType(HM_FLOW_REMOTE_HOSTGROUP_TYPE);
+                }
+                else if( val == "remote-host")
+                {
+                    currentHostGroup->second.setFlowType(HM_FLOW_REMOTE_HOST_TYPE);
+                }
+                else
+                {
+                    nerr++;
+                    HMLog(HM_LOG_ERROR, "%s(%d): Invalid flow-type mode",
                             fileName.c_str(), n.second.Mark().line);
                 }
             }
@@ -603,6 +635,7 @@ HMConfigParserYAML::writeConfigs(HMState& state, std::string outFile)
         {
             outFileStream << "    tos-value: " << (int)it.second.getTOSValue() << endl;
         }
+        outFileStream << "    flow-type: " << printFlowType(it.second.getFlowType()) << endl;
         const vector<string>* hosts = it.second.getHostList();
         if(hosts->size() > 0)
         {

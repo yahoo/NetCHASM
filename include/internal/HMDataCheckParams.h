@@ -202,6 +202,14 @@ public:
      */
     bool getCheckResult(const HMIPAddress& address, HMDataCheckResult& result);
 
+    //! Get the addresses from checkparams results
+    /*! Get the addresses from the checkparam addresses
+         \param Dual stack option.
+         \param result data structure to fill the addresses.
+         \return bool true if the check was copied into the check result.
+     */
+    bool getAddresses(HM_DUALSTACK dualstack, std::set<HMIPAddress>& addresses);
+
     //! Get the time this check was last completed.
     /*!
          Get the time this check was last completed.

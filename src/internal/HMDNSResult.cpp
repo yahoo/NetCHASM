@@ -19,8 +19,8 @@ HMDNSResult::updateTimeouts(uint64_t ttl, uint64_t timeout)
 void
 HMDNSResult::updateQuery(const set<HMIPAddress>& addresses)
 {
-    m_addrExp.clear();
     lock_guard<shared_timed_mutex> lock(m_resultLock);
+    m_addrExp.clear();
     set_difference(m_addr.begin(), m_addr.end(),
             addresses.begin(), addresses.end(),
             inserter(m_addrExp, m_addrExp.begin()));

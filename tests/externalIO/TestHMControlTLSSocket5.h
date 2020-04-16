@@ -22,6 +22,9 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr5);
     CPPUNIT_TEST(test_cmdlstnr6);
     CPPUNIT_TEST(test_cmdlstnr7);
+    CPPUNIT_TEST(test_cmdlstnr8);
+    CPPUNIT_TEST(test_cmdlstnr9);
+    CPPUNIT_TEST(test_cmdlstnr10);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -37,6 +40,9 @@ protected:
     void test_cmdlstnr5();
     void test_cmdlstnr6();
     void test_cmdlstnr7();
+    void test_cmdlstnr8();
+    void test_cmdlstnr9();
+    void test_cmdlstnr10();
     HMStateManager *sm;
     std::thread sm_thr;
     HMAPIIPAddress server;
@@ -44,5 +50,8 @@ protected:
     std::string certfile;
     std::string keyfile;
     std::string caFile;
+    HMHash hash;
+    HMHash hash1;
+    HMHash hash2;
 };
 #endif /* TESTS_HMCONTROLTLSSOCKET5_H_ */

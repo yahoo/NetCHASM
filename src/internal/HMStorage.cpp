@@ -149,26 +149,3 @@ HMStorage::runStore()
     }
     while(commitHealthCheck() || commitAuxInfo()) {}
 }
-
-bool HMHash::operator ==(const HMHash& k) const
-{
-    if(m_hashSize == 0 || k.m_hashSize == 0)
-    {
-        return true;
-    }
-    if(m_hashSize != k.m_hashSize)
-    {
-        return false;
-    }
-    if(memcmp(m_hashValue, k.m_hashValue, m_hashSize) != 0)
-    {
-        return false;
-    }
-    return true;
-}
-
-bool HMHash::operator !=(const HMHash& k) const
-{
-    return !(*this == k);
-}
-

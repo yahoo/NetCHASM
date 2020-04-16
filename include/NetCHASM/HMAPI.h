@@ -50,14 +50,44 @@ enum HM_API_CHECK_TYPE : uint8_t
     HM_API_CHECK_AUX_HTTPS_NO_PEER_CHECK
 };
 
+//! Remote Check type
+enum HM_API_REMOTE_CHECK_TYPE : uint8_t
+{
+    HM_API_REMOTE_CHECK_NONE,
+    HM_API_REMOTE_CHECK_TCP,
+    HM_API_REMOTE_CHECK_TCPS
+};
+
+//! The supported health check flow types.
+enum HM_API_FLOW_TYPE : uint8_t
+{
+    HM_API_FLOW_DNS_HEALTH_TYPE,
+    HM_API_FLOW_REMOTE_HOSTGROUP_TYPE
+};
+
+
+//! The type of fallback mode for distributed health check.
+enum HM_API_DISTRIBUTED_FALLBACK : uint8_t
+{
+    HM_API_DISTRIBUTED_FALLBACK_NONE = 0x00,
+    HM_API_DISTRIBUTED_FALLBACK_LOCAL = 0x01,
+    HM_API_DISTRIBUTED_FALLBACK_REMOTE = 0x02,
+    HM_API_DISTRIBUTED_FALLBACK_BOTH  = 0x03
+};
+
+//! The commit transaction API status.
+enum HM_API_COMMIT_TRANSACTION_STATUS : uint8_t
+{
+    HM_API_COMMIT_TRANSACTION_SUCCESS = 1,
+    HM_API_COMMIT_TRANSACTION_HASH_MISMATCH = 2,
+    HM_API_COMMIT_TRANSACTION_FAILURE = 3
+};
 
 //! The supported types of DNS lookup classes.
-enum HM_DNS_CHECK_TYPE : uint8_t
+enum HM_API_DNS_CHECK_TYPE : uint8_t
 {
-    HM_API_DNS_ARES,
-    HM_API_DNS_LIBEVENT,
-    HM_API_DNS_STATIC,
-    HM_API_DNS_NONE
+    HM_API_DNS_LOOKUP,
+    HM_API_DNS_STATIC
 };
 
 
@@ -68,6 +98,23 @@ class HMDataHostGroup;
 class HMGroupCheckResult;
 class HMDataHostCheck;
 class HMDataCheckParams;
+class HMHash;
+//! Class to hold the hash value
+/*!
+     Class to hold the hash value
+     HMHash stores the hash of configs loaded.
+ */
+class HMAPIHash
+{
+public:
+    HMAPIHash(): m_hashSize(0) { }
+    HMAPIHash(HMHash& k);
+    unsigned char m_hashValue[HASH_MD5_MAX_SIZE];
+    uint32_t m_hashSize;
+    bool operator==(const HMAPIHash& k) const;
+    bool operator!=(const HMAPIHash& k) const;
+};
+
 class HMIPAddress;
 //! API class to store the config information.
 class HMAPIConfigInfo
@@ -76,7 +123,7 @@ public:
     uint8_t m_version;
     bool m_configError;
     uint64_t m_timestamp;
-    char m_hash[HASH_MD5_MAX_SIZE];
+    HMAPIHash m_hash;
 };
 
 //! API class to store an IPAddress.
@@ -126,7 +173,6 @@ public:
     // TODO probably set the output convenience functions
 };
 
-
 //! API class to store the check info for both a host group and per host.
 class HMAPICheckInfo
 {
@@ -154,8 +200,12 @@ public:
     uint32_t m_flapThreshold;
     uint32_t m_passthroughInfo;
     uint8_t m_TOSValue;
-    HM_DNS_CHECK_TYPE m_dnsCheckType;
+    HM_API_DNS_CHECK_TYPE m_dnsCheckType;
     HMAPIIPAddress m_sourceAddress;
+    std::string m_remoteCheck;
+    HM_API_FLOW_TYPE m_flowType;
+    HM_API_DISTRIBUTED_FALLBACK m_distributedFallback;
+    HM_API_REMOTE_CHECK_TYPE m_remoteCheckType;
     std::vector<std::string> m_hosts;
     std::vector<std::string> m_hostGroups;
     // TODO Print measurementOPtions and checktype
@@ -198,6 +248,7 @@ public:
     // variables to track the last check information
     uint64_t m_queueCheckTime;
     uint64_t m_checkTime;
+    uint64_t m_remoteCheckTime;
 
     // TODO print for status, response, reason
 };
@@ -223,7 +274,7 @@ public:
     uint8_t m_type;
     uint32_t m_shed;
     uint64_t m_ts;
-    bool m_forceDown;
+    uint8_t m_forceDown;
     std::string m_host;
     std::string m_resource;
 };
@@ -283,7 +334,7 @@ public:
             m_ipv4(true),
             m_ipv6(false),
             m_TOSValue(0),
-            m_dnsCheckType(HM_API_DNS_ARES){}
+            m_dnsCheckType(HM_API_DNS_LOOKUP){}
     HM_API_CHECK_TYPE m_checkType;
     uint16_t m_port;
     bool m_ipv4;
@@ -291,8 +342,7 @@ public:
     std::string m_checkInfo;
     HMAPIIPAddress m_sourceAddress;
     uint8_t m_TOSValue;
-    HM_DNS_CHECK_TYPE m_dnsCheckType;
+    HM_API_DNS_CHECK_TYPE m_dnsCheckType;
 };
-
 
 #endif /* INCLUDE_HEALTHMON_HMAPI_H_ */

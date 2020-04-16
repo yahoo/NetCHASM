@@ -31,7 +31,7 @@ HMSocketUtilTCP::createSocket()
     }
     if (fcntl(m_socket, F_SETFL, O_NONBLOCK) < 0)
     {
-        m_errorMsg = "tcp check socket() " + getSystemError();
+        m_errorMsg = "tcp check fcntl() " + getSystemError();
         m_reason = HM_REASON_INTERNAL_ERROR;
         return false;
     }
@@ -81,141 +81,14 @@ HMSocketUtilTCP::closeSocket()
     if (m_socket != -1)
     {
         close(m_socket);
+        m_connected = false;
+        m_socket = -1;
     }
-}
-
-HM_REASON
-HMSocketUtilTCP::getReason() const {
-    return m_reason;
-}
-
-const std::string&
-HMSocketUtilTCP::getErrorMsg() const {
-    return m_errorMsg;
-}
-
-const HMTimeStamp&
-HMSocketUtilTCP::getConnectTime() const {
-    return m_connectTime;
 }
 
 bool
 HMSocketUtilTCP::getCheckInfo(std::string& checkinfo, uint32_t size, timeval& tv) {
     return recvData(&checkinfo.at(0), size, tv);
-}
-
-bool
-HMSocketUtilTCP::pingRemoteHost(timeval& tv)
-{
-    HMDataPacking dataPacking;
-    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
-            + HM_CMD_GETREMOTEQUERY;
-    if (sendCommand(cmd))
-    {
-        uint64_t packetSize;
-        unique_ptr<char[]> recvbuf;
-        if (recvData((char*) &packetSize, sizeof(packetSize), tv))
-        {
-            // when bool is false a empty packet is returned.
-            if (packetSize == 0)
-            {
-                m_reason = HM_REASON_RESPONSE_DOWN;
-                return false;
-            }
-            packetSize = dataPacking.ntoh64(packetSize);
-            std::unique_ptr<char[]> recvdData = make_unique<char[]>(packetSize);
-            if (recvData(recvdData.get(), packetSize, tv))
-            {
-                if (dataPacking.unpackBool(recvdData, packetSize))
-                {
-                    m_reason = HM_REASON_SUCCESS;
-                    return true;
-                }
-                else
-                {
-                    m_reason = HM_REASON_RESPONSE_DOWN;
-                    return false;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-HM_SOCK_DATA_STATUS
-HMSocketUtilTCP::getLoadFeedback(string& hostName, HMIPAddress& address, HMDataHostCheck& dataHostCheck, timeval &tv, HMAuxInfo& auxData)
-{
-    HMDataPacking dataPacking;
-    uint64_t dataSize;
-    std::unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
-    string cmd = std::to_string(HM_CONTROL_SOCKET_VERSION) + " "
-            + HM_CMD_LOADFBIP + " " + hostName + " " + dataHostCheck.getCheckInfo() + " " + address.toString()
-            + " " + to_string(dataSize);
-    if (sendCommand(cmd))
-    {
-        uint64_t packetSize = 0;
-        if (recvData((char*) &packetSize, sizeof(packetSize), tv))
-        {
-            if (packetSize == 0)
-            {
-                HMLog(HM_LOG_DEBUG,
-                        "[SocketUtil] Remote aux result fetch received packet size 0 for %s(%s)",
-                        hostName.c_str(), address.toString().c_str());
-                return HM_SOCK_DATA_EMPTY;
-            }
-            packetSize = dataPacking.ntoh64(packetSize);
-            std::unique_ptr<char[]> recvdData = make_unique<char[]>(packetSize);
-            if (recvData(recvdData.get(), packetSize, tv))
-            {
-                if (dataPacking.unpackAuxInfo(recvdData, packetSize,
-                        auxData))
-                {
-                    return HM_SOCK_DATA_OK;
-                }
-            }
-        }
-    }
-    HMLog(HM_LOG_DEBUG, "[SocketUtil] Failed to receive aux results from remote host for %s(%s)", hostName.c_str(), address.toString().c_str());
-    return HM_SOCK_DATA_FAILED;
-}
-
-
-HM_SOCK_DATA_STATUS
-HMSocketUtilTCP::getHostResults(string& hostName, HMIPAddress& address, HMDataHostCheck& dataHostCheck, timeval &tv, map<HMDataCheckParams, HMDataCheckResult>& hostResults)
-{
-    hostResults.clear();
-    HMDataPacking dataPacking;
-    uint64_t dataSize;
-    std::unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
-    string cmd = std::to_string(HM_CONTROL_SOCKET_VERSION) + " "
-            + HM_CMD_HOSTIPRESULTS + " " + hostName + " " + address.toString()
-            + " " + to_string(dataSize);
-    if (sendCommand(cmd))
-    {
-        if (sendData(data.get(), dataSize))
-        {
-            uint64_t packetSize = 0;
-            if (recvData((char*) &packetSize, sizeof(packetSize), tv))
-            {
-                if (packetSize == 0)
-                {
-                    HMLog(HM_LOG_DEBUG, "[SocketUtil] Remote result fetch received packet size 0 for %s(%s)", hostName.c_str(), address.toString().c_str());
-                    return HM_SOCK_DATA_EMPTY;
-                }
-                packetSize = dataPacking.ntoh64(packetSize);
-                std::unique_ptr<char[]> recvdData = make_unique<char[]>(packetSize);
-                if(recvData(recvdData.get(), packetSize, tv))
-                {
-                    if(dataPacking.unpackHostResults(recvdData, packetSize, hostResults))
-                    {
-                        return HM_SOCK_DATA_OK;
-                    }
-                }
-            }
-        }
-    }
-    HMLog(HM_LOG_DEBUG, "[SocketUtil] Failed to receive results from remote host for %s(%s)", hostName.c_str(), address.toString().c_str());
-    return HM_SOCK_DATA_FAILED;
 }
 
 bool
@@ -256,7 +129,8 @@ HMSocketUtilTCP::connectSocket()
     FD_ZERO(&fdws);
     FD_SET(m_socket, &fdrs);
     FD_SET(m_socket, &fdws);
-    ret = select(m_socket + 1, (&fdrs), (&fdws), NULL, &m_connectTimeInfo);
+    timeval tv = m_connectTimeInfo;
+    ret = select(m_socket + 1, (&fdrs), (&fdws), NULL, &tv);
     if (ret < 0)
     {
         m_errorMsg = "select error " + getSystemError();
@@ -284,7 +158,14 @@ HMSocketUtilTCP::connectSocket()
             else if (!v)
             {
                 m_reason = HM_REASON_SUCCESS;
+                struct sockaddr_in sin;
+                socklen_t len = sizeof(sin);
+                if (getsockname(m_socket, (struct sockaddr *)&sin, &len) == 0)
+                {
+                    m_clientPort = ntohs(sin.sin_port);
+                }
                 m_connectTime = HMTimeStamp::now();
+                m_connected = true;
                 return true;
             }
             else
@@ -296,31 +177,22 @@ HMSocketUtilTCP::connectSocket()
     return false;
 }
 
-HMSocketUtilTCP::HMSocketUtilTCP(HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue) :
-        HMSocketUtilBase(false, -1),
-        m_reason(HM_REASON_NONE),
-        m_connectTimeInfo(timeInfo),
-        m_address(address),
-        m_sourceAddress(sourceAddress),
-        m_port(port),
-        m_tos(tosValue)
-
-{
-    if (connectSocket())
-    {
-        m_connected = true;
-    }
-}
-
-HMSocketUtilTCP::HMSocketUtilTCP(int sock) :
-        HMSocketUtilBase(true, sock),
-        m_reason(HM_REASON_NONE),
-        m_port(-1),
-        m_tos(0){ }
-
 HMSocketUtilTCP::~HMSocketUtilTCP()
 {
     closeSocket();
+}
+
+void HMSocketUtilTCP::reconnect()
+{
+    closeSocket();
+    if (connectSocket())
+    {
+        setConnectionReset(false);
+        if(isPersistent())
+        {
+            openPersistant();
+        }
+    }
 }
 
 
@@ -331,19 +203,21 @@ HMSocketUtilTCP::sendData(const char* buffer, uint64_t size)
     {
         return false;
     }
-    if (send(m_socket, buffer, size, 0) == (int)size)
+    int tsize = send(m_socket, buffer, size, 0);
+    if ( tsize == (int)size)
     {
         return true;
     }
+    HMLog(HM_LOG_ERROR, "[TCPNBAPI] Failed to send data [sent:%d, Expected:%d]", tsize, size);
     return false;
 }
 
-bool
-HMSocketUtilTCP::recvData(char* data, uint64_t size, timeval& tv)
+HM_SOCK_DATA_STATUS
+HMSocketUtilTCP::recvData(char* data, uint64_t size, timeval tv)
 {
     if (!m_connected)
     {
-        return false;
+        return HM_SOCK_DATA_FAILED;
     }
     uint64_t ret = 0;
     int32_t tret = 0;
@@ -358,12 +232,12 @@ HMSocketUtilTCP::recvData(char* data, uint64_t size, timeval& tv)
         {
             m_reason = HM_REASON_INTERNAL_ERROR;
             m_errorMsg = "select error ";
-            return false;
+            return HM_SOCK_DATA_FAILED;
         }
         else if (s_ret == 0)
         {
             m_reason = HM_REASON_RESPONSE_TIMEOUT;
-            return false;
+            return HM_SOCK_DATA_TIMEOUT;
         }
         else if (FD_ISSET(m_socket, &fdsr))
         {
@@ -371,13 +245,14 @@ HMSocketUtilTCP::recvData(char* data, uint64_t size, timeval& tv)
             if ((tret = read(m_socket, data + ret, size - ret)) < 0)
             {
                 m_reason = HM_REASON_INTERNAL_ERROR;
-                return false;
+                return HM_SOCK_DATA_FAILED;
                 //errorMsg("[TCPCHECK] read failure ");
             }
             else if (tret == 0)
             {
                 HMLog(HM_LOG_DEBUG3,
                         "[TCPNBAPI] TCP read - No more data to send ,shutdown on other end");
+                return HM_SOCK_DATA_FAILED;
                 break;
             }
             else
@@ -391,6 +266,9 @@ HMSocketUtilTCP::recvData(char* data, uint64_t size, timeval& tv)
             m_reason = HM_REASON_SUCCESS;
         }
     }
-
-    return ret == size;
+    if(ret != size)
+    {
+        return HM_SOCK_DATA_FAILED;
+    }
+    return HM_SOCK_DATA_OK;
 }

@@ -29,8 +29,8 @@ string server_path = HM_DEFAULT_USD_PATH;
 bool verbose = false;
 static void usage(char* name)
 {
-    string command = "man ";
-    command.append(name);
+    string command = "man hm_command";
+    if(system(command.c_str()))
     {
         cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
                 << "-s      <socket-path> [default: " << server_path << "]" << endl
@@ -39,9 +39,13 @@ static void usage(char* name)
                 << "\t" <<"threadinfo\tReturns # of total and idle threads" <<endl
                 << "\t" <<"workqueueinfo\tReturns length of WorkQueue" <<endl
                 << "\t" <<"schdqueueinfo\tReturns length of Scheduler queue" <<endl
+                << "\t" <<"refresh\tRefreshes the configs" <<endl
+                << "\t" <<"reload <master config>\tReload healthmon daemon. Master config is optional" <<endl
                 << "\t" <<"hostschdinfo <hostgroup name> <hostname> \tReturns Scheduling info about host in the hostgroup" <<endl
+                << "\t" <<"remoteschdinfo <hostgroup name> <hostname>\tReturns remote scheduling info about hostgroup or host" <<endl
                 << "\t" <<"dnscheck <hostgroup name> <hostname>\tqueues dnscheck (hostname is optional)" <<endl
                 << "\t" <<"healthcheck <hostgroup name> <hostname>\tqueues healthcheck (hostname is optional)" <<endl
+                << "\t" <<"remotehostgroupcheck <hostgroup name>\tqueues remote hostgroup check" <<endl
                 << "\t" <<"getloglevel \t get the current daemon log verbosity" <<endl
                 << "\t" <<"setloglevel <level>\t set the daemon log verbosity" <<endl
                 << "\t" <<"getconnectiontimeout \t get the current connection timeout for healthchecks" <<endl
@@ -117,6 +121,24 @@ bool runCommand(const vector<string> &strArgs)
         cout << "Schedule queue length = " << schQueueLen << endl;
         return status;
     }
+    else if (strArgs[0] == HM_CMD_REFRESH)
+    {
+        bool status = socketAPI.refresh();
+        return status;
+    }
+    else if (strArgs[0] == HM_CMD_RELOAD)
+    {
+        bool status;
+        if(strArgs.size() > 2)
+        {
+            status = socketAPI.reload(strArgs[1]);
+        }
+        else
+        {
+            status = socketAPI.reload();
+        }
+        return status;
+    }
     else if (strArgs[0] == HM_CMD_HOSTSCHDINFO)
     {
         HMAPIDNSSchedInfo dns;
@@ -164,6 +186,73 @@ bool runCommand(const vector<string> &strArgs)
             cout << "\t\tNext check time : "
                     << nextCheck.print("(%a %b %d %H:%M:%S %Y)") << endl;
         }
+    }
+    else if (strArgs[0] == HM_CMD_REMOTESCHDINFO)
+    {
+        if(strArgs.size() > 2)
+        {
+            HMAPIHostSchedInfo hostgroupschdinfo;
+            if (socketAPI.getRemoteScheduleInfo(strArgs[1], strArgs[2],
+                    hostgroupschdinfo))
+            {
+                cout << "===========Host name :" << strArgs[2]
+                        << "===========" << endl;
+                HMTimeStamp lastCheck, nextCheck;
+                lastCheck.setTime(hostgroupschdinfo.m_lastCheckTime);
+                nextCheck.setTime(hostgroupschdinfo.m_nextCheckTime);
+                cout << "\t\tState : "
+                        << printWorkState(hostgroupschdinfo.m_state) << endl;
+                cout << "\t\tLast check time : "
+                        << lastCheck.print("(%a %b %d %H:%M:%S %Y)") << endl;
+                cout << "\t\tNext check time : "
+                        << nextCheck.print("(%a %b %d %H:%M:%S %Y)") << endl;
+            }
+        }
+        else
+        {
+            HMAPIHostSchedInfo hostgroupschdinfo;
+            if (socketAPI.getRemoteScheduleInfo(strArgs[1],
+                    hostgroupschdinfo))
+            {
+                cout << "===========Host group name :" << strArgs[1]
+                        << "===========" << endl;
+                HMTimeStamp lastCheck, nextCheck;
+                lastCheck.setTime(hostgroupschdinfo.m_lastCheckTime);
+                nextCheck.setTime(hostgroupschdinfo.m_nextCheckTime);
+                cout << "\t\tState : "
+                        << printWorkState(hostgroupschdinfo.m_state) << endl;
+                cout << "\t\tLast check time : "
+                        << lastCheck.print("(%a %b %d %H:%M:%S %Y)") << endl;
+                cout << "\t\tNext check time : "
+                        << nextCheck.print("(%a %b %d %H:%M:%S %Y)") << endl;
+            }
+        }
+    }
+    else if (strArgs[0] == HM_CMD_DNSCHECK)
+    {
+        if(strArgs.size() > 2)
+        {
+            return socketAPI.forceDNSCheck(strArgs[1], strArgs[2]);
+        }
+        else
+        {
+            return socketAPI.forceDNSCheck(strArgs[1]);
+        }
+    }
+    else if (strArgs[0] == HM_CMD_HEALTHCHECK)
+    {
+        if(strArgs.size() > 2)
+        {
+            return socketAPI.forceHealthCheck(strArgs[1], strArgs[2]);
+        }
+        else
+        {
+            return socketAPI.forceHealthCheck(strArgs[1]);
+        }
+    }
+    else if (strArgs[0] == HM_CMD_REMOTEHOSTGROUPCHECK)
+    {
+        return socketAPI.forceRemoteHostGroupCheck(strArgs[1]);
     }
     else if (strArgs[0] == HM_CMD_SETLOGLEVEL)
     {
@@ -432,10 +521,14 @@ int main(int argc, char* argv[])
     case GETWORKPERTHREAD:
     case GETRECYCLE:
     case GETREMOTEQUERY:
+    case RELOAD:
+    case REFRESH:
         bSuccess = runCommand(strArgs);
         return (bSuccess) ? 0 : 1;
     case HEALTHCHECK:
     case DNSCHECK:
+    case REMOTEHOSTGROUPCHECK:
+    case REMOTESCHDINFO:
     case SETLOGLEVEL:
     case SETCONNECTIONTIMEOUT:
     case SETMONFREQ:
@@ -478,7 +571,6 @@ int main(int argc, char* argv[])
     case GETDNSADDRESSES:
         cerr << "This command is supported in hm_staticdns" << endl;
         return -1;
-    case RELOAD:
     case HOSTGROUPINFO:
     case LOADFBINFO:
     case HOSTGROUPLIST:
@@ -488,6 +580,14 @@ int main(int argc, char* argv[])
     case HOSTRESULTS:
     case HOSTIPRESULTS:
     case LOADFBINFOIP:
+    case GETHANDLERTHEADSCOUNT:
+    case ADDHOSTGROUP:
+    case REMOVEHOSTGROUP:
+    case CLEARTRANSACTION:
+    case COMMITTRANSACTION:
+    case GETHOSTGROUPHASH:
+    case GETTRANSCONFIGHASH:
+    case LOADFBINFOHOST:
     case UNDEFINED:
         cerr << "Not all commands are supported at this time" << endl;
         return -3;

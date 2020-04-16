@@ -21,6 +21,14 @@ enum HM_AUX_TYPE : uint8_t
     HM_OOB_FILE
 };
 
+/*! OOB xml values for forcedown. */
+enum HM_OOB_FORCEDOWN : uint8_t
+{
+    HM_OOB_FORCEDOWN_FALSE = 0,
+    HM_OOB_FORCEDOWN_TRUE = 1,
+    HM_OOB_FORCEDOWN_NONE = 2
+};
+
 class HMAuxLoadFB;
 class HMAuxOOB;
 
@@ -161,6 +169,10 @@ protected:
 class HMAuxOOB : public HMAuxBase
 {
 public:
+    //! Aux Info OOB forcedown values false = 0 , true = 1 , not defined =2
+    HMAuxOOB() :
+        m_forceDown(HM_OOB_FORCEDOWN_NONE),
+        m_shed(0) {};
     //! Function to clone the current Aux Info.
     /*!
          The clone function creates the correct copy from the derived class.
@@ -190,7 +202,7 @@ public:
     //! Return a OOB type or nullptr if this is not an OOB type.
     HMAuxOOB* getOOB();
 
-    bool m_forceDown;
+    HM_OOB_FORCEDOWN m_forceDown;
     uint32_t m_shed;
 
 protected:
@@ -211,7 +223,7 @@ protected:
         uint32_t m_resourceSize;
         HMIPAddress m_ip;
         uint64_t m_ts;
-        bool m_forceDown;
+        uint8_t m_forceDown;
         uint32_t m_shed;
 
     };
@@ -230,7 +242,7 @@ public:
     HMIPAddress m_address;
 };
 
-//! Class to store the aux info internally. Supports a vector of Aux ino and the update timestamp.
+//! Class to store the aux info internally. Supports a vector of Aux info and the update timestamp.
 class HMAuxInfo
 {
 public:

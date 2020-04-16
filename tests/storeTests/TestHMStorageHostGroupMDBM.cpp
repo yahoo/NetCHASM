@@ -241,8 +241,8 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_TestRT()
     filename  = "mdbm_yfor";
     remove(filename.c_str());
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
-    HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -495,7 +495,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_BackendTest()
     filename  = "mdbm_yfor";
     remove(filename.c_str());
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -672,7 +672,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadFile_StoreRetrieve()
     auxInfo.m_auxData.push_back(std::move(r1));
     //Tests HM_LOAD_FILE, host stores only 1 of data
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -805,12 +805,12 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     r1->m_ip = address_1;
     r1->m_resource ="resource";
     r1->m_ts = ts;
-    r1->m_forceDown = false;
+    r1->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
 
     auxInfo.m_auxData.push_back(std::move(r1));
     //Tests HM_OOB_FILE, host stores only 1 of data
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -845,7 +845,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     r2->m_ip = address_1;
     r2->m_resource ="resource2";
     r2->m_ts = ts;
-    r2->m_forceDown = false;
+    r2->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
     r2->m_shed = 30;
 
     auxInfo.m_auxData.clear();
@@ -899,7 +899,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     CPPUNIT_ASSERT((oob->m_ip.toString()).empty());
     CPPUNIT_ASSERT(oob->m_resource.empty());
     CPPUNIT_ASSERT(oob->m_ts == ts1);
-    CPPUNIT_ASSERT(!oob->m_forceDown);
+    CPPUNIT_ASSERT(oob->m_forceDown == 2);
     CPPUNIT_ASSERT(oob->m_shed == 0);
     store->closeStore();
 
@@ -959,7 +959,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     groupMap.insert(make_pair(hostGroupName1, hostGroup1));
     dataCheckParams.addHostGroup(hostGroupName1);
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -1108,8 +1108,8 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ZeroIp()
     remove(filename.c_str());
 
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
-    HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     addresses.insert(address_1_3);
@@ -1254,7 +1254,7 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_VersionChange()
     remove(filename.c_str());
 
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -1403,7 +1403,7 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
     checkState.m_hostGroups.insert(make_pair(hostGroupName1, hostGroup1));
     checkState.m_hostGroups.insert(make_pair(hostGroupName2, hostGroup2));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address_1_1);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -1470,4 +1470,102 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
 
 
 }
+
+void
+TESTNAME::test_HMStorageHostGroup_StoreHostGroup()
+{
+    HMDataHostGroupMap hostGroupMap;
+
+    string hostGroup1 = "hostgroup1";
+    string hostGroup2 = "hostgroup2";
+
+    HMDataHostGroup dataHostGroup1(hostGroup1);
+    HMDataHostGroup dataHostGroup2(hostGroup2);
+
+    hostGroupMap.insert(make_pair(hostGroup1, dataHostGroup1));
+    hostGroupMap.insert(make_pair(hostGroup2, dataHostGroup2));
+
+    string hostname1 = "test1.hm.com";
+    string hostname2 = "test2.hm.com";
+
+    HMIPAddress address1_1;
+    HMIPAddress address1_2;
+    HMIPAddress address2_1;
+    HMIPAddress address2_2;
+
+    HMIPAddress testAddress;
+
+    address1_1.set("192.168.0.1");
+    address1_2.set("fad0::1");
+    address2_1.set("192.168.0.3");
+    address2_2.set("fad0::3");
+
+    HMDataCheckResult result1_1;
+    HMDataCheckResult result1_2;
+    HMDataCheckResult result2_1;
+    HMDataCheckResult result2_2;
+
+    result1_1.m_numChecks = 1;
+    result1_2.m_numChecks = 2;
+    result2_1.m_numChecks = 5;
+    result2_2.m_numChecks = 6;
+
+    string filename = "";
+    filename  = "mdbm_yfor";
+    remove(filename.c_str());
+
+    HMDataCheckResult testresult;
+    HMDNSCache dnsCache;
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &hostGroupMap, &dnsCache);
+
+    std::vector<HMGroupCheckResult> resultshg1;
+    HMGroupCheckResult hgresult1_1;
+    hgresult1_1.m_address = address1_1;
+    hgresult1_1.m_hostName = hostname1;
+    hgresult1_1.m_result = result1_1;
+    HMGroupCheckResult hgresult1_2;
+    hgresult1_2.m_address = address1_2;
+    hgresult1_2.m_hostName = hostname1;
+    hgresult1_2.m_result = result1_2;
+    resultshg1.push_back(hgresult1_1);
+    resultshg1.push_back(hgresult1_2);
+    std::vector<HMGroupCheckResult> resultshg2;
+    HMGroupCheckResult hgresult2_1;
+    hgresult2_1.m_address = address2_1;
+    hgresult2_1.m_hostName = hostname2;
+    hgresult2_1.m_result = result2_1;
+    HMGroupCheckResult hgresult2_2;
+    hgresult2_2.m_address = address2_2;
+    hgresult2_2.m_hostName = hostname2;
+    hgresult2_2.m_result = result2_2;
+    resultshg2.push_back(hgresult2_1);
+    resultshg2.push_back(hgresult2_2);
+
+    CPPUNIT_ASSERT(store->storeHostGroupCheckResult(hostGroup1, resultshg1));
+    CPPUNIT_ASSERT(store->storeHostGroupCheckResult(hostGroup2, resultshg2));
+
+    std::vector<HMGroupCheckResult> results_temp;
+    CPPUNIT_ASSERT(store->getGroupCheckResults(hostGroup1, results_temp));
+    CPPUNIT_ASSERT_EQUAL(2, (int)results_temp.size());
+    CPPUNIT_ASSERT(results_temp[0].m_address == address1_1);
+    CPPUNIT_ASSERT(results_temp[0].m_hostName == hostname1);
+    CPPUNIT_ASSERT(results_temp[0].m_result == result1_1);
+    CPPUNIT_ASSERT(results_temp[1].m_address == address1_2);
+    CPPUNIT_ASSERT(results_temp[1].m_hostName == hostname1);
+    CPPUNIT_ASSERT(results_temp[1].m_result == result1_2);
+
+    results_temp.clear();
+    CPPUNIT_ASSERT(store->getGroupCheckResults(hostGroup2, results_temp));
+    CPPUNIT_ASSERT_EQUAL(2, (int)results_temp.size());
+    CPPUNIT_ASSERT(results_temp[0].m_address == address2_1);
+    CPPUNIT_ASSERT(results_temp[0].m_hostName == hostname2);
+    CPPUNIT_ASSERT(results_temp[0].m_result == result2_1);
+    CPPUNIT_ASSERT(results_temp[1].m_address == address2_2);
+    CPPUNIT_ASSERT(results_temp[1].m_hostName == hostname2);
+    CPPUNIT_ASSERT(results_temp[1].m_result == result2_2);
+
+
+    delete store;
+}
+
 

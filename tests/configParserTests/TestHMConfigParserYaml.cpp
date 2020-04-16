@@ -108,16 +108,24 @@ TESTNAME::setUp()
     \n\
 -   name: config.parse7.netchasm.net\n\
     failure-response:  dns\n\
+    dns-type: static\n\
+    flow-type: remote-hostgroup\n\
     dual-stack-mode: both\n\
     check-type: https\n\
     \n\
 -   name: config.parse8.netchasm.net\n\
+    flow-type: remote-hostgroup\n\
+    dns-type: static\n\
     check-type: dns\n\
     \n\
 -   name: config.parse9.netchasm.net\n\
+    flow-type: remote-host\n\
+    dns-type: static\n\
     check-type: ftps\n\
     \n\
 -   name: config.parse10.netchasm.net\n\
+    dns-type: static\n\
+    flow-type: remote-host\n\
     check-type: ftps-explicit-no-peer-check\n\
     \n\
 -   name: config.parse11.netchasm.net\n\
@@ -160,6 +168,16 @@ TESTNAME::setUp()
 -   name:    config.parse19.netchasm.net \n\
     check-info: config.parse15.netchasm.net \n\
     check-type: indirect-host\n\
+    host:\n\ 
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse24.netchasm.net\n\
+    check-type: https-mtls-no-peer-check\n\
+    host:\n\
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse25.netchasm.net\n\
+    check-type: https-mtls\n\
     host:\n\
         - lfb.hm.com\n\
 -   master-check-domain: hm.net\n\
@@ -252,7 +270,6 @@ fout7<<"-   name: config.parse2.netchasm.net\n\
     fout5.close();
     fout6.close();
     fout7.close();
-
 }
 void
 TESTNAME::tearDown()
@@ -261,13 +278,12 @@ TESTNAME::tearDown()
     remove(fileLocation.c_str());
     remove(folderLocation.c_str());
     remove(garbageConfig.c_str());
+    remove(wrongConfig.c_str());
     remove(garbageLocation.c_str());
     remove(fileLocation1.c_str());
     remove(fileLocation2.c_str());
-    remove(wrongConfig.c_str());
     remove(fileLocation3.c_str());
     remove(fileLocation4.c_str());
-
 }
 
 void
@@ -481,6 +497,7 @@ TESTNAME::test_config7_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL((int)HM_DUALSTACK_BOTH, (int)hi.getDualstack());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, hi.getFlowType());
 }
 
 void
@@ -501,6 +518,7 @@ TESTNAME::test_config8_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(53, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, hi.getFlowType());
 }
 
 void
@@ -521,6 +539,7 @@ TESTNAME::test_config9_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(21, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, hi.getFlowType());
 }
 
 void
@@ -541,6 +560,7 @@ TESTNAME::test_config10_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(21, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, hi.getFlowType());
 }
 
 void
@@ -684,7 +704,7 @@ TESTNAME::test_config_https_tests()
 
 void TESTNAME::test_config_neg_tests()
 {
-    string name = "config.parse200.netchasm.net";
+    string name = "config.parse30.netchasm.net";
     HMConfigParserYAML parse;
     HMConfigParams configParams;
 
@@ -781,6 +801,43 @@ TESTNAME::test_config19_tests()
     
     HMDataHostGroup hi = it->second;
     CPPUNIT_ASSERT_EQUAL(info, hi.getCheckInfo());
+}
+
+void
+TESTNAME::test_config21_tests()
+{  
+    string name = "config.parse24.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+    
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+    
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    
+    HMDataHostGroup hi = it->second;
+    
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(443, (int)hi.getCheckPort());
+}
+
+void
+TESTNAME::test_config22_tests()
+{
+    string name = "config.parse25.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MTLS_HTTPS, (int)hi.getCheckType());
 }
 
 void
@@ -931,13 +988,13 @@ TESTNAME::test_config_mark_http_tests()
 {   
     HMConfigParserYAML parse;
     HMConfigParams configParams;
-
+    
     CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
-
+    
     string name= "config.parse21.netchasm.net";
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
-
+     
     HMDataHostGroup hi = it->second;
     CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTP, (int)hi.getCheckType());
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
@@ -965,21 +1022,21 @@ TESTNAME::test_config_mark_https_tests()
 }
 
 void
- TESTNAME::test_config_mark_https_no_peer_tests()
- {
-     HMConfigParserYAML parse;
-     HMConfigParams configParams;
+TESTNAME::test_config_mark_https_no_peer_tests()
+{
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-      CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
-      string name= "config.parse23.netchasm.net";
-     auto it = currentState.m_hostGroups.find(name);
-     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    string name= "config.parse23.netchasm.net";
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
 
-      HMDataHostGroup hi = it->second;
-     CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTPS_NO_PEER_CHECK, (int)hi.getCheckType());
-     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
-             (unsigned int)hi.getPassthroughInfo());
-     CPPUNIT_ASSERT_EQUAL(443, (int)hi.getCheckPort());
- }
+    HMDataHostGroup hi = it->second;
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTPS_NO_PEER_CHECK, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL(443, (int)hi.getCheckPort());
+}
 

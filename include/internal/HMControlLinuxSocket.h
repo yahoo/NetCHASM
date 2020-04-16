@@ -1,7 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
-#ifndef HMCOMMANDTCPLISTENER_H_
-#define HMCOMMANDTCPLISTENER_H_
+#ifndef HMCOMMANDLINUXLISTENER_H_
+#define HMCOMMANDLINUXLISTENER_H_
 
 #include <inttypes.h>
 #include <string>
@@ -35,7 +35,7 @@ public:
          Handle client communications
          \param pointer of client socket.
      */
-    void handleClient(char* client);
+    void handleClient(int clientSock);
     //! Handle client connections
     void handleConnections();
 
@@ -46,4 +46,4 @@ private:
     void unlinkSocket(std::string& socketPath);
 };
 
-#endif /* HMCOMMANDTCPLISTENER_H_ */
+#endif /* HMCOMMANDLINUXLISTENER_H_ */

@@ -127,7 +127,7 @@ TESTNAME::test_HMStorageHost_Restore()
 
     // TODO fix function
     //CPPUNIT_ASSERT(storageHost->restoreResults(*checkList, *dnsCache));
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP);
     CPPUNIT_ASSERT(dnsCache->getAddresses(hostname, HM_DUALSTACK_IPV4_ONLY, dnsHostCheck, vip_ret));
     CPPUNIT_ASSERT(vip_ret.find(address) != vip_ret.end());
     CPPUNIT_ASSERT(dnsCache->getAddresses(hostname, HM_DUALSTACK_BOTH, dnsHostCheck, vip_ret));

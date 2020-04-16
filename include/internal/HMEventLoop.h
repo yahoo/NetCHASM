@@ -61,6 +61,22 @@ public:
      */
     virtual void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp) = 0;
 
+    //! Add a new Remote timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostgroupname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    virtual void addRemoteTimeout(const std::string& hostname, HMTimeStamp timeStamp) = 0;
+
+    //! Add a new Remote host timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    virtual void addRemoteHostTimeout(const std::string& hostname, const HMDataHostCheck& dataHostCheck, HMTimeStamp timeStamp) = 0;
+
     //! Add a new health check timeout.
     /*!
          Add a new health check timeout to the event loop.

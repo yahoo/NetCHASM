@@ -7,7 +7,7 @@ message OOB {
     uint32 type = 1;
     uint32 shed = 2;
     uint32 ts = 3;
-    bool forceDown = 4;
+    uint32 forceDown = 4;
     string host = 5;
     string resource = 6;
 }

@@ -8,11 +8,13 @@
 #include <memory>
 #include <vector>
 
+#include "HMRemoteHostGroupCache.h"
 #include "HMDataCheckResult.h"
 #include "HMDataCheckParams.h"
 #include "HMDataHostCheck.h"
 #include "HMDataHostGroup.h"
 #include "HMDNSCache.h"
+#include "HMRemoteHostCache.h"
 
 class HMWork;
 class HMStorage;
@@ -81,7 +83,7 @@ public:
          \param the work queue to insert the check.
          \param enable remote check(default is false)
      */
-    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue, bool remote = true);
+    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue);
 
     //! This function is called by the worker thread when the check is removed from the work queue and is executed.
     /*
@@ -121,6 +123,16 @@ public:
     */
     void updateCheck(HMWork* work, std::map<HMDataCheckParams, HMDataCheckResult>& results);
 
+    //! This function updates the result based on a reload from the backend data store.
+    /*
+         This function updates the result based on a reload from the backend data store.
+         \param work pointer to the work base class that contains the results of the check and parameters of the check conducted.
+         \param the result to directly insert into the multimap of check params and check results.
+         \return true if the result was inserted successfully.
+    */
+    void updateCheck(HMWork* work, std::multimap<HMDataCheckParams, HMDataCheckResult>& results);
+
+
     //! This function is called by the work thread updating the internal check information.
     /*
          This function is called by the work thread updating the internal check information.
@@ -151,7 +163,7 @@ public:
          \param ip address to update in the backend store.
          \param reference to the publisher class.
      */
-    void publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMResultPublisher& publisher);
+    void publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, std::shared_ptr<HMResultPublisher> publisher);
 
     //! This function is called by the worker thread to commit the aux information to the backend data store.
     /*
@@ -188,6 +200,30 @@ public:
         \return true if the vector contains all the health checks.
      */
     bool getAllChecks(std::vector<HMCheckHeader>& allChecks);
+
+
+    //! Retrieve addresses for a host from the check results.
+        /*
+             Retrive addresses for a host from check result. This is used in remote checks when addresses are not stored in DNS cache.
+             \param hostname to get results.
+             \param hostcheck to get results.
+             \param dual stack options.
+             \param set of IP address.
+             \return true if the results vector is filled ip addresses.
+         */
+    bool getCheckResultsAddress(const std::string& hostname, const HMDataHostCheck& check, HM_DUALSTACK dualstack, std::set<HMIPAddress>& addresses);
+
+    //! Retrieve a set of check results for a given host for remote checks skipping the remote check value.
+    /*
+         Retrive a set of check results for a given host. Gets all checks for a given hostname, address, host check. Currently only used in testing.
+         \param hostname to get results.
+         \param hostcheck to get results.
+         \param address to get results.
+         \param vector of pairs of check params and check results to fill with all associated check params and correlated results.
+         \return true if the results vector is filled with all check params results pairs.
+     */
+    bool getCheckResultsRemoteChecks(const std::string& hostname, const HMDataHostCheck& check, const HMIPAddress& address, std::vector<std::pair<HMDataCheckParams, HMDataCheckResult>>& results);
+
 
     //! Retrieve a set of check results for a given host.
     /*
@@ -239,8 +275,18 @@ public:
          Once the checks start, this can no longer be called safely.
          \param the currest DNS cache to fill.
          \param the current dnsWaitList to fill.
+         \param lookup plugin
+         \param static plugin
      */
-    void initDNSCache(HMDNSCache& cache, HMWaitList& dnsWaitList);
+    void initDNSCache(HMDNSCache& cache, HMWaitList& dnsWaitList, HM_DNS_PLUGIN_CLASS lookupDNSPlugin, HM_DNS_PLUGIN_CLASS staticDNSPlugin);
+
+    //! Initiate the Remote host cache based on the internal list of hostChecks.
+    /*
+         Initiate the Remote host based on the internal list of hostChecks.
+         This function creates a Remote host cache entry for each host name that needs to be remote checked.
+         \param the currest Remote cache to fill.
+     */
+    void initRemoteCache(HMRemoteHostCache& cache);
 
     //! Remove the check from the cache and backend store.
     /*
@@ -251,6 +297,19 @@ public:
          \param a pointer to the current backend storage class to purge the check result.
      */
     void invalidateCheck(std::string& hostname, const HMIPAddress& ipAddress, HMDataHostCheck& hostCheck, HMStorage* store);
+
+    //! Remove the check from the cache and backend store.
+    /*
+         Remove the check from the cache and backend store.
+         \param hostname to remove.
+         \param ip address to remove.
+         \param the host check to remove.
+         \param the check params to remove.
+         \param a pointer to the current backend storage class to purge the check result.
+     */
+    void invalidateCheck(std::string& hostname, const HMIPAddress& ipAddress,
+            HMDataHostCheck& hostCheck, const HMDataCheckParams& checkParams,
+            HMStorage* store);
 
     //! Insert the given check.
     /*

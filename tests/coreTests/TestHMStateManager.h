@@ -19,6 +19,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_master_conf_parse1);
     CPPUNIT_TEST(test_set_state);
     CPPUNIT_TEST(test_config_parse);
+    CPPUNIT_TEST(test_hostgrouphash);
     CPPUNIT_TEST(test_config_parse1);
     CPPUNIT_TEST(test_indirect_host);
     CPPUNIT_TEST(test_indirect_host1);
@@ -29,6 +30,10 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_load_configs_backend);
     CPPUNIT_TEST(test_childhostgroup_1);
     CPPUNIT_TEST(test_childhostgroup_2);
+    CPPUNIT_TEST(test_hg_in_hg);
+    CPPUNIT_TEST(test_hg_in_hg1);
+    CPPUNIT_TEST(test_remote_hostgroup);
+    CPPUNIT_TEST(test_remote_host);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -41,6 +46,7 @@ public:
     void test_master_conf_parse1();
     void test_set_state();
     void test_config_parse();
+    void test_hostgrouphash();
     void test_config_parse1();
     void test_base_reload();
     void test_indirect_host();
@@ -52,6 +58,10 @@ public:
     void test_load_configs_backend();
     void test_childhostgroup_1();
     void test_childhostgroup_2();
+    void test_hg_in_hg();
+    void test_hg_in_hg1();
+    void test_remote_hostgroup();
+    void test_remote_host();
     
 protected:
 

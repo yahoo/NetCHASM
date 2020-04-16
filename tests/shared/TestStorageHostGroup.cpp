@@ -29,7 +29,13 @@ bool TestStorageHostGroup::getHostGroupNames(std::set<std::string>& groupNames)
 bool TestStorageHostGroup::getGroupInfo(const std::string& hostGroupName,
         HMDataHostGroup& hostGroup)
 {
-    return true;
+    auto it = hostgroupmap->find(hostGroupName);
+    if(it != hostgroupmap->end())
+    {
+        hostGroup = it->second;
+        return true;
+    }
+    return false;
 }
 
 bool TestStorageHostGroup::getConfigInfo(HMConfigInfo& configInfo)

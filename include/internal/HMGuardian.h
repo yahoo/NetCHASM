@@ -49,6 +49,15 @@ public:
      */
     void callback();
 
+    /*!
+         The function to run the netchasm.
+         \param The log level to use for the guardian messages.
+         \param The path to the master configuration to configure the daemon.
+         \return Negative indicates an error. Zero means success.
+     */
+    bool startNetCHASM(const std::string& masterConfig, HM_LOG_LEVEL logLevel);
+
+
 private:
     //! Fork the process and start NetCHASM as a daemon.
     /*!
@@ -99,7 +108,6 @@ private:
      */
     std::string getErrnoStr();
 
-    HMStateManager monitor;
     HMLogBase* yGuardianLog;
     pid_t hmonPid; // child pid
     bool bExitGuardian = false;

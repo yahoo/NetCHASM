@@ -53,6 +53,44 @@ public:
     HMStateManager* m_stateManager;
 };
 
+//! Class to hold a Remote timeout within libevent
+/*!
+     Class to hold a Remote timeout within libevent.
+     Contains all the data needed to schedule a Remote check work request.
+ */
+class RemoteTimeout
+{
+public:
+    RemoteTimeout(const std::string& host) :
+        m_hostGroupName(host),
+        m_ev(nullptr),
+        m_stateManager(nullptr) {}
+
+    std::string m_hostGroupName;
+    struct event* m_ev;
+    HMStateManager* m_stateManager;
+};
+
+
+//! Class to hold a Remote host timeout within libevent
+/*!
+     Class to hold a Remote host timeout within libevent.
+     Contains all the data needed to schedule a Remote host check work request.
+ */
+class RemoteHostTimeout
+{
+public:
+    RemoteHostTimeout(const std::string& host, const HMDataHostCheck& check) :
+        m_hostName(host),
+        m_hostCheck(check),
+        m_ev(nullptr),
+        m_stateManager(nullptr) {}
+
+    std::string m_hostName;
+    HMDataHostCheck m_hostCheck;
+    struct event* m_ev;
+    HMStateManager* m_stateManager;
+};
 //! Class to hold a health check timeout within libevent
 /*!
      Class to hold a health check timeout within libevent.
@@ -93,6 +131,22 @@ public:
      */
     void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp);
 
+    //! Add a new Remote timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostgroupname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    void addRemoteTimeout(const std::string& hostGroupName, HMTimeStamp timeStamp);
+
+    //! Add a new Remote host timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    void addRemoteHostTimeout(const std::string& hostname, const HMDataHostCheck& dataHostCheck, HMTimeStamp timeStamp);
+
     //! Add a new health check timeout.
     /*!
          Add a new health check timeout to the event loop.
@@ -111,6 +165,25 @@ public:
          \param a pointer to a DNSTimeout class.
      */
     static void handleDNSTimeout(evutil_socket_t fd, short what, void* arg);
+
+    //! Callback function when a Remote timeout fires.
+    /*!
+         Callback when a Remote timeout fires. Either schedule another timeout or a Remote check work.
+         \param unused.
+         \param unused.
+         \param a pointer to a RemoteTimeout class.
+     */
+    static void handleRemoteTimeout(evutil_socket_t fd, short what, void* arg);
+
+    //! Callback function when a Remote Host timeout fires.
+    /*!
+         Callback when a Remote host timeout fires. Either schedule another timeout or a Remote check work.
+         \param unused.
+         \param unused.
+         \param a pointer to a RemoteHostTimeout class.
+     */
+    static void handleRemoteHostTimeout(evutil_socket_t fd, short what, void* arg);
+
 
     //! Callback function when a health check timeout fires.
     /*!

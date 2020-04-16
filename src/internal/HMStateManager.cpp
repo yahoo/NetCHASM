@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <iostream>
+#include <curl/curl.h>
 #include <openssl/crypto.h>
 
 #include "HMStateManager.h"
@@ -27,22 +28,13 @@
 
 using namespace std;
 
-static HMStateManager* monitor;
-//LCOV_EXCL_START
-void ctrlC_Callback(int s)
-{
-    (void)(s);
-    // Signal the main process to quit
-    monitor->shutdown();
-}
-//LCOV_EXCL_STOP
-
 HMStateManager::HMStateManager() :
           m_keepRunning(true),
           m_eventLoop(nullptr),
           m_threadPool(nullptr),
           m_libEvent(nullptr),
-          m_enableRemoteQueryReply(true)
+          m_enableRemoteQueryReply(true),
+          m_active(false)
 {
     hlog = nullptr;
 }
@@ -87,31 +79,37 @@ HMStateManager::updateState(shared_ptr<HMState>& current)
     return true;
 }
 
+bool
+HMStateManager::updateTransactionState(shared_ptr<HMState>& transactionState)
+{
+    if(transactionState == m_newTransactionState)
+    {
+        return false;
+    }
+    transactionState = m_newTransactionState;
+    return true;
+}
+
+void
+HMStateManager::resetTransactionState()
+{
+    shared_ptr<HMState> currentState;
+    updateState(currentState);
+    m_newTransactionState = make_shared<HMState>(*(currentState.get()));
+}
+
 // The main Daemon HealthCheck Function
 bool
 HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
 {
     // Setup the exit conditions from Ctrl-c
-    monitor = this;
     FIPS_mode_set(0);
-    struct sigaction sigIntHandler;
-    sigIntHandler.sa_handler = ctrlC_Callback;
-    sigemptyset(&sigIntHandler.sa_mask);
-    sigIntHandler.sa_flags = 0;
-    sigaction(SIGINT, &sigIntHandler, NULL);
-
-    struct sigaction sigTermHandler;
-    sigTermHandler.sa_handler = ctrlC_Callback;
-    sigemptyset(&sigTermHandler.sa_mask);
-    sigTermHandler.sa_flags = 0;
-    sigaction(SIGTERM, &sigTermHandler, NULL);
-
-    struct sigaction sigPipeHandler;
-    sigPipeHandler.sa_handler = SIG_IGN;
-    sigemptyset(&sigPipeHandler.sa_mask);
-    sigPipeHandler.sa_flags = 0;
-    sigaction(SIGPIPE, &sigPipeHandler, NULL);
-
+    CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (!result)
+    {
+        HMLog(HM_LOG_CRITICAL, "Curl Global initialization failed");
+    }
+    m_active  = true;
     thread threadMonitor;
     thread_setup();
     // Main function to do all the health checking
@@ -119,6 +117,8 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // Step 1. Load the Master Config that maintains how YHealthCheck runs
     if(!loadDaemonState(masterConfig, logLevel))
     {
+        HMLog(HM_LOG_CRITICAL, "Failure loading daemon state");
+        m_active = false;
         return false;
     }
 
@@ -149,6 +149,8 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     shared_ptr<HMState> current;
     updateState(current);
     current->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, true);
+    current->m_remoteCache.queueRemoteLookups(m_workQueue, *m_eventLoop, current->m_hostGroups, true);
+    current->m_remoteHostCache.queueRemoteLookups(m_workQueue, *m_eventLoop, true);
     const string socketPath = current->getSocketPath();
     // Step 4: Create a socket to listen for external commands
 
@@ -231,7 +233,6 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // Shutdown the threads
     HMLog(HM_LOG_NOTICE, "[CORE] Shutting Down");
     updateState(current);
-    current->closeBackend();
     m_threadPool->shutdown();
 
     if(hlog != nullptr)
@@ -248,6 +249,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
         }
     }
     threadMonitor.join();
+    m_active = false;
     return true;
 }
 
@@ -262,19 +264,22 @@ HMStateManager::shutdown()
 bool
 HMStateManager::loadCertificates()
 {
+    timeval tv;
+    tv.tv_sec = m_newState->getConnectionTimeout() / 1000;
+    tv.tv_usec = 0;
     if (m_newState->isEnableSecureRemote())
     {
         SSL_library_init();
         OpenSSL_add_all_algorithms();
         SSL_load_error_strings();
-        m_newState->m_ctx = SSL_CTX_new(TLSv1_2_method());
+        m_newState->m_ctx = make_shared<HMSSLCtx>();
         if(!m_newState->m_ctx)
         {
             HMLog(HM_LOG_CRITICAL, "Failed creating ssl context, err:%s",
                                 ERR_error_string(ERR_get_error(), NULL));
             return false;
         }
-        if (SSL_CTX_use_certificate_file(m_newState->m_ctx,
+        if (SSL_CTX_use_certificate_file(m_newState->m_ctx->getCtx(),
                 m_newState->getCertFile().c_str(),
                 SSL_FILETYPE_PEM) <= 0)
         {
@@ -282,20 +287,20 @@ HMStateManager::loadCertificates()
                     ERR_error_string(ERR_get_error(), NULL));
             return false;
         }
-        if (SSL_CTX_use_PrivateKey_file(m_newState->m_ctx,
+        if (SSL_CTX_use_PrivateKey_file(m_newState->m_ctx->getCtx(),
                 m_newState->getKeyFile().c_str(), SSL_FILETYPE_PEM) <= 0)
         {
             HMLog(HM_LOG_CRITICAL, "Failed loading private key file, err:%s",
                     ERR_error_string(ERR_get_error(), NULL));
             return false;
         }
-        if (!SSL_CTX_check_private_key(m_newState->m_ctx))
+        if (!SSL_CTX_check_private_key(m_newState->m_ctx->getCtx()))
         {
             HMLog(HM_LOG_CRITICAL,
                     "Private key does not match the public certificate");
             return false;
         }
-        if (!SSL_CTX_load_verify_locations(m_newState->m_ctx, m_newState->getCaFile().c_str(), NULL))
+        if (!SSL_CTX_load_verify_locations(m_newState->m_ctx->getCtx(), m_newState->getCaFile().c_str(), NULL))
         {
             HMLog(HM_LOG_CRITICAL, "failed loading CA certificate, err: %s",
                     ERR_error_string(ERR_get_error(), NULL));
@@ -303,10 +308,15 @@ HMStateManager::loadCertificates()
         }
         if (m_newState->isEnableMutualAuth())
         {
-            SSL_CTX_set_verify(m_newState->m_ctx,
+            SSL_CTX_set_verify(m_newState->m_ctx->getCtx(),
             SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
             NULL);
         }
+        m_newState->m_connectionHandler = make_shared<HMConnectionHandler>(m_newState->m_ctx->getCtx(), m_newState->getMaxConnections(), tv);
+    }
+    else
+    {
+        m_newState->m_connectionHandler = make_shared<HMConnectionHandler>(m_newState->getMaxConnections(), tv);
     }
     return true;
 }
@@ -316,14 +326,12 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
 {
     lock_guard<mutex> lg(m_reloadMutex);
     // save a copy of the current backend storage
-    string currentStoragePath;
     HM_LOG_PLUGIN_CLASS lastLogType;
     string lastLogPath;
     HM_LOG_LEVEL lastLogLevel;
 
     if(m_currentState)
     {
-        currentStoragePath = m_currentState->getStoragePath();
         lastLogType = m_currentState->getDefaultLogType();
         lastLogPath = m_currentState->getLogPath();
         lastLogLevel = m_currentState->getLogLevel();
@@ -384,12 +392,103 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
         m_newState.reset();
         return false;
     }
-    m_newState->m_datastore->storeConfigs(*m_newState);
-    m_newState->storeConfigInfo();
+    if(!m_newState->loadPubSubConfig())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading pub-sub config file");
+        return false;
+    }
+    m_newTransactionState = make_shared<HMState>(*(m_newState.get()));
     m_currentState.swap(m_newState);
     m_newState.reset();
 
     m_currentState->restoreStoredCheckState();
+    return true;
+}
+
+void
+HMStateManager::swapStates()
+{
+    m_newState->restoreRunningCheckState(m_currentState);
+    m_newTransactionState = make_shared<HMState>(*(m_newState.get()));
+    m_currentState.swap(m_newState);
+    m_currentState->resheduleDNSChecks(m_newState, m_workQueue);
+    m_currentState->resheduleHealthChecks(m_newState, m_workQueue);
+    m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, false);
+    m_currentState->m_remoteCache.queueRemoteLookups(m_workQueue, *m_eventLoop, m_currentState->m_hostGroups, false);
+    m_currentState->m_remoteHostCache.queueRemoteLookups(m_workQueue, *m_eventLoop, false);
+    m_currentState->updateBackend(m_newState);
+    // Kick State and Wait for us to have the last handle to the old state
+    m_eventLoop->wakeupTracker();
+    m_workQueue.cycleThreads();
+    while(m_newState.use_count() > 1)
+    {}
+    // Load any results that were in flight
+    m_currentState->restoreRunningCheckState(m_newState);
+
+    // Now we destroy the state
+    m_newState.reset();
+}
+
+
+HM_COMMIT_TRANSACTION_STATUS
+HMStateManager::commitDaemonConfigs(HMHash& hash)
+{
+    lock_guard<mutex> lg(m_reloadMutex);
+
+    // Parse the new config into a check state data structure
+    m_newState = make_shared<HMState>(*(m_newTransactionState.get()));
+    if (!m_newState->hashConfigs())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure Initializing Hashing function");
+        return HM_COMMIT_TRANSACTION_FAILURE;
+    }
+    if(hash != m_newState->getHash())
+    {
+        return HM_COMMIT_TRANSACTION_HASH_MISMATCH;
+    }
+    if (!m_newState->openBackend(false))
+    {
+        HMLog(HM_LOG_CRITICAL, "Failure Opening the backend data store");
+        m_newState.reset();
+        return HM_COMMIT_TRANSACTION_FAILURE;
+    }
+    m_newState->m_ctx = m_currentState->m_ctx;
+    m_newState->m_connectionHandler = m_currentState->m_connectionHandler;
+    m_newState->m_resultPublisher = m_currentState->m_resultPublisher;
+    m_newState->generateCheckList();
+    m_newState->m_datastore->storeConfigs(*(m_newState.get()));
+    m_newState->storeConfigInfo();
+    //To avoid inserting checks in the middle of the run
+    m_newState->m_checkList.setGuard(true);
+    swapStates();
+    return HM_COMMIT_TRANSACTION_SUCCESS;
+}
+
+bool
+HMStateManager::refreshDaemonConfigs()
+{
+    lock_guard<mutex> lg(m_reloadMutex);
+
+    // Parse the new config into a check state data structure
+    m_newState = make_shared<HMState>();
+    m_newState->copyMasterParams(*(m_currentState.get()));
+    if (!m_newState->openBackend(false))
+    {
+        HMLog(HM_LOG_CRITICAL, "Failure Opening the backend data store");
+        m_newState.reset();
+        return false;
+    }
+    m_newState->m_ctx = m_currentState->m_ctx;
+    m_newState->m_connectionHandler = m_currentState->m_connectionHandler;
+    m_newState->m_resultPublisher = m_currentState->m_resultPublisher;
+    if(!m_newState->setupDaemonstate())
+    {
+        HMLog(HM_LOG_CRITICAL, "Failure Parsing Configs");
+        m_newState->m_datastore->closeStore();
+        m_newState.reset();
+        return false;
+    }
+    swapStates();
     return true;
 }
 
@@ -408,7 +507,8 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
     set<string> mHostGroupIgn;
 
     // save a copy of the current backend db
-    string currentStoragePath;
+    string lastStoragePath;
+    HM_STORAGE_CLASS lastStorageType;
     HM_LOG_PLUGIN_CLASS lastLogType;
     string lastLogPath;
     HM_LOG_LEVEL lastLogLevel;
@@ -416,7 +516,8 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
 
     if(m_currentState)
     {
-        currentStoragePath = m_currentState->getStoragePath();
+        lastStoragePath = m_currentState->getStoragePath();
+        lastStorageType = m_currentState->getStorageType();
         lastLogType = m_currentState->getDefaultLogType();
         lastLogPath = m_currentState->getLogPath();
         lastLogLevel = m_currentState->getLogLevel();
@@ -445,7 +546,7 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
     }
 
     // deal with the backend setup
-    if(!m_newState->openBackend(false))
+    if (!m_newState->openBackend(false))
     {
         HMLog(HM_LOG_CRITICAL, "Failure Opening the backend data store");
         m_newState.reset();
@@ -457,6 +558,7 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
         HMLog(HM_LOG_CRITICAL, "Failed loading certificates");
         return false;
     }
+
     if(!m_newState->setupDaemonstate())
     {
         HMLog(HM_LOG_CRITICAL, "Failure Parsing Configs");
@@ -464,23 +566,12 @@ HMStateManager::reloadDaemonConfigs(const string& masterConfig)
         m_newState.reset();
         return false;
     }
-    m_newState->restoreRunningCheckState(m_currentState);
-    m_currentState.swap(m_newState);
-    m_currentState->m_datastore->storeConfigs(*m_currentState);
-    m_currentState->storeConfigInfo();
-    m_currentState->resheduleDNSChecks(m_newState, m_workQueue);
-    m_currentState->resheduleHealthChecks(m_newState, m_workQueue);
-    m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, false);
-    m_currentState->updateBackend(m_newState);
-    // Kick State and Wait for us to have the last handle to the old state
-    m_eventLoop->wakeupTracker();
-    m_workQueue.cycleThreads();
-    while(m_newState.use_count() > 1) {}
-    // Load any results that were in flight
-    m_currentState->restoreRunningCheckState(m_newState);
-
-    // Now we destroy the state
-    m_newState.reset();
+    if (!m_newState->loadPubSubConfig())
+    {
+        HMLog(HM_LOG_CRITICAL, "[CORE] Failure loading pub-sub config file");
+        return false;
+    }
+    swapStates();
     return true;
 }
 
@@ -666,4 +757,9 @@ bool HMStateManager::isEnableRemoteQueryReply() const
 void HMStateManager::setEnableRemoteQueryReply(bool enableRemoteQueryReply)
 {
     m_enableRemoteQueryReply = enableRemoteQueryReply;
+}
+
+bool HMStateManager::isActive() const
+{
+    return m_active;
 }

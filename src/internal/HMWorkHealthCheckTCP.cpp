@@ -42,7 +42,8 @@ HMWorkHealthCheckTCP::healthCheck()
         tv.tv_usec = 0;
         tv_checkinfo.tv_sec = 30;
         tv_checkinfo.tv_usec = 0;
-        HMSocketUtilTCP socketApi(m_ipAddress, m_hostCheck.getPort(), tv, m_hostCheck.getSourceAddress(), m_hostCheck.getTOSValue());
+        HMSocketUtilTCP socketApi(m_ipAddress, m_hostCheck.getPort(), tv, m_hostCheck.getSourceAddress(), m_hostCheck.getTOSValue(), false);
+        socketApi.connectServer();
         m_reason = socketApi.getReason();
         switch (m_reason)
         {
@@ -82,10 +83,11 @@ HMWorkHealthCheckTCP::healthCheck()
                 if (socketApi.pingRemoteHost(tv_checkinfo))
                 {
                     HMLog(HM_LOG_DEBUG3,
-                            "[TLSCHECK] Health check successful for host:%s(%s), port:%hu",
+                            "[TCPCHECK] Health check successful for host:%s(%s), port:%hu",
                             m_hostname.c_str(), m_ipAddress.toString().c_str(),
                             m_hostCheck.getPort());
                     m_response = HM_RESPONSE_CONNECTED;
+                    m_reason = HM_REASON_SUCCESS;
                 }
                 m_reason = socketApi.getReason();
             }

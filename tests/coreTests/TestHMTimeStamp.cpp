@@ -43,3 +43,20 @@ void TESTNAME::test_timestamp2() {
     CPPUNIT_ASSERT_EQUAL(ts1 <= ts3, true);
     CPPUNIT_ASSERT_EQUAL(8,int(ts3 - ts2));
 }
+
+void TESTNAME::test_timestamp3() {
+    HMTimeStamp ts1,ts2;
+
+    uint64_t time = 1566465545000;
+    ts1.setTime(time);
+
+    string outputTime = ts1.print("%Y-%m-%dT%H:%M:%SZ");
+    string expectedTime = "2019-08-22T09:19:05Z";
+    CPPUNIT_ASSERT_EQUAL(expectedTime, outputTime);
+    CPPUNIT_ASSERT_EQUAL(time,ts1.getTimeSinceEpoch());
+
+    string time2 = "2019-8-22T09:19:5Z";
+    ts2.setTime(time2,"%Y-%m-%dT%H:%M:%SZ");
+    CPPUNIT_ASSERT_EQUAL(time,ts2.getTimeSinceEpoch());
+}
+

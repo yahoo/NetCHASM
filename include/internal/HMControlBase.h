@@ -8,15 +8,16 @@
 
 #include "HMConstants.h"
 #include "HMLogBase.h"
-#include "HMStorage.h"
 #include "HMDataPacking.h"
 #include "HMControlLinuxSocketClient.h"
 #include "HMSocketUtilBase.h"
 
 const std::string HM_CMD_RELOAD = "reload";
+const std::string HM_CMD_REFRESH = "refresh";
 const std::string HM_CMD_HOSTGROUP = "hostgroup";
 const std::string HM_CMD_LOADFB = "loadfb";
 const std::string HM_CMD_LOADFBIP = "loadfbip";
+const std::string HM_CMD_LOADFBHOST = "loadfbhost";
 const std::string HM_CMD_THREADINFO = "threadinfo";
 const std::string HM_CMD_WORKQUEUEINFO = "workqueueinfo";
 const std::string HM_CMD_SCHDQUEUEINFO = "schdqueueinfo";
@@ -28,8 +29,10 @@ const std::string HM_CMD_HOSTRESULTS = "hostresults";
 const std::string HM_CMD_HOSTIPRESULTS = "hostipresults";
 const std::string HM_CMD_HOSTGROUPPARAMS = "hostgroupparams";
 const std::string HM_CMD_HOSTSCHDINFO = "hostschdinfo";
+const std::string HM_CMD_REMOTESCHDINFO = "remoteschdinfo";
 const std::string HM_CMD_HEALTHCHECK = "healthcheck";
 const std::string HM_CMD_DNSCHECK = "dnscheck";
+const std::string HM_CMD_REMOTEHOSTGROUPCHECK = "remotehostgroupcheck";
 
 const std::string HM_CMD_GETLOGLEVEL = "getloglevel";
 const std::string HM_CMD_SETLOGLEVEL = "setloglevel";
@@ -47,6 +50,17 @@ const std::string HM_CMD_SETRECYCLE = "setrecycle";
 const std::string HM_CMD_GETRECYCLE = "getrecycle";
 const std::string HM_CMD_SETREMOTEQUERY = "setremotequery";
 const std::string HM_CMD_GETREMOTEQUERY = "getremotequery";
+const std::string HM_CMD_GETHANDLERTHREADSCOUNT = "gethandlerthreadscount";
+const std::string HM_CMD_OPENPERSISTANT = "keepopen";
+
+const std::string HM_CMD_KEEPOPENSTR = std::to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_OPENPERSISTANT;
+
+const std::string HM_CMD_ADDHOSTGROUP = "addhostgroup";
+const std::string HM_CMD_REMOVEHOSTGROUP = "removehostgroup";
+const std::string HM_CMD_CLEARTRANSACTION = "cleartransation";
+const std::string HM_CMD_COMMITTRANSACTION = "committransation";
+const std::string HM_CMD_GETTRANSCONFIGHASH = "gettransconfighash";
+const std::string HM_CMD_GETHOSTGROUPHASH = "gethostgrouphash";
 const std::string HM_CMD_ADDDNSADDRESSES = "adddnsaddresses";
 const std::string HM_CMD_REMOVEDNSADDRESSES = "removednsaddresses";
 const std::string HM_CMD_GETDNSADDRESSES = "getdnsaddresses";
@@ -109,6 +123,31 @@ class HMCommandListenerBase
             std::string& host, uint64_t& buflen);
 
   /*!
+       Called to get the packed remote scheduling info for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the hostgroup
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+
+    std::unique_ptr<char[]> getRemoteSchdInfo(
+            std::unique_ptr<HMDataPacking>& dataPacking,
+            const std::string& hostgroup, uint64_t& buflen);
+
+  /*!
+       Called to get the packed remote scheduling info for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the hostgroup
+       \param name of the host
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+
+    std::unique_ptr<char[]> getRemoteSchdInfo(
+            std::unique_ptr<HMDataPacking>& dataPacking,
+            const std::string& hostgroup, const std::string& host, uint64_t& buflen);
+
+  /*!
        Called to get the health check results for a particular hostgroup.
        \param name of hostgroup.
        \param vector to store results.
@@ -121,18 +160,22 @@ class HMCommandListenerBase
        \param unique ptr of the data packing class.
        \param name of the hostgroup
        \param size of the packed data.
+       \param bool to specify if hash needs to be verified of the hostgroup
+       \param Hash data structure.
        \return unique pointer containing the data.
     */
-  std::unique_ptr<char[]> createHostGroup(std::unique_ptr<HMDataPacking>& datapacking, std::string& hostGroupName, uint64_t& buflen);
+  std::unique_ptr<char[]> createHostGroup(std::unique_ptr<HMDataPacking>& datapacking, std::string& hostGroupName, uint64_t& buflen, bool verifyHash, const HMHash& hash);
 
   /*!
        Called to get the packed load feedback data for a particular hostgroup.
        \param unique ptr of the data packing class.
        \param name of the hostgroup
        \param size of the packed data.
+       \param bool to specify if hash needs to be verified of the hostgroup
+       \param Hash data structure.
        \return unique pointer containing the data.
     */
-  std::unique_ptr<char[]> getloadfbdata (std::unique_ptr<HMDataPacking>& datapacking, std::string& rotationName, uint64_t& buflen);
+  std::unique_ptr<char[]> getloadfbdata (std::unique_ptr<HMDataPacking>& datapacking, std::string& rotationName, uint64_t& buflen, bool verifyHash, const HMHash& hash);
 
   /*!
        Called to get the packed load feedback data for a particular hostgroup.
@@ -144,6 +187,16 @@ class HMCommandListenerBase
        \return unique pointer containing the data.
     */
   std::unique_ptr<char[]> getloadfbdata (std::unique_ptr<HMDataPacking>& dataPacking, std::string& hostName, std::string& sourceURL, HMIPAddress& address, uint64_t& buflen);
+
+  /*!
+       Called to get the packed load feedback data for a particular hostgroup.
+       \param unique ptr of the data packing class.
+       \param name of the host
+       \param datahostcheck of the host
+       \param size of the packed data.
+       \return unique pointer containing the data.
+    */
+  std::unique_ptr<char[]> getloadfbhostdata (std::unique_ptr<HMDataPacking>& dataPacking, std::string& hostName, HMDataHostCheck& hostCheck, uint64_t& buflen);
 
   /*!
        Called to set status up/down for a particular host in a hostgroup.
@@ -199,6 +252,35 @@ class HMCommandListenerBase
   std::unique_ptr<char[]> getHostResults(std::unique_ptr<HMDataPacking>& dataPacking, const std::string& hostName, const HMIPAddress& address, HMDataHostCheck& hostCheck, uint64_t& dataSize);
 
   /*!
+     Called to get the count of the connection handler threads.
+     \param unique ptr of the data packing class.
+     \param size of the packed data.
+     \return unique pointer containing the data.
+  */
+  std::unique_ptr<char[]> getConnectionHandlerCount(std::unique_ptr<HMDataPacking>& dataPacking, uint64_t& dataSize);
+
+  /*
+     Called to called to add hostgroup to the transactional state.
+     \param hostgroup name to add to configs.
+     \param hostgroup to be added to the map
+     \return true if successful.
+  */
+  bool addHostGroup(const std::string& hostGroupName, HMDataHostGroup& hostGroup);
+
+  /*!
+     Called to called to remove hostgroup to the transactional state.
+     \param hostgroup name to removed from configs.
+     \return true if successful.
+  */
+  bool removeHostGroup(const std::string& hostGroupName);
+
+  /*!
+     Called to called to reset transactional state.
+     \return true if successful.
+  */
+  bool clearTransaction();
+
+  /*
        set mark to a particular host in a host-group.
        \param host-groupname  the host belongs
        \param host-name to sdd the mark
@@ -251,8 +333,9 @@ class HMCommandListenerBase
   HMStateManager& m_stateManager;
   bool m_keepRunning;
   std::thread m_mainThread;
-  std::mutex m_handlerMutex;
+  std::shared_timed_mutex m_handlerMutex;
   std::mutex m_exceptionMutex;
+  std::mutex m_transactionMutex;
   std::vector<std::thread> m_handlerThreads;
   std::map<std::thread::id,bool> m_handlerThreadsStatus;
   int m_pipesfd[2];

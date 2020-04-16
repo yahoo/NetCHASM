@@ -31,6 +31,8 @@ dns.type: none\n\
 dns.host: 192.168.1.1\n\
 dns.ttl: 360\n\
 dns.lookup-timeout: 60\n\
+dns.statictype: none\n\
+dns.lookuptype: none\n\
 http.type: curl\n\
 ftp.type: curl\n\
 tcp.type: rawsocket\n\
@@ -58,7 +60,6 @@ socket.path: test_sock" << endl;
     check-info: hm-hello\n\
     group-threshold: 12\n\
     dual-stack-mode: both\n\
-    dns-type: none\n\
     host:\n\
         - loadfb3.hm1.com\n\
         - loadfb3.hm2.com\n" << endl;
@@ -134,7 +135,7 @@ socket.path: test_sock" << endl;
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);

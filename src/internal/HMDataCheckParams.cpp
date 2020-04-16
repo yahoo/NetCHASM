@@ -275,6 +275,9 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     it->second.m_end = end;
     it->second.m_port = port;
 
+    // Fix the possible race condition during DNS timeouts
+    it->second.m_queryState = HM_CHECK_INACTIVE;
+
     if(response == HM_RESPONSE_DNS_FAILED)
     {
         it->second.m_checkTime = start;
@@ -283,7 +286,6 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
 
     it->second.m_numChecks++;
     it->second.m_checkTime = HMTimeStamp::now();
-    it->second.m_queryState = HM_CHECK_INACTIVE;
 
     if(response == HM_RESPONSE_CONNECTED)
     {
@@ -332,6 +334,7 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
         return;
     }
 
+    it->second.m_remoteCheckTime.setTime(0);
     unsigned long flap = m_flapThreshold  ?m_flapThreshold : HM_DEFAULT_FLAP_THRESHOLD;
     
     //Failed on Retry
@@ -470,6 +473,24 @@ HMDataCheckParams::getCheckResult(const HMIPAddress& address, HMDataCheckResult&
     }
     result = it->second;
     return true;
+}
+
+bool
+HMDataCheckParams::getAddresses(HM_DUALSTACK dualstack, set<HMIPAddress>& addresses)
+{
+    shared_lock<shared_timed_mutex> lock(m_sharedMutex);
+    for(const auto& it : m_checkData)
+    {
+        if((dualstack & HM_DUALSTACK_IPV6_ONLY) && (it.first.getType() == AF_INET6))
+        {
+            addresses.insert(it.first);
+        }
+        if((dualstack & HM_DUALSTACK_IPV4_ONLY) && it.first.getType() == AF_INET)
+        {
+            addresses.insert(it.first);
+        }
+    }
+    return addresses.size() > 0;
 }
 
 HMTimeStamp
@@ -689,7 +710,7 @@ HMDataCheckParams::setResponse(string& hostname,
             it->second.m_smoothedResponseTime = srt;
 
             HMLog(HM_LOG_DEBUG3,
-                    "[CHECK] %s: check complete: rt = %us, smoothed rt = %us, total rt = %us with response %s",
+                    "[CHECK] %s: check complete: rt = %u ms, smoothed rt = %u ms, total rt = %u ms with response %s",
                     it->first.toString().c_str(),
                     it->second.m_responseTime,
                     it->second.m_smoothedResponseTime,

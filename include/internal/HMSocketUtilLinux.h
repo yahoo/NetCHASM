@@ -19,20 +19,35 @@ class HMSocketUtilLinux : public HMSocketUtilBase
 {
 public:
 
-    HMSocketUtilLinux(int sock, std::string& sockPath);
-    virtual ~HMSocketUtilLinux();
+    HMSocketUtilLinux(const std::string& socketPath, const bool persistant) :
+            HMSocketUtilBase(false, -1, persistant),
+            m_socketPath(socketPath)
+    { }
 
+    HMSocketUtilLinux(int sock, std::string& sockPath) :
+            HMSocketUtilBase(true, sock, false),
+            m_socketPath(sockPath)
+    { }
+
+    virtual ~HMSocketUtilLinux();
     HMSocketUtilLinux& operator=(const HMSocketUtilLinux&) = delete;        // Disallow copying
     HMSocketUtilLinux(const HMSocketUtilLinux&) = delete;
-
+    //! Called to close the socket.
+    void closeSocket();
+    //! Called to connect to a server.
+    void connectServer();
 
 protected:
     std::string m_socketPath;
+    //! Called to get the connect to a socket.
+    virtual bool connectSocket();
 
 private:
     HMSocketUtilLinux();
-    //! Called to close the socket.
-    void closeSocket();
+    //! Called to get the create a socket.
+    bool createSocket();
+    //! Called to reset the connection.
+    void reconnect();
     /*!
          Called to send data across the socket.
          \param data buffer.
@@ -44,8 +59,9 @@ private:
          \param data buffer.
          \param size of the data buffer.
          \param wait time for the data.
+         \return Status of results fetch.
      */
-    bool recvData(char* data, uint64_t size, timeval& tv);
+    HM_SOCK_DATA_STATUS recvData(char* data, uint64_t size, timeval tv);
 };
 
 #endif /* HMSOCKETUTIL_LINUX_H_ */

@@ -15,8 +15,6 @@
 #include "HMWorkHealthCheckDNS.h"
 #include "HMWorkHealthCheckNone.h"
 #include "HMWorkAuxFetchCurl.h"
-#include "HMWorkHealthCheckRemote.h"
-#include "HMWorkHealthCheckRemoteTLS.h"
 #include "HMWorkHealthCheckTCPS.h"
 #include "HMWorkHealthMultiWork.h"
 using namespace std;
@@ -98,7 +96,7 @@ HMDataCheckList::getCheckTimeout(const string& hostname, const HMIPAddress& ip, 
 }
 
 void
-HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue, bool enableRemoteCheck)
+HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue)
 {
     HMLog(HM_LOG_DEBUG, "[CORE] Health Check QueueCheck for %s(%s)",
                                         hostname.c_str(), ip.toString().c_str());
@@ -110,175 +108,164 @@ HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDat
     }
 
     unique_ptr<HMWork> healthCheck;
-    if (enableRemoteCheck
-            && check.getRemoteCheckType() != HM_REMOTE_CHECK_NONE)
+
+    switch (check.getCheckType())
     {
-        switch (check.getRemoteCheckType())
+    case HM_CHECK_HTTP:
+    case HM_CHECK_HTTPS:
+    case HM_CHECK_HTTPS_NO_PEER_CHECK:
+    case HM_CHECK_MTLS_HTTPS:
+    case HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK:
+        switch (check.getCheckPlugin())
         {
-        case HM_REMOTE_CHECK_TCP:
-            healthCheck = make_unique<HMWorkHealthCheckRemote>(
-                    HMWorkHealthCheckRemote(hostname, ip, check));
-            break;
-        case HM_REMOTE_CHECK_TCPS:
-        default:
-            healthCheck = make_unique<HMWorkHealthCheckRemoteTLS>(
-                    HMWorkHealthCheckRemoteTLS(hostname, ip, check));
-            break;
-        }
-    }
-    else
-    {
-        switch (check.getCheckType())
-        {
-        case HM_CHECK_HTTP:
-        case HM_CHECK_HTTPS:
-        case HM_CHECK_HTTPS_NO_PEER_CHECK:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_DEFAULT:
-            case HM_CHECK_PLUGIN_HTTP_CURL:
-                healthCheck = make_unique<HMWorkHealthCheckCurl>(
-                        HMWorkHealthCheckCurl(hostname, ip, check));
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for %s CheckType",
-                        printCheckType(check.getCheckType()).c_str());
-                return;
-            }
-            break;
-
-        case HM_CHECK_FTP:
-        case HM_CHECK_FTPS_IMPLICIT:
-        case HM_CHECK_FTPS_IMPLICIT_NO_PEER_CHECK:
-        case HM_CHECK_FTPS_EXPLICIT:
-        case HM_CHECK_FTPS_EXPLICIT_NO_PEER_CHECK:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_FTP_CURL:
-            case HM_CHECK_PLUGIN_DEFAULT:
-                healthCheck = make_unique<HMWorkHealthCheckCurl>(
-                        HMWorkHealthCheckCurl(hostname, ip, check));
-                break;
-
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for %s CheckType",
-                        printCheckType(check.getCheckType()).c_str());
-                return;
-            }
-            break;
-
-        case HM_CHECK_TCP:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_TCP_RAW:
-            case HM_CHECK_PLUGIN_DEFAULT:
-                healthCheck = make_unique<HMWorkHealthCheckTCP>(
-                        HMWorkHealthCheckTCP(hostname, ip, check));
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for TCP CheckType");
-                return;
-            }
-            break;
-        case HM_CHECK_TCPS:
-            switch (check.getCheckPlugin()) {
-            case HM_CHECK_PLUGIN_TCPS_RAW:
-            case HM_CHECK_PLUGIN_DEFAULT:
-                healthCheck = make_unique<HMWorkHealthCheckTCPS>(
-                        HMWorkHealthCheckTCPS(hostname, ip, check));
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for TCP CheckType");
-                return;
-            }
-            break;
-        case HM_CHECK_DNS:
-        case HM_CHECK_DNSVC:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_DNS_ARES:
-            case HM_CHECK_PLUGIN_DEFAULT:
-#ifdef USE_ARES
-                healthCheck = make_unique<HMWorkHealthCheckDNS>(
-                        HMWorkHealthCheckDNS(hostname, ip, check));
-#else
-                HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
-#endif
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for %s CheckType",
-                        printCheckType(check.getCheckType()).c_str());
-                return;
-            }
-            break;
-
-        case HM_CHECK_NONE:
-        case HM_CHECK_DEFAULT:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_DEFAULT:
-                healthCheck = make_unique<HMWorkHealthCheckNone>(
-                        HMWorkHealthCheckNone(hostname, ip, check));
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for None CheckType");
-                return;
-            }
-            break;
-
-        case HM_CHECK_AUX_HTTP:
-        case HM_CHECK_AUX_HTTPS:
-        case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_AUX_CURL:
-            case HM_CHECK_PLUGIN_DEFAULT:
-                healthCheck = make_unique<HMWorkAuxFetchCurl>(
-                        HMWorkAuxFetchCurl(hostname, ip, check));
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for %s CheckType",
-                        printCheckType(check.getCheckType()).c_str());
-                return;
-            }
-            break;
-
-        case HM_CHECK_MARK_HTTP:
-        case HM_CHECK_MARK_HTTPS:
-        case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
-            switch (check.getCheckPlugin())
-            {
-            case HM_CHECK_PLUGIN_DEFAULT:
-            case HM_CHECK_PLUGIN_MARK_CURL:
-                healthCheck = make_unique<HMWorkHealhMultiWork>(
-                        HMWorkHealhMultiWork(hostname, ip, check));
-                healthCheck->setStoreResults(false);
-                healthCheck->setPublish(false);
-                break;
-            default:
-                HMLog(HM_LOG_ERROR,
-                        "[CORE] Invalid Check Type Plugin for %s CheckType",
-                        printCheckType(check.getCheckType()).c_str());
-                return;
-            }
+        case HM_CHECK_PLUGIN_DEFAULT:
+        case HM_CHECK_PLUGIN_HTTP_CURL:
+            healthCheck = make_unique<HMWorkHealthCheckCurl>(
+                    HMWorkHealthCheckCurl(hostname, ip, check));
             break;
         default:
-            HMLog(HM_LOG_ERROR, "[CORE] Invalid Check Type %s",
-                    hostname.c_str());
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for %s CheckType",
+                    printCheckType(check.getCheckType()).c_str());
             return;
         }
+        break;
+
+    case HM_CHECK_FTP:
+    case HM_CHECK_FTPS_IMPLICIT:
+    case HM_CHECK_FTPS_IMPLICIT_NO_PEER_CHECK:
+    case HM_CHECK_FTPS_EXPLICIT:
+    case HM_CHECK_FTPS_EXPLICIT_NO_PEER_CHECK:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_FTP_CURL:
+        case HM_CHECK_PLUGIN_DEFAULT:
+            healthCheck = make_unique<HMWorkHealthCheckCurl>(
+                    HMWorkHealthCheckCurl(hostname, ip, check));
+            break;
+
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for %s CheckType",
+                    printCheckType(check.getCheckType()).c_str());
+            return;
+        }
+        break;
+
+    case HM_CHECK_TCP:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_TCP_RAW:
+        case HM_CHECK_PLUGIN_DEFAULT:
+            healthCheck = make_unique<HMWorkHealthCheckTCP>(
+                    HMWorkHealthCheckTCP(hostname, ip, check));
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for TCP CheckType");
+            return;
+        }
+        break;
+    case HM_CHECK_TCPS:
+        switch (check.getCheckPlugin()) {
+        case HM_CHECK_PLUGIN_TCPS_RAW:
+        case HM_CHECK_PLUGIN_DEFAULT:
+            healthCheck = make_unique<HMWorkHealthCheckTCPS>(
+                    HMWorkHealthCheckTCPS(hostname, ip, check));
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for TCP CheckType");
+            return;
+        }
+        break;
+    case HM_CHECK_DNS:
+    case HM_CHECK_DNSVC:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_DNS_ARES:
+        case HM_CHECK_PLUGIN_DEFAULT:
+#ifdef USE_ARES
+            healthCheck = make_unique<HMWorkHealthCheckDNS>(
+                    HMWorkHealthCheckDNS(hostname, ip, check));
+#else
+            HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
+#endif
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for %s CheckType",
+                    printCheckType(check.getCheckType()).c_str());
+            return;
+        }
+        break;
+
+    case HM_CHECK_NONE:
+    case HM_CHECK_DEFAULT:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_DEFAULT:
+            healthCheck = make_unique<HMWorkHealthCheckNone>(
+                    HMWorkHealthCheckNone(hostname, ip, check));
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for None CheckType");
+            return;
+        }
+        break;
+
+    case HM_CHECK_AUX_HTTP:
+    case HM_CHECK_AUX_HTTPS:
+    case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
+    case HM_CHECK_AUX_MTLS_HTTPS:
+    case HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_AUX_CURL:
+        case HM_CHECK_PLUGIN_DEFAULT:
+            healthCheck = make_unique<HMWorkAuxFetchCurl>(
+                    HMWorkAuxFetchCurl(hostname, ip, check));
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for %s CheckType",
+                    printCheckType(check.getCheckType()).c_str());
+            return;
+        }
+        break;
+
+    case HM_CHECK_MARK_HTTP:
+    case HM_CHECK_MARK_HTTPS:
+    case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+        switch (check.getCheckPlugin())
+        {
+        case HM_CHECK_PLUGIN_DEFAULT:
+        case HM_CHECK_PLUGIN_MARK_CURL:
+            healthCheck = make_unique<HMWorkHealhMultiWork>(
+                    HMWorkHealhMultiWork(hostname, ip, check));
+            healthCheck->setStoreResults(false);
+            healthCheck->setPublish(false);
+            break;
+        default:
+            HMLog(HM_LOG_ERROR,
+                    "[CORE] Invalid Check Type Plugin for %s CheckType",
+                    printCheckType(check.getCheckType()).c_str());
+            return;
+        }
+        break;
+    default:
+        HMLog(HM_LOG_ERROR, "[CORE] Invalid Check Type %s %s",
+               printCheckType(check.getCheckType()).c_str(), hostname.c_str());
+        return;
     }
     // Setup the timing parameters
     healthCheck->m_start = HMTimeStamp::now();
     healthCheck->m_end = getCheckTimeout(hostname, ip, check);
-
+    if(check.getFlowType() == HM_FLOW_REMOTE_HOSTGROUP_TYPE || check.getFlowType() == HM_FLOW_REMOTE_HOST_TYPE)
+    {
+        healthCheck->setReschedule(false);
+    }
     queue.insertWork(healthCheck);
 }
 
@@ -335,7 +322,7 @@ HMDataCheckList::updateCheck(const HMCheckHeader& header, const HMDataCheckResul
 }
 
 void
-HMDataCheckList::updateCheck(HMWork* work, map<HMDataCheckParams, HMDataCheckResult>& results)
+HMDataCheckList::updateCheck(HMWork* work, multimap<HMDataCheckParams, HMDataCheckResult>& results)
 {
     HMLog(HM_LOG_DEBUG, "[CORE] Remote results update for %s", work->m_hostname.c_str());
     auto key = make_pair(work->m_hostname, work->m_hostCheck);
@@ -345,6 +332,9 @@ HMDataCheckList::updateCheck(HMWork* work, map<HMDataCheckParams, HMDataCheckRes
         auto paramsIt = results.equal_range(it->second);
         if(paramsIt.first == paramsIt.second)
         {
+            vector<string> hostgroups;
+            it->second.getHostGroups(hostgroups);
+            HMLog(HM_LOG_ERROR, "[CORE] Missing hostcheckparams for host %s hostGroups %s, %llu", work->m_hostname.c_str(), it->second.printHostGroups().c_str(), results.size());
             it->second.emptyQuery(work->m_ipAddress);
             it->second.updateCheck(work->m_hostname, work->m_ipAddress, HM_RESPONSE_REMOTE_FAILED, HM_REASON_REMOTE_NODATA, work->m_start, work->m_end, work->m_hostCheck.getPort());
             continue;
@@ -353,11 +343,43 @@ HMDataCheckList::updateCheck(HMWork* work, map<HMDataCheckParams, HMDataCheckRes
         {
             // need to copy status such that it does not fall into retry loop.
             iit->second.m_softStatus = iit->second.m_status;
+            iit->second.m_remoteCheckTime = iit->second.m_checkTime;
             iit->second.m_checkTime = HMTimeStamp::now();
-            iit->second.m_changeTime = HMTimeStamp::now();
             // reset query state to prevent the health check to go off schedule
             iit->second.m_queryState = HM_CHECK_INACTIVE;
             it->second.updateCheck(iit->second.m_address, iit->second, true);
+        }
+    }
+    results.clear();
+}
+
+
+void
+HMDataCheckList::updateCheck(HMWork* work, map<HMDataCheckParams, HMDataCheckResult>& results)
+{
+    HMLog(HM_LOG_DEBUG, "[CORE] Remote results update for %s", work->m_hostname.c_str());
+    auto key = make_pair(work->m_hostname, work->m_hostCheck);
+    auto ret = m_checklist.equal_range(key);
+    for(auto it = ret.first; it != ret.second; ++it)
+    {
+        auto paramsIt = results.find(it->second);
+        if(paramsIt == results.end())
+        {
+            vector<string> hostgroups;
+            it->second.getHostGroups(hostgroups);
+            HMLog(HM_LOG_ERROR, "[CORE] Missing hostcheckparams for host %s hostGroups %s, %llu", work->m_hostname.c_str(), it->second.printHostGroups().c_str(), results.size());
+            it->second.emptyQuery(work->m_ipAddress);
+            it->second.updateCheck(work->m_hostname, work->m_ipAddress, HM_RESPONSE_REMOTE_FAILED, HM_REASON_REMOTE_NODATA, work->m_start, work->m_end, work->m_hostCheck.getPort());
+        }
+        else
+        {
+            // need to copy status such that it does not fall into retry loop.
+            paramsIt->second.m_softStatus = paramsIt->second.m_status;
+            paramsIt->second.m_remoteCheckTime = paramsIt->second.m_checkTime;
+            paramsIt->second.m_checkTime = HMTimeStamp::now();
+            // reset query state to prevent the health check to go off schedule
+            paramsIt->second.m_queryState = HM_CHECK_INACTIVE;
+            it->second.updateCheck(paramsIt->second.m_address, paramsIt->second, true);
         }
     }
     results.clear();
@@ -404,7 +426,7 @@ HMDataCheckList::storeCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIP
 
 
 void
-HMDataCheckList::publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, HMResultPublisher& publisher)
+HMDataCheckList::publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HMIPAddress& address, shared_ptr<HMResultPublisher> publisher)
 {
     auto key = make_pair(work->m_hostname, hostCheck);
     auto ret = m_checklist.equal_range(key);
@@ -416,7 +438,14 @@ HMDataCheckList::publishCheck(HMWork* work, HMDataHostCheck& hostCheck, const HM
         {
             set<string> hostGroups;
             it->second.getHostGroups(hostGroups);
-            publisher.publishResult(work->m_hostname, result, work->getMark(), hostGroups, result.m_statusChanged);
+            if(publisher)
+            {
+                publisher->publishResult(work->m_hostname, result, work->getMark(), hostGroups, result.m_statusChanged);
+            }
+            else
+            {
+                HMLog(HM_LOG_DEBUG, "Result publisher not initialized");
+            }
         }
     }
 }
@@ -484,8 +513,23 @@ HMDataCheckList::getAllChecks(vector<HMCheckHeader>& allChecks)
     return true;
 }
 
+
 bool
-HMDataCheckList::getCheckResults(const string& hostname, const HMDataHostCheck& check, const HMIPAddress& address, vector<pair<HMDataCheckParams, HMDataCheckResult>>& results)
+HMDataCheckList::getCheckResultsAddress(const string& hostname, const HMDataHostCheck& check, HM_DUALSTACK dualstack, set<HMIPAddress>& addresses)
+{
+    addresses.clear();
+    auto key = make_pair(hostname, check);
+    auto ret = m_checklist.equal_range(key);
+    // We can fetch from a single check params. Iterating over all check param for consistency.
+    for(auto it = ret.first; it != ret.second; ++it)
+    {
+        it->second.getAddresses(dualstack, addresses);
+    }
+    return (addresses.size() > 0);
+}
+
+bool
+HMDataCheckList::getCheckResultsRemoteChecks(const string& hostname, const HMDataHostCheck& check, const HMIPAddress& address, vector<pair<HMDataCheckParams, HMDataCheckResult>>& results)
 {
     results.clear();
     auto key = make_pair(hostname, check);
@@ -496,6 +540,23 @@ HMDataCheckList::getCheckResults(const string& hostname, const HMDataHostCheck& 
         if(it->second->second.getCheckResult(address, result))
         {
             results.push_back(pair<HMDataCheckParams, HMDataCheckResult>(it->second->second, result));
+        }
+    }
+    return (results.size() > 0);
+}
+
+bool
+HMDataCheckList::getCheckResults(const string& hostname, const HMDataHostCheck& check, const HMIPAddress& address, vector<pair<HMDataCheckParams, HMDataCheckResult>>& results)
+{
+    results.clear();
+    auto key = make_pair(hostname, check);
+    auto ret = m_checklist.equal_range(key);
+    for(auto it = ret.first; it != ret.second; ++it)
+    {
+        HMDataCheckResult result(it->second.getTimeout());
+        if(it->second.getCheckResult(address, result))
+        {
+            results.push_back(pair<HMDataCheckParams, HMDataCheckResult>(it->second, result));
         }
     }
     return (results.size() > 0);
@@ -544,7 +605,8 @@ HMDataCheckList::addHostGroup(HMDataHostGroup& hostGroup)
 
         if(!hostGroup.getHostCheck(hostcheck) || !hostGroup.getCheckParameters(check))
         {
-            HMLog(HM_LOG_ERROR, "[CORE] Invalid Check type");
+            HMLog(HM_LOG_ERROR, "[CORE] Invalid Check type in addHostGroup %s ",
+                printCheckType(hostcheck.getCheckType()).c_str());
             return 0;
         }
 
@@ -571,6 +633,7 @@ HMDataCheckList::addHostGroup(HMDataHostGroup& hostGroup)
                 it->second.addHostGroup(hostGroup.getName());
                 string emptyRemoteHost = "";
                 HMDataHostCheck tempHostCheck = hostcheck;
+                //setting the remote check to empty to match datahostcheck in remote check type of per host per ip to mat
                 tempHostCheck.setRemoteCheck(emptyRemoteHost);
                 auto keyRemote = make_pair(*host, tempHostCheck);
                 m_checklistReference.insert(make_pair(keyRemote, it));
@@ -582,24 +645,68 @@ HMDataCheckList::addHostGroup(HMDataHostGroup& hostGroup)
 }
 
 void
-HMDataCheckList::initDNSCache(HMDNSCache& cache, HMWaitList& dnsWaitList)
+HMDataCheckList::initDNSCache(HMDNSCache& cache, HMWaitList& dnsWaitList, HM_DNS_PLUGIN_CLASS lookupDNSPlugin, HM_DNS_PLUGIN_CLASS staticDNSPlugin)
 {
     if (!m_guard)
     {
         for(auto it = m_checklist.begin(); it != m_checklist.end(); ++it)
         {
             uint8_t dualstack = it->first.second.getDualStack();
+            HM_DNS_PLUGIN_CLASS pluginClass;
+            switch(it->first.second.getDnsType())
+            {
+            case HM_DNS_TYPE_LOOKUP:
+                pluginClass = lookupDNSPlugin;
+                break;
+            case HM_DNS_TYPE_STATIC:
+                pluginClass = staticDNSPlugin;
+                break;
+            }
             if(dualstack & HM_DUALSTACK_IPV4_ONLY)
             {
-                HMDNSLookup dnsHostCheck(it->first.second.getDnsPlugin(), false);
+                HMDNSLookup dnsHostCheck(it->first.second.getDnsType(), false, it->first.second.getRemoteCheck());
+                dnsHostCheck.setPlugin(pluginClass);
                 cache.insertDNSEntry(it->first.first, dnsHostCheck, it->second.getTTL(), it->second.getTimeout());
             }
             if(dualstack & HM_DUALSTACK_IPV6_ONLY)
             {
-                HMDNSLookup dnsHostCheck(it->first.second.getDnsPlugin(), true);
-               cache.insertDNSEntry(it->first.first, dnsHostCheck, it->second.getTTL(), it->second.getTimeout());
+                HMDNSLookup dnsHostCheck(it->first.second.getDnsType(), true, it->first.second.getRemoteCheck());
+                dnsHostCheck.setPlugin(pluginClass);
+                cache.insertDNSEntry(it->first.first, dnsHostCheck, it->second.getTTL(), it->second.getTimeout());
             }
-            dnsWaitList.insert(make_pair(HMDNSTypeMap(it->first.first, it->first.second.getDnsPlugin()), it->first.second));
+            dnsWaitList.insert(make_pair(HMDNSTypeMap(it->first.first, it->first.second.getDnsType(), it->first.second.getRemoteCheck()), it->first.second));
+        }
+    }
+}
+
+void
+HMDataCheckList::initRemoteCache(HMRemoteHostCache& cache)
+{
+    if (!m_guard)
+    {
+        for(auto it = m_checklist.begin(); it != m_checklist.end(); ++it)
+        {
+            if(it->first.second.getFlowType() == HM_FLOW_REMOTE_HOST_TYPE)
+            {
+                cache.insertRemoteEntry(it->first.first, it->first.second, it->second.getTTL(), it->second.getTimeout());
+            }
+        }
+    }
+}
+
+
+void
+HMDataCheckList::invalidateCheck(string& hostname, const HMIPAddress& ipAddress, HMDataHostCheck& hostCheck, const HMDataCheckParams& checkParams, HMStorage* store)
+{
+    auto key = make_pair(hostname, hostCheck);
+    auto ret = m_checklist.equal_range(key);
+    for(auto it = ret.first; it != ret.second; ++it)
+    {
+        if(it->second == checkParams)
+        {
+            HMDataCheckResult result;
+            it->second.invalidateResult(ipAddress, result);
+            store->purgeCheckResult(hostname, ipAddress, hostCheck, it->second);
         }
     }
 }
@@ -637,6 +744,7 @@ HMDataCheckList::insertCheck(string hostGroup, string host, HMDataHostCheck& hos
         }
         string emptyRemoteHost = "";
         HMDataHostCheck tempHostCheck = hostCheck;
+        //setting the remote check to empty to match datahostcheck in remote check type of per host per ip to mat
         tempHostCheck.setRemoteCheck(emptyRemoteHost);
         auto keyRemote = make_pair(host, tempHostCheck);
         m_checklistReference.insert(make_pair(keyRemote, it));

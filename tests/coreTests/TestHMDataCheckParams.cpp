@@ -44,13 +44,66 @@ void TESTNAME::test_basic_query()
 {
     HMDataCheckParams params;
     HMIPAddress ip;
+    ip.set("1.2.3.4");
     params.emptyQuery(ip);
     params.startQuery(ip);
     CPPUNIT_ASSERT_EQUAL(HM_CHECK_IN_PROGRESS, params.getQueryState(ip));
     CPPUNIT_ASSERT(params.getCheckTime(ip) <= HMTimeStamp::now());
     CPPUNIT_ASSERT(!params.checkNeeded(ip));
     CPPUNIT_ASSERT(params.nextCheckTime(ip) > HMTimeStamp::now());
+    set<HMIPAddress> addresses;
+    CPPUNIT_ASSERT(params.getAddresses(HM_DUALSTACK_IPV4_ONLY, addresses));
+    CPPUNIT_ASSERT_EQUAL(1, (int)addresses.size());
+    CPPUNIT_ASSERT(addresses.find(ip) != addresses.end());
+    addresses.clear();
+    CPPUNIT_ASSERT(!params.getAddresses(HM_DUALSTACK_IPV6_ONLY, addresses));
 }
+
+void TESTNAME::test_basic_queryV6()
+{
+    HMDataCheckParams params;
+    HMIPAddress ip;
+    ip.set("::1");
+    params.emptyQuery(ip);
+    params.startQuery(ip);
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_IN_PROGRESS, params.getQueryState(ip));
+    CPPUNIT_ASSERT(params.getCheckTime(ip) <= HMTimeStamp::now());
+    CPPUNIT_ASSERT(!params.checkNeeded(ip));
+    CPPUNIT_ASSERT(params.nextCheckTime(ip) > HMTimeStamp::now());
+    set<HMIPAddress> addresses;
+    CPPUNIT_ASSERT(params.getAddresses(HM_DUALSTACK_IPV6_ONLY, addresses));
+    CPPUNIT_ASSERT_EQUAL(1, (int)addresses.size());
+    CPPUNIT_ASSERT(addresses.find(ip) != addresses.end());
+    addresses.clear();
+    CPPUNIT_ASSERT(!params.getAddresses(HM_DUALSTACK_IPV4_ONLY, addresses));
+}
+
+void TESTNAME::test_basic_querydual()
+{
+    HMDataCheckParams params;
+    HMIPAddress ip;
+    ip.set("::1");
+    HMIPAddress ip1;
+    ip1.set("127.0.0.1");
+    params.emptyQuery(ip);
+    params.startQuery(ip);
+    params.emptyQuery(ip1);
+    params.startQuery(ip1);
+    set<HMIPAddress> addresses;
+    CPPUNIT_ASSERT(params.getAddresses(HM_DUALSTACK_IPV6_ONLY, addresses));
+    CPPUNIT_ASSERT_EQUAL(1, (int)addresses.size());
+    CPPUNIT_ASSERT(addresses.find(ip) != addresses.end());
+    addresses.clear();
+    CPPUNIT_ASSERT(params.getAddresses(HM_DUALSTACK_IPV4_ONLY, addresses));
+    CPPUNIT_ASSERT_EQUAL(1, (int)addresses.size());
+    CPPUNIT_ASSERT(addresses.find(ip1) != addresses.end());
+    addresses.clear();
+    CPPUNIT_ASSERT(params.getAddresses(HM_DUALSTACK_BOTH, addresses));
+    CPPUNIT_ASSERT_EQUAL(2, (int)addresses.size());
+    CPPUNIT_ASSERT(addresses.find(ip) != addresses.end());
+    CPPUNIT_ASSERT(addresses.find(ip1) != addresses.end());
+}
+
 
 void TESTNAME::test_basic_result()
 {

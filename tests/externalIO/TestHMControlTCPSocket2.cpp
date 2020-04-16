@@ -158,7 +158,7 @@ socket.path: test_sock" << endl;
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address);
     addresses.insert(address3);

@@ -100,9 +100,8 @@ HMControlLinuxSocket::listernerShutDown()
 }
 
 void
-HMControlLinuxSocket::handleClient(char* client)
+HMControlLinuxSocket::handleClient(int clientSock)
 {
-    int clientSock = *(int*)client;
     if(clientSock == -1)
     {
         //LCOV_EXCL_START
@@ -112,35 +111,47 @@ HMControlLinuxSocket::handleClient(char* client)
         //LCOV_EXCL_STOP
     }
     HMSocketUtilLinux utilLinux(clientSock, m_socketPath);
-    int done = 0;
+    bool keepOpen = false;
+    bool done = false;
     do
     {
+        done = false;
         struct timeval timeToWait;
         timeToWait.tv_sec = 3;
         timeToWait.tv_usec = 0;
         string command;
-        if (!utilLinux.receiveCommand(command, timeToWait))
+        HM_SOCK_DATA_STATUS status = utilLinux.receiveCommand(command, timeToWait);
+        switch(status)
         {
-            done = 1;
-
-        }
-        else
-        {
-            HMLog(HM_LOG_DEBUG3, "[CORE] HMCommandListener::run command = %s",
+        case HM_SOCK_DATA_EMPTY:
+        case HM_SOCK_DATA_FAILED:
+            keepOpen = false;
+            done = true;
+            break;
+        case HM_SOCK_DATA_TIMEOUT:
+            done = true;
+            break;
+        case HM_SOCK_DATA_OK:
+            HMLog(HM_LOG_DEBUG, "[UNIXSERVER] NetCHASM daemon socket received command = %s",
                     command.c_str());
 
             if (command == "quit")
             {
-                done = 1;
+                done = true;
+                keepOpen = false;
+            }
+            else if (command == HM_CMD_KEEPOPENSTR)
+            {
+                keepOpen = true;
             }
             else
             {
                 handleCommands(command, utilLinux);
             }
         }
-    } while (!done);
-
-    lock_guard<mutex> lg(m_handlerMutex);
+    } while (m_keepRunning && (keepOpen || !done));
+    utilLinux.closeSocket();
+    lock_guard<shared_timed_mutex> lg(m_handlerMutex);
     m_handlerThreadsStatus[this_thread::get_id()] = true;
     return;
 }
@@ -170,9 +181,10 @@ void HMControlLinuxSocket::handleConnections()
             if(clientSock > 0)
             {
                 cleanHandlerThreads();
+                lock_guard<shared_timed_mutex> lg(m_handlerMutex);
                 m_handlerThreads.push_back(
                         thread(&HMControlLinuxSocket::handleClient, this,
-                                (char*)&clientSock));
+                               clientSock));
                 HMLog(HM_LOG_DEBUG, "[CORE] HMCommandListener::run accept on client sock = %d", clientSock);
             }
         }

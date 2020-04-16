@@ -42,7 +42,7 @@ HMDataCheckResult::serialize(char* buf, uint32_t size) const
     ptr->m_forceHostDown = m_forceHostDown;
     ptr->m_queueCheckTime = m_queueCheckTime.getTimeSinceEpoch();
     ptr->m_checkTime = m_checkTime.getTimeSinceEpoch();
-
+    ptr->m_remoteCheckTime = m_remoteCheckTime.getTimeSinceEpoch();
     return sizeof(SerStruct);
 }
 
@@ -83,6 +83,7 @@ HMDataCheckResult::deserialize(char* buf, uint32_t size)
     m_forceHostDown = ptr->m_forceHostDown;
     m_queueCheckTime.setTime(ptr->m_queueCheckTime);
     m_checkTime.setTime(ptr->m_checkTime);
+    m_remoteCheckTime.setTime(ptr->m_remoteCheckTime);
 
     return true;
 }

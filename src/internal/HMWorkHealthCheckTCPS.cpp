@@ -42,7 +42,16 @@ HMWorkHealthCheckTCPS::healthCheck()
         tv.tv_usec = 0;
         tv_checkinfo.tv_sec = 30;
         tv_checkinfo.tv_usec = 0;
-        HMSocketUtilTCPS socketApi(currentState->m_ctx, m_ipAddress, m_hostCheck.getPort(), tv, m_hostCheck.getSourceAddress(), m_hostCheck.getTOSValue());
+        if(currentState->m_ctx == NULL)
+        {
+            HMLog(HM_LOG_ERROR, "[TLSCHECK] SSL context is NULL. Check Master config params and certs - HostName = %s(%s), checkInfo = %s",
+                                m_hostname.c_str(), m_ipAddress.toString().c_str(),
+                                checkInfo.c_str());
+            m_reason = HM_REASON_INTERNAL_ERROR;
+            return HM_WORK_COMPLETE;
+        }
+        HMSocketUtilTCPS socketApi(currentState->m_ctx->getCtx(), m_ipAddress, m_hostCheck.getPort(), tv, m_hostCheck.getSourceAddress(), m_hostCheck.getTOSValue(), false);
+        socketApi.connectServer();
         m_reason = socketApi.getReason();
         switch (m_reason)
         {
@@ -86,6 +95,7 @@ HMWorkHealthCheckTCPS::healthCheck()
                             m_hostname.c_str(), m_ipAddress.toString().c_str(),
                             m_hostCheck.getPort());
                     m_response = HM_RESPONSE_CONNECTED;
+                    m_reason = HM_REASON_SUCCESS;
                 }
                 m_reason = socketApi.getReason();
             }

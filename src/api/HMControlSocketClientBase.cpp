@@ -150,7 +150,7 @@ HMControlSocketClientBase::getWorkQueue(uint32_t &workQLen)
 }
 
 bool
-HMControlSocketClientBase::getHostScheduleInfo(const string& hostGroupName, const string& hostName, HMAPIDNSSchedInfo &dns)
+HMControlSocketClientBase::getHostScheduleInfo(const string& hostGroupName, const string& hostName, HMAPIDNSSchedInfo& dns)
 {
     string cmd =  to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTSCHDINFO + " " + hostGroupName + " " + hostName;
     if (sendMessage(cmd))
@@ -161,6 +161,46 @@ HMControlSocketClientBase::getHostScheduleInfo(const string& hostGroupName, cons
         {
             if (dataPacking.unpackHostSchedInfo(recvbuf, packetSize,
                     dns))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::getRemoteScheduleInfo(const string& hostGroupName, HMAPIHostSchedInfo& hostGroupSchdInfo)
+{
+    string cmd =  to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REMOTESCHDINFO + " " + hostGroupName;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize = 0;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            if (dataPacking.unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
+                    hostGroupSchdInfo))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::getRemoteScheduleInfo(const string& hostGroupName, const string& hostName, HMAPIHostSchedInfo& hostGroupSchdInfo)
+{
+    string cmd =  to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REMOTESCHDINFO + " " + hostGroupName + " " + hostName;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize = 0;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            if (dataPacking.unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
+                    hostGroupSchdInfo))
             {
                 return true;
             }
@@ -373,7 +413,7 @@ HMControlSocketClientBase::unsetForceStatusDown(string& hostGroupName, HMAPIIPAd
 
 
 bool
-HMControlSocketClientBase::reload(string& masterConfig)
+HMControlSocketClientBase::reload(const string& masterConfig)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_RELOAD + " " + masterConfig;
     if (sendMessage(cmd))
@@ -392,6 +432,22 @@ bool
 HMControlSocketClientBase::reload()
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_RELOAD;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            return dataPacking.unpackBool(recvbuf, packetSize);
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::refresh()
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REFRESH;
     if (sendMessage(cmd))
     {
         uint64_t packetSize;
@@ -439,7 +495,7 @@ HMControlSocketClientBase::getHostList(string& hostGroupName, vector<string>& ho
 }
 
 bool
-HMControlSocketClientBase::getHostGroupParams(string& hostGroupName, HMAPICheckInfo& checkInfo, vector<string>& hosts)
+HMControlSocketClientBase::getHostGroupParams(string& hostGroupName, HMAPICheckInfo& checkInfo)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTGROUPPARAMS + " " + hostGroupName;
     if (sendMessage(cmd))
@@ -448,8 +504,7 @@ HMControlSocketClientBase::getHostGroupParams(string& hostGroupName, HMAPICheckI
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackDataHostGroup(recvbuf, packetSize, checkInfo,
-                    hosts);
+            return dataPacking.unpackDataHostGroup(recvbuf, packetSize, checkInfo);
         }
     }
     return false;
@@ -461,9 +516,6 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheck
     hostResults.clear();
     vector<string> hosts;
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTGROUP + " " + hostGroupName;
-    HMLog(HM_LOG_DEBUG3,
-             "[ControlSocketClientBase] getHostGroupCheckResults: Fetching results for : %s",
-                                hostGroupName.c_str());
     if (sendMessage(cmd))
     {
         uint64_t packetSize;
@@ -471,7 +523,7 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheck
         if (receivePacket(recvbuf, packetSize))
         {
             if (dataPacking.unpackHostGroupInfo(recvbuf, packetSize,
-                    checkInfo, hosts, hostResults))
+                    checkInfo, hostResults))
             {
                 return true;
             }
@@ -480,6 +532,32 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheck
     return false;
 }
 
+bool
+HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, const HMAPIHash& hash, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
+{
+    hostResults.clear();
+    uint64_t dataSize = 0;
+    unique_ptr<char[]> data = dataPacking.packHash(hostGroupName, hash, dataSize);
+    vector<string> hosts;
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTGROUP + " " + hostGroupName + " " + to_string(dataSize);
+    if (sendMessage(cmd))
+    {
+        if (sendData(data.get(), dataSize))
+        {
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize))
+            {
+                if (dataPacking.unpackHostGroupInfo(recvbuf, packetSize,
+                        checkInfo, hostResults))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
 
 bool
 HMControlSocketClientBase::getHostResults(string& hostGroupName, string& hostName, vector<HMAPICheckResult>& hostResults)
@@ -493,7 +571,7 @@ HMControlSocketClientBase::getHostResults(string& hostGroupName, string& hostNam
         if (receivePacket(recvbuf, packetSize))
         {
             dataPacking.unpackDataCheckResults(recvbuf, packetSize,
-                    hostResults, hostName);
+                    hostResults);
             return true;
         }
     }
@@ -516,6 +594,32 @@ HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, vector<HMAPIAu
 
             {
                 return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, const HMAPIHash& hash, vector<HMAPIAuxInfo>& auxInfo)
+{
+    auxInfo.clear();
+    uint64_t dataSize = 0;
+    unique_ptr<char[]> data = dataPacking.packHash(hostGroupName, hash, dataSize);
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFB + " " + hostGroupName + " " + to_string(dataSize);
+    if (sendMessage(cmd))
+    {
+        if (sendData(data.get(), dataSize))
+        {
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize))
+            {
+                if (dataPacking.unpackAuxInfo(recvbuf, packetSize, auxInfo))
+
+                {
+                    return true;
+                }
             }
         }
     }
@@ -558,6 +662,33 @@ HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, 
 
             {
                 return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::getLoadFeedback(const string& hostName, const HMAPIDataHostCheck& apiDataHostCheck, vector<HMAPIAuxInfo>& auxResults)
+{
+    auxResults.clear();
+    HMDataHostCheck dataHostCheck(apiDataHostCheck);
+    uint64_t dataSize = 0;
+    unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFBHOST + " " + hostName + " " + to_string(dataSize);
+    if (sendMessage(cmd))
+    {
+        if (sendData(data.get(), dataSize))
+        {
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize))
+            {
+                if (dataPacking.unpackAuxInfo(recvbuf, packetSize, auxResults))
+
+                {
+                    return true;
+                }
             }
         }
     }
@@ -645,6 +776,141 @@ HMControlSocketClientBase::setRemoteQueryOff()
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_SETREMOTEQUERY + " off";
     return sendMessage(cmd);
+}
+
+bool
+HMControlSocketClientBase::getHandlerThreadCount(uint64_t& count)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_GETHANDLERTHREADSCOUNT;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize, false))
+        {
+            return dataPacking.unpackUInt(recvbuf, packetSize, count);
+        }
+    }
+    return false;
+}
+bool
+HMControlSocketClientBase::addHostGroup(string& hostGroupName, HMAPICheckInfo& checkInfo)
+{
+    uint64_t dataSize = 0;
+    HMDataHostGroup hostGroup(hostGroupName, checkInfo);
+    unique_ptr<char[]> data = dataPacking.packDataHostGroup(hostGroup, dataSize);
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_ADDHOSTGROUP + " " + hostGroupName + " "
+            + to_string(dataSize);
+    if (sendMessage(cmd))
+    {
+        if (sendData(data.get(), dataSize))
+        {
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize))
+            {
+                return dataPacking.unpackBool(recvbuf, packetSize);
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::removeHostGroup(string& hostGroupName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REMOVEHOSTGROUP + " " + hostGroupName;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            return dataPacking.unpackBool(recvbuf, packetSize);
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::clearTransaction()
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_CLEARTRANSACTION;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            return dataPacking.unpackBool(recvbuf, packetSize);
+        }
+    }
+    return false;
+}
+
+
+bool
+HMControlSocketClientBase::getTransactionalHashInfo(map<string, HMAPIHash>& hashinfo)
+{
+    hashinfo.clear();
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_GETHOSTGROUPHASH;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            return dataPacking.unpackHashInfo(recvbuf, packetSize,
+                    hashinfo);
+        }
+    }
+    return false;
+}
+
+bool
+HMControlSocketClientBase::getTransactionConfigHash(HMAPIHash& hash)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_GETTRANSCONFIGHASH;
+    if (sendMessage(cmd))
+    {
+        uint64_t packetSize;
+        unique_ptr<char[]> recvbuf;
+        if (receivePacket(recvbuf, packetSize))
+        {
+            return dataPacking.unpackHash(recvbuf, packetSize,
+                    hash);
+        }
+    }
+    return false;
+}
+
+HM_API_COMMIT_TRANSACTION_STATUS
+HMControlSocketClientBase::commitTransaction(const HMAPIHash& hash)
+{
+    uint64_t dataSize = 0;
+    string configHash = "config";
+    unique_ptr<char[]> data = dataPacking.packHash(configHash, hash, dataSize);
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_COMMITTRANSACTION + " " + to_string(dataSize);
+    if (sendMessage(cmd))
+    {
+        if (sendData(data.get(), dataSize))
+        {
+            uint64_t packetSize;
+            unique_ptr<char[]> recvbuf;
+            if (receivePacket(recvbuf, packetSize))
+            {
+                uint8_t status;
+                if(dataPacking.unpackUInt(recvbuf, packetSize, status))
+                {
+                    return (HM_API_COMMIT_TRANSACTION_STATUS)status;
+                }
+                setError("Failure unpacking status");
+                return HM_API_COMMIT_TRANSACTION_FAILURE;
+            }
+        }
+    }
+    return HM_API_COMMIT_TRANSACTION_FAILURE;;
 }
 
 bool
@@ -768,4 +1034,46 @@ HMControlSocketClientBase::getHostMark(const string& hostGroupName, const string
         }
     }
     return false;
+}
+
+
+
+bool
+HMControlSocketClientBase::forceDNSCheck(const string& hostGroupName, const string& hostName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_DNSCHECK + " " + hostGroupName + " " + hostName;
+    return sendMessage(cmd);
+}
+
+bool
+HMControlSocketClientBase::forceDNSCheck(const string& hostGroupName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_DNSCHECK + " " + hostGroupName;
+    return sendMessage(cmd);
+}
+
+bool
+HMControlSocketClientBase::forceHealthCheck(const string& hostGroupName, const string& hostName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_HEALTHCHECK + " " + hostGroupName + " " + hostName;
+    return sendMessage(cmd);
+}
+
+bool
+HMControlSocketClientBase::forceHealthCheck(const string& hostGroupName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_HEALTHCHECK + " " + hostGroupName;
+    return sendMessage(cmd);
+}
+
+bool
+HMControlSocketClientBase::forceRemoteHostGroupCheck(const string& hostGroupName)
+{
+    string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
+            + HM_CMD_REMOTEHOSTGROUPCHECK + " " + hostGroupName;
+    return sendMessage(cmd);
 }

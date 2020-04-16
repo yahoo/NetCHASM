@@ -23,7 +23,7 @@ HMWorkQueue::insertWork(unique_ptr<HMWork>& work)
     if (workType == HM_WORK_DNSLOOKUP)
     {
         HMLog(HM_LOG_DEBUG, "[CORE] Pushing DNS(%s) Task to Queue iptype=%s host=%s",
-                printDnsType(work->m_hostCheck.getDnsPlugin()).c_str(),
+                printDnsType(work->m_hostCheck.getDnsType()).c_str(),
                 work->m_ipAddress.getType() == AF_INET6? "IPv6": "IPv4",
                 work->m_hostname.c_str());
     }

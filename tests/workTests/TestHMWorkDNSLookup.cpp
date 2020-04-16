@@ -8,8 +8,8 @@ HM_WORK_STATUS TestHMWorkDNSLookup::dnsLookup()
 {
     shared_ptr<HMState> currentState;
     m_stateManager->updateState(currentState);
-    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_STATIC, true);
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMDNSLookup dnsHostCheckT(HM_DNS_TYPE_STATIC, true);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
     if(m_v4Targets.size() == 0 && m_v6Targets.size() == 0)
     {
         currentState->m_dnsCache.updateDNSEntry(m_hostname, dnsHostCheckF, m_v4Targets);
@@ -110,12 +110,12 @@ TESTNAME::test_HMWorkDNSLookup_Process_IPV4()
     string timedout = "ipv4.timedout.hm.com";
     string failure = "ipv4.failure.hm.com";
 
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(success, HM_DNS_PLUGIN_STATIC),check1));
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(success, HM_DNS_PLUGIN_STATIC),check2));
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(timedout, HM_DNS_PLUGIN_STATIC),check1));
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(timedout, HM_DNS_PLUGIN_STATIC),check2));
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_PLUGIN_STATIC),check1));
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_PLUGIN_STATIC),check2));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(success, HM_DNS_TYPE_STATIC, ""),check1));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(success, HM_DNS_TYPE_STATIC, ""),check2));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(timedout, HM_DNS_TYPE_STATIC, ""),check1));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(timedout, HM_DNS_TYPE_STATIC, ""),check2));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_TYPE_STATIC, ""),check1));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_TYPE_STATIC, ""),check2));
 
     m_currentState->m_checkList.insertCheck("HostGroup1", success, check1, params, ips);
     m_currentState->m_checkList.insertCheck("HostGroup2", success, check2, params, ips);
@@ -126,7 +126,8 @@ TESTNAME::test_HMWorkDNSLookup_Process_IPV4()
 
     // Basic ipv4 test to make sure the address gets added to the cache and timeout is updated
     HMDataHostCheck hostCheck;
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
+    dnsHostCheckF.setPlugin(HM_DNS_PLUGIN_STATIC);
     m_currentState->m_dnsCache.insertDNSEntry(success, dnsHostCheckF, 500, 60000);
     m_currentState->m_dnsCache.insertDNSEntry(timedout, dnsHostCheckF, 10, 60000);
     m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckF, 500, 60000);
@@ -249,17 +250,17 @@ TESTNAME::test_HMWorkDNSLookup_Process_IPV6()
     string failure = "ipv6.failure.hm.com";
 
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(success, HM_DNS_PLUGIN_STATIC), check1));
+            make_pair(HMDNSTypeMap(success, HM_DNS_TYPE_STATIC, ""), check1));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(success, HM_DNS_PLUGIN_STATIC), check2));
+            make_pair(HMDNSTypeMap(success, HM_DNS_TYPE_STATIC, ""), check2));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(timedout, HM_DNS_PLUGIN_STATIC), check1));
+            make_pair(HMDNSTypeMap(timedout, HM_DNS_TYPE_STATIC, ""), check1));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(timedout, HM_DNS_PLUGIN_STATIC), check2));
+            make_pair(HMDNSTypeMap(timedout, HM_DNS_TYPE_STATIC, ""), check2));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(failure, HM_DNS_PLUGIN_STATIC), check1));
+            make_pair(HMDNSTypeMap(failure, HM_DNS_TYPE_STATIC, ""), check1));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(failure, HM_DNS_PLUGIN_STATIC), check2));
+            make_pair(HMDNSTypeMap(failure, HM_DNS_TYPE_STATIC, ""), check2));
 
     m_currentState->m_checkList.insertCheck("HostGroup1", success, check1,
             params, ips);
@@ -276,8 +277,8 @@ TESTNAME::test_HMWorkDNSLookup_Process_IPV6()
 
     // Basic ipv4 test to make sure the address gets added to the cache and timeout is updated
     HMDataHostCheck hostCheck;
-    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_STATIC, true);
-
+    HMDNSLookup dnsHostCheckT(HM_DNS_TYPE_STATIC, true);
+    dnsHostCheckT.setPlugin(HM_DNS_PLUGIN_STATIC);
     m_currentState->m_dnsCache.insertDNSEntry(success, dnsHostCheckT, 500, 60000);
     m_currentState->m_dnsCache.insertDNSEntry(timedout, dnsHostCheckT, 10, 60000);
     m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckT, 500, 60000);
@@ -442,29 +443,31 @@ TESTNAME::test_HMWorkDNSLookup_Process_IPV4_6()
     ipsboth.insert(addrv6_1);
     ipsboth.insert(addrv6_2);
 
-    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_STATIC, true);
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMDNSLookup dnsHostCheckT(HM_DNS_TYPE_STATIC, true);
+    dnsHostCheckT.setPlugin(HM_DNS_PLUGIN_STATIC);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
+    dnsHostCheckF.setPlugin(HM_DNS_PLUGIN_STATIC);
 
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_PLUGIN_STATIC), checkV4Only));
+            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_TYPE_STATIC, ""), checkV4Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_PLUGIN_STATIC), checkV6Only));
+            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_TYPE_STATIC, ""), checkV6Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_PLUGIN_STATIC), checkBoth));
+            make_pair(HMDNSTypeMap(bothSuccess, HM_DNS_TYPE_STATIC, ""), checkBoth));
 
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v4Success, HM_DNS_PLUGIN_STATIC), checkV4Only));
+            make_pair(HMDNSTypeMap(v4Success, HM_DNS_TYPE_STATIC, ""), checkV4Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v4Success, HM_DNS_PLUGIN_STATIC), checkV6Only));
+            make_pair(HMDNSTypeMap(v4Success, HM_DNS_TYPE_STATIC, ""), checkV6Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v4Success, HM_DNS_PLUGIN_STATIC), checkBoth));
+            make_pair(HMDNSTypeMap(v4Success, HM_DNS_TYPE_STATIC, ""), checkBoth));
 
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v6Success, HM_DNS_PLUGIN_STATIC), checkV4Only));
+            make_pair(HMDNSTypeMap(v6Success, HM_DNS_TYPE_STATIC, ""), checkV4Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v6Success, HM_DNS_PLUGIN_STATIC), checkV6Only));
+            make_pair(HMDNSTypeMap(v6Success, HM_DNS_TYPE_STATIC, ""), checkV6Only));
     m_currentState->m_dnsWaitList.insert(
-            make_pair(HMDNSTypeMap(v6Success, HM_DNS_PLUGIN_STATIC), checkBoth));
+            make_pair(HMDNSTypeMap(v6Success, HM_DNS_TYPE_STATIC, ""), checkBoth));
 
     m_currentState->m_checkList.insertCheck("HostGroup1", bothSuccess,
             checkV4Only, params, ipsv4);
@@ -730,14 +733,14 @@ TESTNAME::test_HMWorkDNSLookup_DnsFailed()
     addr.set("0.0.0.0");
     set<HMIPAddress> ips;
     ips.insert(addr);
-    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_PLUGIN_STATIC),check1));
+    m_currentState->m_dnsWaitList.insert(make_pair(HMDNSTypeMap(failure, HM_DNS_TYPE_STATIC, ""),check1));
 
     m_currentState->m_checkList.insertCheck("HostGroup1", failure, check1, params, ips);
 
     // Basic ipv4 test to make sure the address gets added to the cache and timeout is updated
     HMDataHostCheck hostCheck;
     HMTimeStamp time = HMTimeStamp::now();
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
     m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckF, 10000, 10000);
     dnsLookup = new TestHMWorkDNSLookup(failure, addr, hostCheck, dnsHostCheckF);
     dnsLookup->updateState(&m_state, m_eventQueue);

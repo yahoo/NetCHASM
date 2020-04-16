@@ -21,6 +21,14 @@ threads: 20
 # Specify the dns server.
 # The server can be ipv4 or ipv6 address.
 
+# dns.lookuptype: <type>
+# values: ares
+# default: ares
+
+# dns.statictype: <type>
+# values: static
+# default: static
+
 # http.type: <curl>
 # Plugin to use for HTTP HealthCheck. 
 # Default is curl.
@@ -84,3 +92,51 @@ threads: 20
 # aux.path: <path>
 # Path where the load feedback files should be stored.
 # The path should be a absolute path.
+
+# control-server-linux: <on/off>
+# Enable linux server 
+
+# control-server-ipv4: <on/off>
+# Enable IPv4 server
+
+# control-server-ipv6: <on/off>
+# Enable IPv6 server
+
+# master-check-portv4: <num>
+# Port for IPv4 control server
+
+# master-check-portv6: <num>
+# Port for IPv6 control server
+
+# enable-mutual-auth: <on/off>
+# Enable mutual authentication for remote checks
+
+# enable-secure-remote: <on/off>
+# Enable encrypted comunication for remote health checks
+# the cert-file, key-file needs to set for enabling remote checks
+
+# enable-shared-connection: <on/off>
+# Use persistent connections for remote health checks
+
+# max-remote-connections: <num>
+# Number of persistent connection to be created for remote checks
+# max-remote-connections can be set to a max of 125
+  
+# cert-file: <path>
+# The cert file to be used for remote checks
+
+# key-file: <path>
+# The key file to be used for remote checks
+
+# ca-file: <path>
+# The Certificate Authority for validating TLS remote connections
+
+# hc-cert-file <path>
+# certificate file for TLS mutual authentication in health checks 
+#
+# hc-key-file <path>
+# private key file for TLS mutual authentication in health checks 
+#
+# hc-ca-file <path>
+# CA certificate key file for TLS mutual authentication in health checks
+

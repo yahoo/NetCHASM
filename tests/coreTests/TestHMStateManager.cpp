@@ -42,6 +42,17 @@ void TESTNAME::setUp()
     std::ofstream fout13("conf/dummy_master9.yaml");
     std::ofstream fout14("conf/hm/testconf12.yaml");
 
+    ofstream fout15("conf/hg_in_hg.yaml");
+    ofstream fout16("conf/master_hg_in_hg.yaml");
+    ofstream fout17("conf/hg_in_hg1.yaml");
+    ofstream fout18("conf/master_hg_in_hg1.yaml");
+
+    std::ofstream fout19("master_remotehostgroupcheck.yaml");
+    std::ofstream fout20("conf/remotehostgroupcheck.yaml");
+
+    std::ofstream fout21("master_remotehostcheck.yaml");
+    std::ofstream fout22("conf/remotehostcheck.yaml");
+
 
     fout1 << "threads.max: 5\n\
 threads.min: 2\n\
@@ -335,6 +346,150 @@ socket.path: test_sock" << endl;
        - iconfig.parse3.netchasm.net\n\
        - iconfig.parse4.netchasm.net" << endl;
 
+    fout15 << "-   name: baseconfig.parse1.netchasm.net\n\
+    check-type: tcp\n\
+    check-port: 123\n\
+    host:\n\
+       - hg_in_hg.hm1.com\n\
+       - hg_in_hg.hm2.com\n\
+\n\
+-   name: childconfig.parse1.netchasm.net\n\
+    host-group:\n\
+       - baseconfig.parse1.netchasm.net\n\
+    \n\
+-   name: childconfig1.parse1.netchasm.net\n\
+    host-group:\n\
+       - baseconfig.parse1.netchasm.net\n"<<endl;
+
+    fout16 << "config.load-file: ./conf/hg_in_hg.yaml\n\
+dns.type: none\n\
+tcp.type: rawsocket\n\
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: netchasm.log\n\
+log.type: 0\n\
+log.verbosity: 0\n" << endl;
+
+    fout17 << "-   name: baseconfig.parse1.netchasm.net\n\
+    check-type: tcp\n\
+    check-port: 123\n\
+    host:\n\
+       - hg_in_hg.hm1.com\n\
+       - hg_in_hg.hm2.com\n\
+\n\
+-   name: childconfig.parse1.netchasm.net\n\
+    host-group:\n\
+       - baseconfig.parse1.netchasm.net\n\
+    \n\
+-   name: childconfig1.parse1.netchasm.net\n\
+    host-group:\n\
+       - childconfig.parse1.netchasm.net\n"<<endl;
+
+    fout18 << "config.load-file: ./conf/hg_in_hg1.yaml\n\
+dns.type: none\n\
+tcp.type: rawsocket\n\
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: netchasm.log\n\
+log.type: 0\n\
+log.verbosity: 0\n" << endl;
+
+    fout19 << "config.load-file: ./conf/remotehostgroupcheck.yaml\n\
+dns.type: none\n\
+tcp.type: rawsocket\n\
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: netchasm.log\n\
+remote-fetch: hostgroup\n\
+log.type: 0\n\
+log.verbosity: 0\n" << endl;
+
+
+    fout20 << "-   name: config1.parse1.netchasm.net\n\
+    check-type: tcp\n\
+    check-port: 123\n\
+    host:\n\
+       - lfb3.hm1.com\n\
+       - lfb3.hm2.com\n\
+\n\
+-   name: config2.parse1.netchasm.net\n\
+    check-port: 80\n\
+    check-type: http\n\
+    host:\n\
+       - mrf1.hm1.com\n\
+       - mrf1.hm2.com\n\
+\n\
+-   name: config1.parse2.netchasm.net\n\
+    check-port: 443\n\
+    check-type: https-no-peer-check\n\
+    host:\n\
+       - e1.hm.com\n\
+       - e2.hm.com\n\
+\n\
+-   name: config2.parse2.netchasm.net\n\
+    check-type: dnsvc\n\
+    host:\n\
+       - g4.hm.com\n\
+\n\
+-   name: config3.parse2.netchasm.net\n\
+    check-port: 21\n\
+    check-type: ftp\n\
+    host:\n\
+       - dh1.hm.com\n\
+       - dh2.hm.com\n\
+-   master-check-domain: parse2.netchasm.net\n\
+    master-check-host: hm.ref.com\n\
+-   master-check-mode: slave\n\n"<<endl;
+
+    fout21 << "config.load-file: ./conf/remotehostcheck.yaml\n\
+dns.type: none\n\
+tcp.type: rawsocket\n\
+db.type: mdbm\n\
+db.path: netchasm.mdbm\n\
+log.path: netchasm.log\n\
+remote-fetch: host\n\
+log.type: 0\n\
+log.verbosity: 0\n" << endl;
+
+
+    fout22 << "-   name: config1.parse1.netchasm.net\n\
+    check-type: tcp\n\
+    check-port: 123\n\
+    host:\n\
+       - lfb3.hm1.com\n\
+       - lfb3.hm2.com\n\
+\n\
+-   name: config2.parse1.netchasm.net\n\
+    check-port: 80\n\
+    check-type: http\n\
+    host:\n\
+       - mrf1.hm1.com\n\
+       - mrf1.hm2.com\n\
+\n\
+-   name: config1.parse2.netchasm.net\n\
+    check-port: 443\n\
+    check-type: https-no-peer-check\n\
+    host:\n\
+       - e1.hm.com\n\
+       - e2.hm.com\n\
+\n\
+-   name: config2.parse2.netchasm.net\n\
+    check-type: dnsvc\n\
+    host:\n\
+       - g4.hm.com\n\
+\n\
+-   name: config3.parse2.netchasm.net\n\
+    check-port: 21\n\
+    check-type: ftp\n\
+    host:\n\
+       - dh1.hm.com\n\
+       - dh2.hm.com\n\
+-   master-check-domain: parse2.netchasm.net\n\
+    master-check-host: hm.ref.com\n\
+-   master-check-mode: slave\n\n"<<endl;
+
+
+
     fout1.close();
     fout2.close();
     fout3.close();
@@ -349,6 +504,14 @@ socket.path: test_sock" << endl;
     fout12.close();
     fout13.close();
     fout14.close();
+    fout15.close();
+    fout16.close();
+    fout17.close();
+    fout18.close();
+    fout19.close();
+    fout20.close();
+    fout21.close();
+    fout22.close();
 }
 
 void TESTNAME::tearDown()
@@ -365,12 +528,21 @@ void TESTNAME::tearDown()
     remove("conf/dummy_master8.yaml");
     remove("conf/dummy_masterbackend.yaml");
     remove("conf/dummy_masterbackendempty.yaml");
-    //remove("conf/hm/testconf2.yaml");
-    //remove("conf/dummy_master9.yaml");    
+    remove("conf/hm/testconf12.yaml");
+    remove("conf/hm/testconf.yaml");
+    remove("conf/dummy_master9.yaml");
     remove("conf/hm");
-    remove("conf");
     remove("netchasm.mdbm");
     remove("netchasm.text");
+    remove("conf/hg_in_hg.yaml");
+    remove("conf/master_hg_in_hg.yaml");
+    remove("conf/hg_in_hg1.yaml");
+    remove("conf/master_hg_in_hg1.yaml");
+    remove("master_remotehostgroupcheck.yaml");
+    remove("conf/remotehostgroupcheck.yaml");
+    remove("master_remotehostcheck.yaml");
+    remove("conf/remotehostcheck.yaml");
+    remove("conf");
 }
 
 void TESTNAME::test_statemanager()
@@ -461,6 +633,59 @@ void TESTNAME::test_config_parse()
     string master_config = "conf/dummy_master.yaml";
     CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
     shared_ptr<HMState> state1_ptr = make_shared<HMState>();
+}
+
+void TESTNAME::test_hostgrouphash()
+{
+    HMStateManager sm;
+    string master_config = "conf/dummy_master.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> state1_ptr = make_shared<HMState>();
+    CPPUNIT_ASSERT_EQUAL(true, sm.updateState(state1_ptr));
+
+    string hostGroupName = "config.parse3.netchasm.net";
+    HMDataHostGroup hostGroup(hostGroupName);
+    hostGroup.setDualStack(HM_DUALSTACK_IPV6_ONLY);
+    string check_info = "//hm/checkInfo-ssl";
+    hostGroup.setCheckInfo(check_info);
+    hostGroup.setPort(443);
+    hostGroup.setMeasurementOptions(HM_RT_SMOOTHED_TOTAL);
+    hostGroup.setCheckType(HM_CHECK_HTTPS_NO_PEER_CHECK);
+    hostGroup.setPassthroughInfo(0);
+    hostGroup.setCheckTTL(300000);
+    string host =  "e1.hm.com";
+    hostGroup.addHost(host);
+    host = "e2.hm.com";
+    hostGroup.addHost(host);
+    HMHashMD5 md5;
+    CPPUNIT_ASSERT(md5.init());
+    hostGroup.getHash(md5);
+    HMHash hash;
+    md5.final(hash);
+    auto hostgroupIter = state1_ptr->m_hostGroups.find(hostGroupName);
+    CPPUNIT_ASSERT(hostgroupIter != state1_ptr->m_hostGroups.end());
+    CPPUNIT_ASSERT(hash == hostgroupIter->second.getHashValue());
+    hostGroupName = "config.parse4.netchasm.net";
+    HMDataHostGroup hostGroup1(hostGroupName);
+    hostGroup1.setPassthroughInfo(0);
+    hostGroup1.setCheckTTL(60000);
+    hostGroup1.setCheckTimeout(10000);
+    hostGroup1.setPort(53);
+    hostGroup1.setMeasurementOptions(HM_RT_SMOOTHED_CONNECT);
+    hostGroup1.setCheckType(HM_CHECK_DNSVC);
+    check_info = "healthcheck.hm.com";
+    hostGroup1.setCheckInfo(check_info);
+    host = "g4.hm.com";
+    hostGroup1.addHost(host);
+    HMHashMD5 md5_1;
+    CPPUNIT_ASSERT(md5_1.init());
+    hostGroup1.getHash(md5_1);
+    HMHash hash1;
+    md5_1.final(hash1);
+    auto hostgroupIter1 = state1_ptr->m_hostGroups.find(hostGroupName);
+    CPPUNIT_ASSERT(hostgroupIter1 != state1_ptr->m_hostGroups.end());
+    HMDataHostGroup hg = hostgroupIter1->second;
+    CPPUNIT_ASSERT(hash1 == hostgroupIter1->second.getHashValue());
 }
 
 void TESTNAME::test_config_parse1()
@@ -662,4 +887,121 @@ void TESTNAME::test_childhostgroup_2()
     string master_config = "conf/dummy_master9.yaml";
     CPPUNIT_ASSERT_EQUAL(false, sm.loadDaemonState(master_config, HM_LOG_ERROR));
 
+}
+
+void TESTNAME::test_hg_in_hg()
+{
+    HMStateManager sm;
+    string master_config = "conf/master_hg_in_hg.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("baseconfig.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm1.com") != it->second.getHostList()->end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm2.com") != it->second.getHostList()->end());
+    it = current->m_hostGroups.find("childconfig.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm1.com") != it->second.getHostList()->end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm2.com") != it->second.getHostList()->end());
+    it = current->m_hostGroups.find("childconfig1.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm1.com") != it->second.getHostList()->end());
+    CPPUNIT_ASSERT(find(it->second.getHostList()->begin(), it->second.getHostList()->end(), "hg_in_hg.hm2.com") != it->second.getHostList()->end());
+}
+
+void TESTNAME::test_hg_in_hg1()
+{
+    HMStateManager sm;
+    string master_config = "conf/master_hg_in_hg1.yaml";
+    CPPUNIT_ASSERT_EQUAL(false, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+}
+
+
+void TESTNAME::test_remote_hostgroup()
+{
+    HMStateManager sm;
+    string master_config = "master_remotehostgroupcheck.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    auto it = current->m_hostGroups.find("config1.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_TCP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(123, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_DNS_HEALTH_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config2.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(80, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_DNS_HEALTH_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config1.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTPS_NO_PEER_CHECK, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(443, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config2.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_DNSVC, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config3.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+}
+
+void TESTNAME::test_remote_host()
+{
+    HMStateManager sm;
+    string master_config = "master_remotehostcheck.yaml";
+    CPPUNIT_ASSERT_EQUAL(true, sm.loadDaemonState(master_config, HM_LOG_ERROR));
+    shared_ptr<HMState> current;
+    sm.updateState(current);
+    for(auto& it : current->m_hostGroups)
+    {
+        cout<<it.first<<endl;
+    }
+    auto it = current->m_hostGroups.find("config1.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_TCP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(123, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_DNS_HEALTH_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config2.parse1.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(80, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_DNS_HEALTH_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config1.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_HTTPS_NO_PEER_CHECK, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(443, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config2.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_DNSVC, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
+
+    it = current->m_hostGroups.find("config3.parse2.netchasm.net");
+    CPPUNIT_ASSERT(it != current->m_hostGroups.end());
+    CPPUNIT_ASSERT_EQUAL(HM_CHECK_FTP, it->second.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(21, (int)it->second.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, it->second.getFlowType());
+    CPPUNIT_ASSERT_EQUAL(HM_DNS_TYPE_LOOKUP, it->second.getDNSType());
 }

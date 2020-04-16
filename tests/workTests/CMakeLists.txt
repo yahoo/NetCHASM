@@ -1,7 +1,7 @@
 include(ExternalProject)
 project(netchasm)
 
-list(APPEND SOURCES "TestHMWork.cpp" "TestHMWorkAuxFetch.cpp" "TestHMWorkDNSLookup.cpp" "TestHMWorkHealthCheck.cpp")
+list(APPEND SOURCES "TestHMWork.cpp" "TestHMWorkAuxFetch.cpp" "TestHMWorkDNSLookup.cpp" "TestHMWorkHealthCheck.cpp" "TestHMWorkRemoteCheck.cpp" "TestHMWorkRemoteHostCheck.cpp")
 if(NOT SKIP-ARES)
 	list(APPEND SOURCES "TestHMWorkAresTest.cpp")
 endif()

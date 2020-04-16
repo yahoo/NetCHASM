@@ -28,10 +28,25 @@ SOCKET-PATH
 .PP 
 			Returns length of Scheduler queue
 
+.BI "		refresh"
+.PP 
+			Refresh configs in healthmon
+
+.BI "		reload "
+[MASTER-CONFIG]
+.PP 
+			Reloads the healthmon deamon. The master config is optional
+
 .BI "		hostschdinfo" 
 HOSTGROUP-NAME HOSTNAME
 .PP 
 			Returns Scheduling Information about a host in the hostgroup. It produces both DNS and Health check information
+
+.BI "		remoteschdinfo" 
+HOSTGROUP-NAME HOSTNAME
+.PP 
+			Returns Remote Scheduling Information about a host in the hostgroup. It produces both DNS and Health check information
+
 
 .BI "		hostset" 
 HOSTGROUP-NAME HOSTNAME ON|OFF
@@ -47,6 +62,11 @@ HOSTGROUP-NAME [HOSTNAME]
 HOSTGROUP-NAME [HOSTNAME]
 .PP 
 			Instruct the daemon to performs Health check
+
+.BI "		remotehostgroupcheck "
+HOSTGROUP-NAME
+.PP 
+			Instruct the daemon to performs remote hostgroup check
 
 .BI "		getloglevel" 
 .PP 

@@ -19,6 +19,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr2);
     CPPUNIT_TEST(test_cmdlstnr3);
     CPPUNIT_TEST(test_cmdlstnr4);
+    CPPUNIT_TEST(test_cmdlstnr5);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -31,6 +32,7 @@ protected:
     void test_cmdlstnr2();
     void test_cmdlstnr3();
     void test_cmdlstnr4();
+    void test_cmdlstnr5();
     HMStateManager *sm;
     std::thread sm_thr;
     HMTimeStamp now;
@@ -42,5 +44,7 @@ protected:
     std::string certfile;
     std::string keyfile;
     std::string caFile;
+    HMHash hash;
+    HMHash hash1;
 };
 #endif /* TEST_HMCONTROLTLSSOCKET4_H_ */

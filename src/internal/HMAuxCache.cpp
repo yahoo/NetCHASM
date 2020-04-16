@@ -261,9 +261,13 @@ HMAuxOOB::print()
     ss << "Out-of-Band(OOB) Entry\n"
             << "Host:\t" << m_host << "\n"
             << "IP:\t" << m_ip.toString() << "\n"
-            << "Resource:\t" << m_resource << "\n"
-            << "Force Down:\t" << ((m_forceDown) ? "true\n" : "false\n")
-            << "Shed:\t" << m_shed
+            << "Resource:\t" << m_resource << "\n";
+    // Printing forcedown tag on if true or false is present
+    if(m_forceDown != HM_OOB_FORCEDOWN_NONE)
+    {
+        ss << "Force Down:\t" << ((m_forceDown == HM_OOB_FORCEDOWN_TRUE) ? "true\n" : "false\n");
+    }
+    ss << "Shed:\t" << m_shed << "\n"
             << "Time Stamp:\t" << m_ts.print("(%a %b %d %H:%M:%S %Y)");
     return ss.str();
 }
@@ -298,7 +302,7 @@ HMAuxOOB::internalDeserialize(char* buf, uint32_t size)
     m_type = HM_AUX_TYPE(ptr->m_type);
     m_ip = ptr->m_ip;
     m_ts.setTime(ptr->m_ts);
-    m_forceDown = ptr->m_forceDown;
+    m_forceDown = (HM_OOB_FORCEDOWN)ptr->m_forceDown;
     m_shed = ptr->m_shed;
 
     char* src = buf + sizeof(SerStruct);

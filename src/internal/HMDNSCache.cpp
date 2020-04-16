@@ -41,7 +41,7 @@ void
 HMDNSCache::updateReloadDNSEntry(const string& name,
         set<HMIPAddress>& addresses,
         const HMDNSResult& v4Result,
-        const HMDNSResult& v6Result, HM_DNS_PLUGIN_CLASS plugin)
+        const HMDNSResult& v6Result, const HMDNSLookup& dnsLookup)
 {
     bool ipv4 = false;
     bool ipv6 = false;
@@ -66,7 +66,7 @@ HMDNSCache::updateReloadDNSEntry(const string& name,
 
     if(ipv4)
     {
-        HMDNSLookup dnsHostCheck(plugin, false);
+        HMDNSLookup dnsHostCheck(dnsLookup.getType(), false, dnsLookup.getRemoteCheckGroup());
         auto key = make_pair(name, dnsHostCheck);
         v4Entry = m_cache.find(key);
         if(v4Entry == m_cache.end())
@@ -75,7 +75,7 @@ HMDNSCache::updateReloadDNSEntry(const string& name,
         }
         v4Entry->second.setResultTime(v4Result.getResultTime());
         v4Entry->second.updateQuery(v4Address);
-        if(plugin == HM_DNS_PLUGIN_STATIC)
+        if(dnsLookup.getType() == HM_DNS_TYPE_STATIC)
         {
             v4Address.erase(HMIPAddress(AF_INET));
             addStaticDNSAddress(name, v4Address);
@@ -84,7 +84,7 @@ HMDNSCache::updateReloadDNSEntry(const string& name,
 
     if(ipv6)
     {
-        HMDNSLookup dnsHostCheck(plugin, true);
+        HMDNSLookup dnsHostCheck(dnsLookup.getType(), true, dnsLookup.getRemoteCheckGroup());
         auto key = make_pair(name, dnsHostCheck);
         v6Entry = m_cache.find(key);
         if(v6Entry == m_cache.end())
@@ -93,7 +93,7 @@ HMDNSCache::updateReloadDNSEntry(const string& name,
         }
         v6Entry->second.setResultTime(v6Result.getResultTime());
         v6Entry->second.updateQuery(v6Address);
-        if (plugin == HM_DNS_PLUGIN_STATIC)
+        if (dnsLookup.getType() == HM_DNS_TYPE_STATIC)
         {
             v6Address.erase(HMIPAddress(AF_INET6));
             addStaticDNSAddress(name, v6Address);
@@ -102,15 +102,15 @@ HMDNSCache::updateReloadDNSEntry(const string& name,
 }
 
 void
-HMDNSCache::updateDNSEntry(string name, HMDNSLookup& dnsHostCheck, set<HMIPAddress>& addresses)
+HMDNSCache::updateDNSEntry(const string& name, HMDNSLookup& dnsHostCheck, const set<HMIPAddress>& addresses)
 {
     auto key = make_pair(name, dnsHostCheck);
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        HMLog(HM_LOG_ERROR,
+        HMLog(HM_LOG_NOTICE,
                 "Missing DNS entry in cache in function updateDNSEntry for host %s - DNS check type %s",
-                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+                name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return;
     }
     it->second.updateQuery(addresses);
@@ -123,9 +123,9 @@ HMDNSCache::finishQuery(string name, HMDNSLookup& dnsHostCheck, bool success)
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        HMLog(HM_LOG_ERROR,
+        HMLog(HM_LOG_NOTICE,
                 "Missing DNS entry in cache in function finishquery for host %s - DNS check type %s",
-                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+                name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return;
 
     }
@@ -139,7 +139,7 @@ HMDNSCache::getAddresses(const string& name, uint8_t dualstack, const HMDNSLooku
 
     if(dualstack & HM_DUALSTACK_IPV4_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), false);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), false, dnsHostCheck.getRemoteCheckGroup());
         if(getDNSResult(name, dnsCheck, res))
         {
             res->second.getAddresses(vaddress);
@@ -147,7 +147,7 @@ HMDNSCache::getAddresses(const string& name, uint8_t dualstack, const HMDNSLooku
     }
     if(dualstack & HM_DUALSTACK_IPV6_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), true);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), true, dnsHostCheck.getRemoteCheckGroup());
         if(getDNSResult(name, dnsCheck, res))
         {
             res->second.getAddresses(vaddress);
@@ -163,7 +163,7 @@ HMDNSCache::getExpiredAddresses(const string& name, uint8_t dualstack, const HMD
     map<pair<string,HMDNSLookup>,HMDNSResult>::const_iterator res;
     if (dualstack & HM_DUALSTACK_IPV4_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), false);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), false, dnsHostCheck.getRemoteCheckGroup());
         if (getDNSResult(name, dnsCheck, res))
         {
             res->second.getExpiredAddresses(vaddress);
@@ -171,7 +171,7 @@ HMDNSCache::getExpiredAddresses(const string& name, uint8_t dualstack, const HMD
     }
     if (dualstack & HM_DUALSTACK_IPV6_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), true);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), true, dnsHostCheck.getRemoteCheckGroup());
         if (getDNSResult(name, dnsCheck, res) )
         {
             res->second.getExpiredAddresses(vaddress);
@@ -217,6 +217,12 @@ HMDNSCache::queryNeeded(const string& name, const HMDNSLookup& dnsHostCheck) con
             }
         }
     }
+    else
+    {
+        HMLog(HM_LOG_NOTICE,
+                        "Missing DNS entry in cache in function queryNeeded for host %s - DNS check type %s",
+                        name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
+    }
     if (alreadyScheduled || isCheckTimeChanged)
     {
         result = HM_SCHEDULE_IGNORE;
@@ -235,7 +241,10 @@ HMDNSCache::nextQueryTime(const string& name, const HMDNSLookup& dnsHostCheck) c
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        return HMTimeStamp::now();
+        HMLog(HM_LOG_ERROR,
+                        "Missing DNS entry in cache in function nextQueryTime for host %s - DNS check type %s",
+                        name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
+        return HMTimeStamp::now() + HMTimeStamp::HOURINMS;
     }
     return it->second.nextQueryTime();
 }
@@ -247,9 +256,9 @@ HMDNSCache::startDNSQuery(const string& name, HMDNSLookup& dnsHostCheck)
     auto it = m_cache.find(key);
     if(it == m_cache.end())
     {
-        HMLog(HM_LOG_ERROR,
+        HMLog(HM_LOG_NOTICE,
                 "Missing DNS entry in cache in function startDNSQuery for host %s - DNS check type %s",
-                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+                name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return false;
     }
     it->second.startQuery();
@@ -266,33 +275,57 @@ HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& q
 
     if(it == m_cache.end())
     {
-        HMLog(HM_LOG_ERROR,
+        HMLog(HM_LOG_NOTICE,
                 "Missing DNS entry in cache in function queueDNSQuery for host %s - DNS check type %s",
-                name.c_str(), printDnsType(dnsHostCheck.getPlugin()).c_str());
+                name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return;
     }
     unique_ptr<HMWork> dnslookup;
-    switch(dnsHostCheck.getPlugin())
+    switch(dnsHostCheck.getType())
     {
+    case HM_DNS_TYPE_STATIC:
+        switch (dnsHostCheck.getPlugin())
+        {
         case HM_DNS_PLUGIN_NONE:
             return;
         case HM_DNS_PLUGIN_STATIC:
-            dnslookup = make_unique<HMWorkDNSLookupStatic>(HMWorkDNSLookupStatic(it->first.first,
-                HMIPAddress((it->first.second.isIpv6()) ? AF_INET6 : AF_INET),
-                HMDataHostCheck(it->first.second.getPlugin()), it->first.second));
+        default:
+            dnslookup = make_unique<HMWorkDNSLookupStatic>(
+                    HMWorkDNSLookupStatic(it->first.first,
+                            HMIPAddress((it->first.second.isIpv6()) ?
+                            AF_INET6 :
+                                                                      AF_INET),
+                            HMDataHostCheck(it->first.second.getType()),
+                            it->first.second));
             break;
+        }
+        break;
+    case HM_DNS_TYPE_LOOKUP:
+        switch (dnsHostCheck.getPlugin())
+        {
+        case HM_DNS_PLUGIN_NONE:
+            return;
         case HM_DNS_PLUGIN_ARES:
         default:
-        {
+            {
 #ifdef USE_ARES
-            dnslookup = make_unique<HMWorkDNSLookupAres>
-                (HMWorkDNSLookupAres(name, HMIPAddress((dnsHostCheck.isIpv6())?AF_INET6:AF_INET),
-                        HMDataHostCheck(it->first.second.getPlugin()), it->first.second));
+            dnslookup = make_unique<HMWorkDNSLookupAres>(
+                    HMWorkDNSLookupAres(name,
+                            HMIPAddress((dnsHostCheck.isIpv6()) ?
+                            AF_INET6 :
+                                                                  AF_INET),
+                            HMDataHostCheck(it->first.second.getType()),
+                            it->first.second));
 #else
-                HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
-                return;
+            HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
+            return;
 #endif
+            }
         }
+    }
+    if (!it->first.second.getRemoteCheckGroup().empty())
+    {
+        dnslookup->setReschedule(false);
     }
     dnslookup->m_start = HMTimeStamp::now();
     dnslookup->m_end = HMTimeStamp::now() + it->second.getDNSTTL();
@@ -307,30 +340,55 @@ HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool res
     {
         // Check for a DNS check
         unique_ptr<HMWork> dnslookup;
+        if(!it->first.second.getRemoteCheckGroup().empty())
+        {
+            continue;
+        }
         HM_SCHEDULE_STATE state = this->queryNeeded(it->first.first, it->first.second);
         if(state == HM_SCHEDULE_EVENT || state == HM_SCHEDULE_WORK)
         {
             // if there is no active query, then we add one
-            switch (it->first.second.getPlugin())
+            switch (it->first.second.getType())
             {
+            case HM_DNS_TYPE_STATIC:
+                switch (it->first.second.getPlugin())
+                {
                 case HM_DNS_PLUGIN_NONE:
                     continue;
                 case HM_DNS_PLUGIN_STATIC:
-                    dnslookup = make_unique<HMWorkDNSLookupStatic>(HMWorkDNSLookupStatic(it->first.first,
-                        HMIPAddress((it->first.second.isIpv6()) ? AF_INET6 : AF_INET),
-                        HMDataHostCheck(it->first.second.getPlugin()), it->first.second));
+                default:
+                    dnslookup = make_unique<HMWorkDNSLookupStatic>(
+                            HMWorkDNSLookupStatic(it->first.first,
+                                    HMIPAddress(
+                                            (it->first.second.isIpv6()) ?
+                                                    AF_INET6 : AF_INET),
+                                    HMDataHostCheck(it->first.second.getType()),
+                                    it->first.second));
                     break;
+                }
+                break;
+            case HM_DNS_TYPE_LOOKUP:
+                switch (it->first.second.getPlugin())
+                {
+                case HM_DNS_PLUGIN_NONE:
+                    continue;
                 case HM_DNS_PLUGIN_ARES:
                 default:
-                {
+                    {
 #ifdef USE_ARES
-                    dnslookup = make_unique<HMWorkDNSLookupAres>(HMWorkDNSLookupAres(it->first.first,
-                        HMIPAddress((it->first.second.isIpv6()) ? AF_INET6 : AF_INET),
-                        HMDataHostCheck(it->first.second.getPlugin()), it->first.second));
+                    dnslookup = make_unique<HMWorkDNSLookupAres>(
+                            HMWorkDNSLookupAres(it->first.first,
+                                    HMIPAddress(
+                                            (it->first.second.isIpv6()) ?
+                                                    AF_INET6 : AF_INET),
+                                    HMDataHostCheck(it->first.second.getType()),
+                                    it->first.second));
 #else
-                HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
-                continue;
+                    HMLog(HM_LOG_ERROR, "ARES disabled during build. Please enable it for the ARES to work");
+                    continue;
 #endif
+                    }
+                    break;
                 }
             }
             dnslookup->m_start = HMTimeStamp::now();
@@ -353,7 +411,7 @@ HMDNSCache::isValidAddress(const string& name, uint8_t dualstack, const HMDNSLoo
 
     if(dualstack & HM_DUALSTACK_IPV4_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), false);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), false, dnsHostCheck.getRemoteCheckGroup());
         if(getDNSResult(name, dnsCheck, res) && res->second.isValidAddress(address))
         {
             return true;
@@ -361,7 +419,7 @@ HMDNSCache::isValidAddress(const string& name, uint8_t dualstack, const HMDNSLoo
     }
     if(dualstack & HM_DUALSTACK_IPV6_ONLY)
     {
-        HMDNSLookup dnsCheck(dnsHostCheck.getPlugin(), true);
+        HMDNSLookup dnsCheck(dnsHostCheck.getType(), true, dnsHostCheck.getRemoteCheckGroup());
         if(getDNSResult(name, dnsCheck, res) && res->second.isValidAddress(address))
         {
             return true;

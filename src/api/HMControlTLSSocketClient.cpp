@@ -209,6 +209,45 @@ HMControlTLSSocketClient::recvMessage(char* data, uint64_t size)
         setError("Socket not connected");
         return false;
     }
-    int n = SSL_read(m_ssl, data, size);
-    return n == (int) size;
+    uint64_t ret = 0;
+    while (ret < size)
+    {
+
+        int read_cont;
+        do
+        {
+            int ssl_error;
+            read_cont = 0;
+            int tret = SSL_read(m_ssl, data + ret, size - ret);
+            if (tret <= 0)
+            {
+                return false;
+            }
+            //check SSL errors
+            switch (ssl_error = SSL_get_error(m_ssl, tret))
+            {
+            case SSL_ERROR_NONE:
+                ret += tret;
+                break;
+
+            case SSL_ERROR_WANT_READ:
+                //the operation did not complete, block the read
+                read_cont = 1;
+                break;
+
+            case SSL_ERROR_ZERO_RETURN:
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_SYSCALL:
+            default:
+                setError(ERR_error_string(ERR_get_error(), NULL));
+                return false;
+            }
+        }
+        while (SSL_pending(m_ssl) && !read_cont);
+    }
+    if(ret != size)
+    {
+        return false;
+    }
+    return true;
 }

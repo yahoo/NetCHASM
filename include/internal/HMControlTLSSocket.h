@@ -36,6 +36,14 @@ public:
     void handleClient(SSL* ssl);
     //! Handle client connections
     void handleConnections();
+    /*!
+          Handle secure accept
+          \param expiry time to wait for the connection to be established.
+          \param connection socket descriptor
+          \param client port for debug info
+     */
+    void secureAccept(HMTimeStamp expiry, int clientSock, int clientport);
+
 
 private:
     int m_socket;

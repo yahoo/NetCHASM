@@ -10,6 +10,7 @@
 #include "HMDataHostCheck.h"
 #include "HMDataCheckParams.h"
 #include "HMConstants.h"
+#include "HMStorage.h"
 #include "HMHashMD5.h"
 
 class HMHashMD5;
@@ -35,12 +36,15 @@ public:
         m_passthroughInfo(0),
         m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
         m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
-        m_DNSCheckPlugin(HM_DNS_PLUGIN_ARES),
-        m_TOSValue(0){};
+        m_DNSType(HM_DNS_TYPE_LOOKUP),
+        m_TOSValue(0),
+        m_flowType(HM_FLOW_DNS_HEALTH_TYPE) {};
 
     bool operator<(const HMDataHostGroup& k) const;
     bool operator==(const HMDataHostGroup& k) const;
     bool operator!=(const HMDataHostGroup& k) const;
+
+    HMDataHostGroup(const std::string& groupName, HMAPICheckInfo& checkInfo);
 
     //! Fill in a host check data structure based on this host group info.
     /*!
@@ -401,6 +405,9 @@ public:
      */
     HM_DISTRIBUTED_FALLBACK getDistributedFallback() const;
 
+    const HMHash& getHashValue() const;
+
+    void setHashValue(const HMHash& hashValue);
     //! Get the source ip specified for the check.
     /*!
          Get the source ip specified for the check.
@@ -441,14 +448,28 @@ public:
          Get the type of DNS check for the host group.
          \return the DNS check type.
      */
-    HM_DNS_PLUGIN_CLASS getDnsCheckPlugin() const;
+    HM_DNS_TYPE getDNSType() const;
 
     //! Set the type of DNS check.
     /*!
          Set the type of DNS check for the health check.
          \param the DNS check type.
      */
-    void setDnsCheckPlugin(HM_DNS_PLUGIN_CLASS dnsCheckPlugin);
+    void setDNSType(HM_DNS_TYPE dnstype);
+
+    //! Get the type of flow type.
+    /*!
+         Get the type of flow type for the host group.
+         \return the flow type.
+     */
+    HM_FLOW_TYPE getFlowType() const;
+
+    //! Set the type of flow type.
+    /*!
+         Set the type of flow type for the health check.
+         \param the flow type.
+     */
+    void setFlowType(HM_FLOW_TYPE flowType);
 
 private:
 
@@ -472,9 +493,11 @@ private:
     uint32_t m_flapThreshold;
     uint32_t m_passthroughInfo;
     HM_DISTRIBUTED_FALLBACK m_distributedFallback;
+    HMHash m_hashValue;
     HM_CHECK_PLUGIN_CLASS m_checkPlugin;
-    HM_DNS_PLUGIN_CLASS m_DNSCheckPlugin;
+    HM_DNS_TYPE m_DNSType;
     uint8_t m_TOSValue;
+    HM_FLOW_TYPE m_flowType;
     std::vector<std::string> m_hostGroups;
     std::vector<std::string> m_hosts;
 
@@ -505,6 +528,7 @@ private:
         HMIPAddress m_sourceAddress;
         uint8_t m_TOSValue;
         uint8_t m_DNSCheckPlugin;
+        uint8_t m_flowType;
     };
 };
 

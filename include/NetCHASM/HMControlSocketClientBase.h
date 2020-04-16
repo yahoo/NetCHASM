@@ -45,6 +45,24 @@ public:
     bool getHostScheduleInfo(const std::string& hostGroupName, const std::string& hostName, HMAPIDNSSchedInfo &dns);
 
     /*!
+         Get the schedule information for remote hostgroup check .
+         \param hostGroupName to get the schedule info.
+         \param the HMAPIHostSchedInfo struct to fill.
+         \return true if the struct was filled correctly.
+     */
+    bool getRemoteScheduleInfo(const std::string& hostGroupName, HMAPIHostSchedInfo& hostGroupSchdInfo);
+
+    /*!
+         Get the schedule information for remote hostgroup check .
+         \param hostGroupName to get the schedule info.
+         \param hostName to get the schedule info.
+         \param the HMAPIHostSchedInfo struct to fill.
+         \return true if the struct was filled correctly.
+     */
+    bool getRemoteScheduleInfo(const std::string& hostGroupName, const std::string& hostName, HMAPIHostSchedInfo& hostGroupSchdInfo);
+
+
+    /*!
          Get the schedule queue length of the daemon.
          \param the variable to assign the length.
          \return true if the variable was filled correctly.
@@ -192,13 +210,19 @@ public:
          \param master config used for reload.
          \return true if successful.
     */
-    bool reload(std::string& masterConfig);
+    bool reload(const std::string& masterConfig);
 
     /*!
          Reload the daemon .
          \return true if successful.
     */
     bool reload();
+
+    /*!
+     Refresh configs in the daemon .
+     \return true if successful.
+     */
+    bool refresh();
 
     /*!
          Get all host group names.
@@ -223,15 +247,29 @@ public:
          \return true if successful.
     */
     bool getHostGroupParams(std::string& hostGroupName,
-            HMAPICheckInfo& checkInfo, std::vector<std::string>& hosts);
+            HMAPICheckInfo& checkInfo);
 
     /*!
          Get host group health check results.
          \param hostgroup to get the result.
+         \param structure to fill hostgroupinfo.
          \param structure to fill host group results.
          \return true if successful.
     */
     bool getHostGroupResults(std::string& hostGroupName,
+            HMAPICheckInfo& checkInfo,
+            std::vector<HMAPICheckResult>& hostResults);
+
+    /*!
+         Get host group health check results.
+         \param hostgroup to get the result.
+         \param hash value expected
+         \param structure to fill hostgroupinfo.
+         \param structure to fill host group results.
+         \return true if successful.
+    */
+    bool getHostGroupResults(std::string& hostGroupName,
+            const HMAPIHash& hash,
             HMAPICheckInfo& checkInfo,
             std::vector<HMAPICheckResult>& hostResults);
 
@@ -255,6 +293,16 @@ public:
             std::vector<HMAPIAuxInfo>& auxInfo);
 
     /*!
+         Get aux results.
+         \param hostgroup to get the aux result.
+         \param hash value expected
+         \param structure to fill aux results.
+         \return true if successful.
+    */
+    bool getLoadFeedback(std::string& hostGroupName, const HMAPIHash& hash,
+            std::vector<HMAPIAuxInfo>& auxInfo);
+
+    /*!
          Get aux results for host and corresponding IP.
          \param host to get the aux result.
          \param source URL for Host group.
@@ -274,6 +322,15 @@ public:
      */
     bool getLoadFeedback(std::string& hostName,
             std::string& sourceURL, HMAPIIPAddress& address, HMAuxInfo& auxInfo);
+
+    /*!
+         Get aux results for host and corresponding IP.
+         \param host to get the aux result.
+         \param structure to fill host check details results.
+         \param structure to fill aux results.
+         \return true if successful.
+     */
+    bool getLoadFeedback(const std::string& hostName, const HMAPIDataHostCheck& apiDataHostCheck, std::vector<HMAPIAuxInfo>& auxResults);
 
     /*!
          Get check results.
@@ -304,6 +361,13 @@ public:
     bool getRemoteQueryOn(bool& remoteQueryStatus);
 
     /*!
+         Get number of communication threads the daemon is handling.
+         \param variable to store count
+         \return true if successful.
+     */
+    bool getHandlerThreadCount(uint64_t& count);
+
+    /*!
          Enabling remote query reply for remote query.
          \return true if successful.
     */
@@ -314,6 +378,49 @@ public:
          \return true if successful.
     */
     bool setRemoteQueryOff();
+
+    /*
+         Add Host Group.
+         \param hostGroupname to add to configs.
+         \param Hostgroup structure to be added.
+         \return true if successful.
+     */
+    bool addHostGroup(std::string& hostGroupName, HMAPICheckInfo& checkInfo);
+
+    /*!
+         Remove Host Group.
+         \param hostGroupname to remove from configs.
+         \return true if successful.
+     */
+    bool removeHostGroup(std::string& hostGroupName);
+
+    /*!
+     Reset transaction state to current configs.
+     \return true if successful.
+     */
+    bool clearTransaction();
+
+    /*
+     fetch hashes of all the hostgroups in transactional state.
+     \param map to store the hostgroup name and corresponding hash.
+     \return true on success
+     */
+    bool getTransactionalHashInfo(std::map<std::string, HMAPIHash>& hashinfo);
+
+    /*
+     fetch hash of the entire config in transactional state.
+     \param data structure to store the hash.
+     \return true on success
+     */
+    bool getTransactionConfigHash(HMAPIHash& hash);
+
+    /*
+     Commit the transactions so far. This is similar to refresh.
+     Configs will be modified, all other master config parameter remains same.
+     \param hash expected of all the configs.
+     \return HM_API_COMMIT_TRANSACTION_STATUS status message of the commit.
+     */
+    HM_API_COMMIT_TRANSACTION_STATUS commitTransaction(const HMAPIHash& hash);
 
     /*!
          add address to specific host in static DNS.
@@ -368,6 +475,43 @@ public:
          \return true if successful.
      */
     bool getHostMark(const std::string& hostGroupName, const std::string& hostName, const HMAPIIPAddress& address, std::set<int>& value);
+
+    /*!
+         Force a DNS Check for a particular Host in Hostgroup.
+         \param host-groupname  the host belongs
+         \param host-name to forcheck
+         \return true if successful.
+     */
+    bool forceDNSCheck(const std::string& hostGroupName, const std::string& hostName);
+
+    /*!
+         Force a DNS Check for a particular Hostgroup.
+         \param host-groupname to force check
+         \return true if successful.
+     */
+    bool forceDNSCheck(const std::string& hostGroupName);
+
+    /*!
+         Force a Health Check for a particular Host in Hostgroup.
+         \param host-groupname  the host belongs
+         \param host-name to forcheck
+         \return true if successful.
+     */
+    bool forceHealthCheck(const std::string& hostGroupName, const std::string& hostName);
+
+    /*!
+         Force a Health Check for a particular Hostgroup.
+         \param host-groupname to force check
+         \return true if successful.
+     */
+    bool forceHealthCheck(const std::string& hostGroupName);
+
+    /*!
+         Force a Remote hostgroup Check for a particular Hostgroup.
+         \param host-groupname to force check
+         \return true if successful.
+     */
+    bool forceRemoteHostGroupCheck(const std::string& hostGroupName);
 
     /*!
          Get error message on failure.

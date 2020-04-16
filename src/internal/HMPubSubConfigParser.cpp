@@ -11,10 +11,9 @@
 #include "HMStateManager.h"
 #include "HMConstants.h"
 #include "HMLogBase.h"
-
-#ifdef USE_KAFKA 
+#ifdef USE_KAFKA
 #include "HMPublisherKafka.h"
-#endif 
+#endif
 
 using namespace std;
 
@@ -171,7 +170,14 @@ HMPubSubConfigParser::parseConfig(const string& fileName, HMState& checkState)
             publisher->addHostGroups(hostgroups);
         }
         publisher->setPublishOnChange(onChange);
-        checkState.m_resultPublisher.registerPublisher(name, publisher);
+        if(checkState.m_resultPublisher)
+        {
+            checkState.m_resultPublisher->registerPublisher(name, publisher);
+        }
+        else
+        {
+            HMLog(HM_LOG_ERROR, "Result publisher not initialized");
+        }
     }
     return nerr;
 }

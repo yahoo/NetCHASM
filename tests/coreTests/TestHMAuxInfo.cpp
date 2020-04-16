@@ -92,8 +92,8 @@ void TESTNAME::test_HMAuxInfo_NewLFB()
     std::vector<std::unique_ptr<HMAuxBase>> singleResult;
     HMAuxLoadFB* lfb;
     HMTimeStamp ts,ts1;
-    ts.setTime(1518198900);
-    ts1.setTime(1436935860);
+    ts.setTime(1518198900000);
+    ts1.setTime(1436935860000);
 
     string hostName = "test.hm.com";
     string sourceURL = "lfb.html";
@@ -255,9 +255,9 @@ void TESTNAME::test_HMAuxInfo_OOB()
     std::vector<std::unique_ptr<HMAuxBase>> singleResult;
     HMAuxOOB* lfb;
     HMTimeStamp ts,ts1,ts2;
-    ts.setTime(1506496234);
-    ts1.setTime(1508927205);
-    ts2.setTime(1506400318);
+    ts.setTime(1506496234000);
+    ts1.setTime(1508927205000);
+    ts2.setTime(1506400318000);
     string hostName = "test.hm.com";
     string sourceURL = "lfb.html";
     HMIPAddress address;

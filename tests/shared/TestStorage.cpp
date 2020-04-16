@@ -7,7 +7,7 @@ using namespace std;
 
 
 void TestStorage::initResultsFromBackend(HMDataCheckList& checkList,
-        HMDNSCache& dnsCache, HMAuxCache& auxCache)
+        HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache)
 {
 }
 
@@ -113,6 +113,34 @@ bool TestStorage::updateAuxInfoCache(HMCheckHeader& header, HMAuxInfo& aux)
 void TestStorage::updateHostGroups(std::set<std::string>& hostGroups)
 {
 
+}
+
+bool TestStorage::storeHostGroupCheckResult(const std::string& hostgroupname,
+        std::vector<HMGroupCheckResult>& checkResult)
+{
+    for(const auto& it : checkResult)
+    {
+        m_hostGroupResults.insert(make_pair(hostgroupname, it));
+    }
+    return true;
+}
+
+bool TestStorage::storeHostGroupAuxResult(const std::string& hostgroupname,
+        std::vector<HMGroupAuxResult>& auxResult)
+{
+    return true;
+}
+
+bool TestStorage::getGroupCheckResults(const std::string& groupName,
+            std::vector<HMGroupCheckResult>& results)
+{
+    auto range = m_hostGroupResults.equal_range(groupName);
+    for (auto it = range.first; it != range.second; ++it)
+    {
+        results.push_back(it->second);
+    }
+    return true;
+    return true;
 }
 
 bool TestStorage::getGroupCheckResults(const std::string& groupName,

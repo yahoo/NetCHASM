@@ -42,7 +42,7 @@ TESTNAME::test_HMStorageText_StoreRetrieve()
     // First test with a bad filename
     CPPUNIT_ASSERT(!store->openStore(false));
     delete store;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     checkState.m_dnsCache.updateDNSEntry(hostname, dnsHostCheck, addresses);
     filename  = "testfile";
     remove(filename.c_str());
@@ -122,7 +122,6 @@ TESTNAME::test_HMStorageText_AuxStoreRetrieve()
         string filename1  = "testfile";
     remove(filename.c_str());
     HMDataHostGroupMap groupMap;
-
     HMDNSCache dnsCache;
     HMStorageHostText* store = new HMStorageHostText(filename, &groupMap, &dnsCache);
 
@@ -171,7 +170,7 @@ TESTNAME::test_HMStorageText_AuxStoreRetrieve()
     r2->m_ip = address_1;
     r2->m_resource ="resource";
     r2->m_ts = ts;
-    r2->m_forceDown = "forcedown";
+    r2->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
     r2->m_shed = 3;
 
     auxInfo.m_auxData.clear();

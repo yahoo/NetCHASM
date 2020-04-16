@@ -213,6 +213,7 @@ private:
         // variables to track the last check information
         uint64_t m_queueCheckTime;
         uint64_t m_checkTime;
+        uint64_t m_remoteCheckTime;
     };
 };
 

@@ -17,9 +17,12 @@ message DataHostGroup {
     uint32 flapThreshold = 13;
     uint32 passthroughInfo = 14;
     string checkInfo = 15;
-    repeated string hosts = 16;
-    repeated string hostgroups = 17;
-    IPAddress sourceAddress = 18;
-    uint32 TOSValue = 19;
-    uint32 dnsType = 20;
+    uint32 remoteCheckType = 16;
+    string remoteCheck = 17;
+    uint32 distributedFallback = 18;
+    IPAddress sourceAddress = 19;
+    uint32 TOSValue = 20;
+    uint32 dnsType = 21;
+    repeated string hosts = 22;
+    repeated string hostgroups = 23;
 }

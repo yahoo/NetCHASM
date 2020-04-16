@@ -13,6 +13,94 @@
 
 using namespace std;
 
+
+//rsa key and cert
+static CURLcode testsslctxkey_function(CURL* curl, void* sslctx, void* mykey)
+{   
+    (void)curl; /* avoid warnings */
+    (void)mykey; /* avoid warnings */
+
+    
+    auto l =  (std::pair<std::string,std::string>*) mykey;
+    
+    BIO* kbio = NULL;
+    RSA* rsa = NULL;
+    int ret;
+    
+    (void)curl; /* avoid warnings */
+    (void)mykey; /* avoid warnings */
+    
+    char* mypem = (char*)l->first.c_str();/*key*/
+    
+    kbio = BIO_new_mem_buf(mypem, -1);
+    
+    if(kbio == NULL)
+    {   
+        HMLog(HM_LOG_ERROR,"[CURLCHECK]BIO_new_mem_buf failed");
+    }
+    
+    /*read the key bio into an RSA object*/
+    rsa = PEM_read_bio_RSAPrivateKey(kbio, NULL, 0, NULL);
+    if(rsa == NULL)
+    {   
+        HMLog(HM_LOG_ERROR,"[CURLCHECK]Failed to create key bio");
+    }
+    
+    /*tell SSL to use the RSA key from memory*/
+    ret = SSL_CTX_use_RSAPrivateKey((SSL_CTX*)sslctx, rsa);
+    if(ret != 1)
+    {   
+        HMLog(HM_LOG_ERROR,"[CURLCHECK] RSA Key failed");
+    }
+    
+    /*cert*/
+    X509* cert = NULL;
+    BIO* bio;
+    
+    char* mycert = (char*)l->second.c_str();/*cert*/
+    
+    bio=BIO_new_mem_buf(mycert, -1);
+    if(bio == NULL)
+    {   
+        HMLog(HM_LOG_ERROR,"[CURLCHECK]BIO_new_mem_buf failed");
+    }
+    
+    cert = PEM_read_bio_X509(bio, NULL, 0, NULL);
+    if(cert == NULL)
+    {   
+        HMLog(HM_LOG_ERROR,"[CURLCHECK]Failed to create cert bio");
+    }
+    
+    /*tell SSL to use the X509 certificate*/ 
+    ret = SSL_CTX_use_certificate((SSL_CTX*)sslctx, cert);
+    if(ret != 1)
+    {
+        HMLog(HM_LOG_ERROR,"Use certificate failed\n");
+    }
+    
+    if(kbio)
+    {   
+        BIO_free(kbio);
+    }
+    if(rsa)
+    {   
+        RSA_free(rsa);
+    }
+    if(bio)
+    {
+        BIO_free(bio);
+    }
+    if(cert)
+    { 
+       X509_free(cert);
+    } 
+
+    delete l;
+    /* all set to go */
+    return CURLE_OK;
+}
+
+
 size_t
 curl_Callback(void* ptr, size_t size, size_t nmemb, HMWorkAuxFetchCurl* check)
 {
@@ -43,7 +131,9 @@ HMWorkAuxFetchCurl::fetchAux()
 
     if(m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTP
             || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS
-            || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
+            || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK
+            || m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS
+            || m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK)
     {
         shared_ptr<HMState> currentState;
         m_stateManager->updateState(currentState);
@@ -141,7 +231,7 @@ HMWorkAuxFetchCurl::fetchAux()
         curl_easy_setopt(curl,CURLOPT_TIMEOUT, timeout / 1000);
         curl_easy_setopt(curl,CURLOPT_SSL_VERIFYHOST,0);
         curl_easy_setopt(curl,CURLOPT_NOSIGNAL,1);
-        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
+        curl_easy_setopt(curl,CURLOPT_TCP_NODELAY,1);
         if (m_hostCheck.getSourceAddress().isSet())
         {
             curl_easy_setopt(curl, CURLOPT_INTERFACE,
@@ -155,7 +245,8 @@ HMWorkAuxFetchCurl::fetchAux()
             curl_easy_setopt(curl, CURLOPT_SOCKOPTDATA, &tos);
         }
 
-        if(m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
+        if(m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS_NO_PEER_CHECK
+               || m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK)
         {
             curl_easy_setopt(curl, CURLOPT_CAINFO, NULL);
             curl_easy_setopt(curl,CURLOPT_SSL_VERIFYPEER,0);
@@ -245,6 +336,26 @@ HMWorkAuxFetchCurl::fetchAux()
 
             host = curl_slist_append(NULL, hostsni.c_str());
             curl_easy_setopt(curl, CURLOPT_CONNECT_TO, host);
+        }
+
+        if ((m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS
+               || m_hostCheck.getCheckType() == HM_CHECK_AUX_HTTPS)
+                    && !currentState->getHealthCheckCAFile().empty())
+        {
+            curl_easy_setopt(curl, CURLOPT_CAINFO, currentState->getHealthCheckCAFile().c_str());
+        }
+
+        //MUTUAL TLS
+        if ((m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS
+                || m_hostCheck.getCheckType() == HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK) 
+                    && (!currentState->getHealthCheckCert().empty() 
+                        && !currentState->getHealthCheckKey().empty()))
+        {
+            curl_easy_setopt(curl, CURLOPT_SSLCERTTYPE, "PEM");
+            curl_easy_setopt(curl, CURLOPT_SSLKEYTYPE, "PEM");
+            auto certkey = new std::pair<std::string, std::string>(currentState->getHealthCheckKey(), currentState->getHealthCheckCert());
+            curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, *testsslctxkey_function);
+            curl_easy_setopt(curl, CURLOPT_SSL_CTX_DATA,certkey);
         }
 
         if(uri.empty())

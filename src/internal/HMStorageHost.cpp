@@ -11,12 +11,13 @@
 using namespace std;
 
 void
-HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache)
+HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache)
 {
+    (void)remoteCache;
     set<string> backendNames;
     set<string> localNames;
 
-    map<string,set<HMIPAddress>> dnsMap;
+    map<pair<string, HMDNSLookup>,set<HMIPAddress>> dnsMap;
     map<pair<string, HMDNSLookup>,HMTimeStamp> dnsResTimeMap;
 
     HMIPAddress blank(AF_INET);
@@ -109,7 +110,7 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
         // Insert blank DNS entry
         set<HMIPAddress> addresses;
         uint8_t dualstack = (v4 ? HM_DUALSTACK_IPV4_ONLY : 0) | (v6 ? HM_DUALSTACK_IPV6_ONLY : 0);
-        HMDNSLookup dnsHostCheck(checkHeader.m_hostCheck.getDnsPlugin());
+        HMDNSLookup dnsHostCheck(checkHeader.m_hostCheck.getDnsType(), checkHeader.m_hostCheck.getRemoteCheck());
         dnsCache.getAddresses(*it, dualstack, dnsHostCheck, addresses);
         if(addresses.size() == 0)
         {
@@ -168,15 +169,18 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
                         auxCache.updateAuxInfo(check->m_hostname, check->m_hostCheck.getCheckInfo(), check->m_address, auxInfo);
                     }
 
-                    auto res = dnsMap.insert(make_pair(check->m_hostname, set<HMIPAddress>()));
-                    res.first->second.insert(check->m_address);
-                    HMDNSLookup dnsHostCheck(check->m_hostCheck.getDnsPlugin(), check->m_address.getType() == AF_INET6);
+                    HMDNSLookup dnsHostCheck(check->m_hostCheck.getDnsType(), check->m_address.getType() == AF_INET6, check->m_hostCheck.getRemoteCheck());
                     pair<string, HMDNSLookup> key = make_pair(check->m_hostname, dnsHostCheck);
+                    auto res = dnsMap.insert(make_pair(key, set<HMIPAddress>()));
+                    res.first->second.insert(check->m_address);
                     if(dnsResTimeMap.find(key) == dnsResTimeMap.end())
                     {
                         dnsResTimeMap.insert(make_pair(key, result.m_checkTime));
                     }
-
+                    if(check->m_hostCheck.getFlowType() == HM_FLOW_REMOTE_HOST_TYPE)
+                    {
+                        remoteHostCache.updateResultTime(check->m_hostname, check->m_hostCheck, result.m_checkTime);
+                    }
                     filledChecks.insert(*localCheck);
                     break;
                 }
@@ -196,17 +200,17 @@ HMStorageHost::initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dn
     {
         HMDNSResult v4Result;
         HMDNSResult v6Result;
-        auto res = dnsResTimeMap.find(make_pair(it->first, false));
+        auto res = dnsResTimeMap.find(it->first);
         if (res != dnsResTimeMap.end())
         {
             v4Result.setResultTime(res->second);
         }
-        res = dnsResTimeMap.find(make_pair(it->first, true));
+        res = dnsResTimeMap.find(it->first);
         if (res != dnsResTimeMap.end())
         {
             v6Result.setResultTime(res->second);
         }
-        dnsCache.updateReloadDNSEntry(it->first, it->second, v4Result, v6Result, res->first.second.getPlugin());
+        dnsCache.updateReloadDNSEntry(it->first.first, it->second, v4Result, v6Result, res->first.second);
     }
 
     // Fill missing entries in the backend
@@ -486,6 +490,24 @@ HMStorageHost::updateHostGroups(set<string>& hostGroups)
 }
 
 bool
+HMStorageHost::storeHostGroupCheckResult(const std::string& hostgroupname,
+        std::vector<HMGroupCheckResult>& checkResult)
+{
+    (void)hostgroupname;
+    (void)checkResult;
+    return true;
+}
+
+bool
+HMStorageHost::storeHostGroupAuxResult(const std::string& hostgroupname,
+        std::vector<HMGroupAuxResult>& auxResult)
+{
+    (void)hostgroupname;
+    (void)auxResult;
+    return true;
+}
+
+bool
 HMStorageHost::getGroupCheckResults(const string& groupName,
         bool noCache,
         bool onlyResolved,
@@ -493,6 +515,13 @@ HMStorageHost::getGroupCheckResults(const string& groupName,
 {
     (void) noCache;
     (void) onlyResolved;
+    return getGroupCheckResults(groupName, results);
+}
+
+bool
+HMStorageHost::getGroupCheckResults(const std::string& groupName,
+            std::vector<HMGroupCheckResult>& results)
+{
     // assume we have the group info in the group map
     HMCheckHeader header;
     HMDataCheckResult result;

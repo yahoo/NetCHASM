@@ -47,9 +47,9 @@ public:
          \param the set of all IP addresses resolved to the host. This contains both the IPv4 and IPv6 IPs
          \param the timeouts associated with the last V4 resolution.
          \param the timeouts associated with the last V6 resolution.
-         \param type of DNS lookup.
+         \param DNSLookup structure.
      */
-    void updateReloadDNSEntry(const std::string& name, std::set<HMIPAddress>& addresses, const HMDNSResult& v4Result, const HMDNSResult& v6Result, HM_DNS_PLUGIN_CLASS plugin);
+    void updateReloadDNSEntry(const std::string& name, std::set<HMIPAddress>& addresses, const HMDNSResult& v4Result, const HMDNSResult& v6Result, const HMDNSLookup& dnsLookup);
 
     //! Update a single DNS entry after resolving the name.
     /*!
@@ -58,7 +58,7 @@ public:
          \param structure holding DNS type and address type(v4 or v6).
          \param the set of IPs resolved for this name.
      */
-    void updateDNSEntry(std::string name, HMDNSLookup& dnsHostCheck, std::set<HMIPAddress>& addresses);
+    void updateDNSEntry(const std::string& name, HMDNSLookup& dnsHostCheck, const std::set<HMIPAddress>& addresses);
 
     //! Finish the DNS query.
     /*!
@@ -124,7 +124,7 @@ public:
          Start a DNS query. Update the internal query state to in progress.
          \param the host name to resolve.
          \param structure holding DNS type and address type(v4 or v6).
-         \return true if succeeds.
+         \return the true if succeeds.
      */
     bool startDNSQuery(const std::string& name, HMDNSLookup& dnsHostCheck);
 

@@ -195,6 +195,36 @@ HMEventLoopLibEvent::addDNSTimeout(const string& hostname, const HMDNSLookup& dn
 }
 
 void
+HMEventLoopLibEvent::addRemoteTimeout(const string& hostGroupName, HMTimeStamp timeStamp)
+{
+    RemoteTimeout* data = new RemoteTimeout(hostGroupName);
+    //struct event* ev = event_new(m_base, -1, 0, &HMEventLoopLibEvent::handleDNSTimeout, data);
+    struct event* ev =  evtimer_new(m_base, &HMEventLoopLibEvent::handleRemoteTimeout, data);
+    struct timeval tv = timeStamp.getTimeout();
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS timeout %d.%d for %s", tv.tv_sec, tv.tv_usec,hostGroupName.c_str());
+    data->m_ev = ev;
+    data->m_stateManager = m_stateManager;
+    event_add(ev,&tv);
+
+    wakeupTracker();
+}
+
+void
+HMEventLoopLibEvent::addRemoteHostTimeout(const std::string& hostname, const HMDataHostCheck& dataHostCheck, HMTimeStamp timeStamp)
+{
+    RemoteHostTimeout* data = new RemoteHostTimeout(hostname, dataHostCheck);
+    //struct event* ev = event_new(m_base, -1, 0, &HMEventLoopLibEvent::handleDNSTimeout, data);
+    struct event* ev =  evtimer_new(m_base, &HMEventLoopLibEvent::handleRemoteTimeout, data);
+    struct timeval tv = timeStamp.getTimeout();
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS timeout %d.%d for %s", tv.tv_sec, tv.tv_usec,hostname.c_str());
+    data->m_ev = ev;
+    data->m_stateManager = m_stateManager;
+    event_add(ev,&tv);
+
+    wakeupTracker();
+}
+
+void
 HMEventLoopLibEvent::addHealthCheckTimeout(const string& hostname, const HMIPAddress& address, const HMDataHostCheck hostCheck, HMTimeStamp timeStamp)
 {
     HealthCheckTimeout* data = new HealthCheckTimeout(hostname, address, hostCheck);
@@ -251,6 +281,97 @@ HMEventLoopLibEvent::handleDNSTimeout(evutil_socket_t fd, short what, void* arg)
         HMDataHostCheck temp;
         HMTimeStamp nextCheckTimeOut = currentState->m_checkList.nextCheckTime(data->m_hostname, HMIPAddress(), temp);
         event->addDNSTimeout(data->m_hostname, data->m_dnsHostCheck, nextCheckTimeOut);
+    }
+
+    event_del(data->m_ev);
+    delete data;
+}
+
+
+// static
+void
+HMEventLoopLibEvent::handleRemoteTimeout(evutil_socket_t fd, short what, void* arg)
+{
+    (void) fd;
+    (void) what;
+    RemoteTimeout* data = (RemoteTimeout*)arg;
+    HMStateManager* state = data->m_stateManager;
+    std::shared_ptr<HMState> currentState;
+
+    HMEventLoopLibEvent* event = state->getLibEvent();
+    if(event == nullptr)
+    {
+        HMLog(HM_LOG_ERROR, "[EVENT] LibEvent pointer null failing");
+        return;
+    }
+
+    state->updateState(currentState);
+    HM_SCHEDULE_STATE check_state;
+
+    HMLog(HM_LOG_DEBUG, "[EVENT] Remote Entry Timeout for %s",
+            data->m_hostGroupName.c_str());
+    check_state = currentState->m_remoteCache.checkNeeded(
+           data->m_hostGroupName);
+    if (check_state == HM_SCHEDULE_WORK)
+    {
+        HMLog(HM_LOG_DEBUG3,
+                "[DEBUG] Remote Check Schedule work for %s",
+                data->m_hostGroupName.c_str());
+        currentState->m_remoteCache.queueRemoteCheck(data->m_hostGroupName,
+                state->m_workQueue, currentState->m_hostGroups);
+    }
+    else if (check_state == HM_SCHEDULE_EVENT)
+    {
+        HMLog(HM_LOG_DEBUG3,
+                "[DEBUG] Remote Check Schedule event for %s",
+                data->m_hostGroupName.c_str());
+        HMTimeStamp nextCheckTimeOut = currentState->m_remoteCache.nextCheckTime(data->m_hostGroupName);
+        event->addRemoteTimeout(data->m_hostGroupName, nextCheckTimeOut);
+    }
+
+    event_del(data->m_ev);
+    delete data;
+}
+
+void
+HMEventLoopLibEvent::handleRemoteHostTimeout(evutil_socket_t fd, short what, void* arg)
+{
+    (void) fd;
+    (void) what;
+    RemoteHostTimeout* data = (RemoteHostTimeout*)arg;
+    HMStateManager* state = data->m_stateManager;
+    std::shared_ptr<HMState> currentState;
+
+    HMEventLoopLibEvent* event = state->getLibEvent();
+    if(event == nullptr)
+    {
+        HMLog(HM_LOG_ERROR, "[EVENT] LibEvent pointer null failing");
+        return;
+    }
+
+    state->updateState(currentState);
+    HM_SCHEDULE_STATE check_state;
+
+    HMLog(HM_LOG_DEBUG, "[EVENT] Remote Entry Timeout for %s",
+            data->m_hostName.c_str());
+    check_state = currentState->m_remoteHostCache.checkNeeded(
+           data->m_hostName, data->m_hostCheck);
+    if (check_state == HM_SCHEDULE_WORK)
+    {
+        HMLog(HM_LOG_DEBUG3,
+                "[DEBUG] Remote Check Schedule work for %s",
+                data->m_hostName.c_str());
+        currentState->m_remoteHostCache.queueRemoteCheck(data->m_hostName,
+                data->m_hostCheck, state->m_workQueue);
+    }
+    else if (check_state == HM_SCHEDULE_EVENT)
+    {
+        HMLog(HM_LOG_DEBUG3,
+                "[DEBUG] Remote Check Schedule event for %s",
+                data->m_hostName.c_str());
+        HMDataHostCheck temp;
+        HMTimeStamp nextCheckTimeOut = currentState->m_remoteHostCache.nextCheckTime(data->m_hostName, data->m_hostCheck);
+        event->addRemoteHostTimeout(data->m_hostName, data->m_hostCheck, nextCheckTimeOut);
     }
 
     event_del(data->m_ev);

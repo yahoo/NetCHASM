@@ -25,6 +25,7 @@ void TESTNAME::test_HMStorage_Construction()
     HMIPAddress address;
     address.set("192.168.0.1");
 
+    HMDNSCache dnsCache;
     HMConfigInfo configInfo;
     HMDataHostCheck hostCheck;
     HMDataCheckParams checkParams;
@@ -43,7 +44,6 @@ void TESTNAME::test_HMStorage_Construction()
     CPPUNIT_ASSERT(checkHeader.m_hostCheck == hostCheck);
     CPPUNIT_ASSERT(checkHeader.m_hostname == hostname);
     HMDataHostGroupMap hostGroupMap;
-    HMDNSCache dnsCache;
     TestStorage myStorage(&hostGroupMap, &dnsCache);
 }
 

@@ -69,7 +69,7 @@ HMTimeStamp::setTime(string time, string format)
 }
 
 string
-HMTimeStamp::print(string format)
+HMTimeStamp::print(string format) const
 {
     stringstream ss;
     time_t tt = chrono::system_clock::to_time_t(m_timeStamp);

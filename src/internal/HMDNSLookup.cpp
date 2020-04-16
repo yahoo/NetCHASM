@@ -13,11 +13,15 @@ using namespace std;
 bool
 HMDNSLookup::operator <(const HMDNSLookup& k) const
 {
-    if (m_plugin == k.m_plugin)
+    if (m_type == k.m_type)
     {
-        return m_ipv6 < k.m_ipv6;
+        if(m_remoteCheckGroup == k.m_remoteCheckGroup)
+        {
+            return m_ipv6 < k.m_ipv6;
+        }
+        return m_remoteCheckGroup < k.m_remoteCheckGroup;
     }
-    return m_plugin < k.m_plugin;
+    return m_type < k.m_type;
 }
 
 bool
@@ -29,7 +33,7 @@ HMDNSLookup::operator !=(const HMDNSLookup& k) const
 bool
 HMDNSLookup::operator ==(const HMDNSLookup& k) const
 {
-    if(m_plugin == k.m_plugin
+    if(m_type == k.m_type
             && m_ipv6 == k.m_ipv6)
     {
         return true;
@@ -41,7 +45,7 @@ HMDNSLookup::operator ==(const HMDNSLookup& k) const
 void
 HMDNSLookup::setCheckParams(const HMDataHostGroup& dataHostGroup)
 {
-    m_plugin = dataHostGroup.getDnsCheckPlugin();
+    m_type = dataHostGroup.getDNSType();
     m_ipv6 = dataHostGroup.getDualstack() == AF_INET6;
 }
 
@@ -51,17 +55,17 @@ HMDNSLookup::isIpv6() const
     return m_ipv6;
 }
 
-HM_DNS_PLUGIN_CLASS
-HMDNSLookup::getPlugin() const
+HM_DNS_TYPE
+HMDNSLookup::getType() const
 {
-    return m_plugin;
+    return m_type;
 }
 
 bool HMDNSTypeMap::operator <(const HMDNSTypeMap& k) const
 {
     if (m_name == k.m_name)
     {
-        return m_plugin < k.m_plugin;
+        return m_type < k.m_type;
     }
     return m_name < k.m_name;
 }
@@ -73,9 +77,24 @@ bool HMDNSTypeMap::operator !=(const HMDNSTypeMap& k) const
 
 bool HMDNSTypeMap::operator ==(const HMDNSTypeMap& k) const
 {
-    if (m_name == k.m_name && m_plugin == k.m_plugin)
+    if (m_name == k.m_name && m_type == k.m_type)
     {
         return true;
     }
     return false;
+}
+
+const std::string& HMDNSLookup::getRemoteCheckGroup() const
+{
+    return m_remoteCheckGroup;
+}
+
+HM_DNS_PLUGIN_CLASS HMDNSLookup::getPlugin() const
+{
+    return m_plugin;
+}
+
+void HMDNSLookup::setPlugin(HM_DNS_PLUGIN_CLASS plugin)
+{
+    m_plugin = plugin;
 }

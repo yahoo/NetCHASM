@@ -15,8 +15,8 @@ using namespace std;
 
 static void usage(char* name)
 {
-    string command = "man ";
-    command.append(name);
+    string command = "man hm_reload";
+    if(system(command.c_str()))
     {
         cout << "Usage: "<< name<<" [options] ..." << endl << "Options:" << endl
                 << "-s      <socket-path> [default: " << HM_DEFAULT_USD_PATH << "]" << endl
@@ -34,8 +34,9 @@ int main(int argc, char *argv[])
     int opt;
     string server_path = HM_DEFAULT_USD_PATH;
     string master_path;
+    bool refresh = false;
     bool isDifMaster = false;
-    while ((opt = getopt(argc, argv, "s:m:h")) != -1) {
+    while ((opt = getopt(argc, argv, "rs:m:h")) != -1) {
         switch (opt) {
         case 's':
             server_path = std::string(optarg);
@@ -43,6 +44,9 @@ int main(int argc, char *argv[])
         case 'm':
             isDifMaster = true;
             master_path = optarg;
+            break;
+        case 'r':
+            refresh = true;
             break;
         case 'h':
             usage(argv[0]);
@@ -55,7 +59,11 @@ int main(int argc, char *argv[])
     }
     bool status;
     HMControlLinuxSocketClient socketAPI(server_path);
-    if (isDifMaster)
+    if(refresh)
+    {
+        status = socketAPI.refresh();
+    }
+    else if (isDifMaster)
     {
         status = socketAPI.reload(master_path);
     }

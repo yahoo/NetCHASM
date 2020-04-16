@@ -71,21 +71,21 @@ void TESTNAME::setUp()
     temp_aux2->m_host = "api.hm.com";
     temp_aux2->m_resource = "canl";
     temp_aux2->m_shed = 10;
-    temp_aux2->m_forceDown = false;
+    temp_aux2->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
     auxInfo2.m_auxData.push_back(std::move(temp_aux2));
     temp_aux2 = std::make_unique<HMAuxOOB>();
     temp_aux2->m_type = HM_OOB_FILE;
     temp_aux2->m_host = "api1.hm.com";
     temp_aux2->m_resource = "canl";
     temp_aux2->m_shed = 20;
-    temp_aux2->m_forceDown = true;
+    temp_aux2->m_forceDown = HM_OOB_FORCEDOWN_TRUE;
     auxInfo2.m_auxData.push_back(std::move(temp_aux2));
     temp_aux2 = std::make_unique<HMAuxOOB>();
     temp_aux2->m_type = HM_OOB_FILE;
     temp_aux2->m_host = "api2.hm.com";
     temp_aux2->m_resource = "canl1";
     temp_aux2->m_shed = 30;
-    temp_aux2->m_forceDown = true;
+    temp_aux2->m_forceDown = HM_OOB_FORCEDOWN_TRUE;
 
     string sourceURL = "lfb.html";
     string xmlOut;
@@ -113,6 +113,12 @@ void TESTNAME::setUp()
     hostGroup.addHost(host1);
     hostGroup.addHost(host2);
     hostGroup.addHost(host3);
+    HMHashMD5 hashMD5;
+    hashMD5.init();
+    hostGroup.getHash(hashMD5);
+    hashMD5.final(hash);
+    hash1 = hash;
+    hash1.m_hashValue[2]+=10;
     groupMap.insert(make_pair(hostGroupName, hostGroup));
     HMDataHostCheck hostCheck;
     hostGroup.getHostCheck(hostCheck);
@@ -152,8 +158,8 @@ void TESTNAME::setUp()
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
-    HMDNSLookup dnsHostCheckv6(HM_DNS_PLUGIN_ARES, true);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
     set<HMIPAddress> addressess;
     addressess.insert(address);
     dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
@@ -198,6 +204,8 @@ void TESTNAME::setUp()
             << "config.load-file: " << hmConfig << endl
             << "db.type: mdbm" << endl
             << "dns.type: none" << endl
+            << "dns.statictype: none"<<endl
+            << "dns.lookuptype: none"<<endl
             << "db.path: " << mdbm << endl
             << "control-server-linux: off"<< endl
             << "master-check-portv6 : 10052"<<endl
@@ -227,6 +235,7 @@ void TESTNAME::setUp()
             << "    group-threshold: 50" << endl
             << "    check-port: 8080" << endl
             << "    check-info: " << checkInfo << endl
+            << "    dual-stack-mode: both" << endl
             << "    host:" << endl
             << "        - " << host1 << endl
             << "        - " << host2 << endl
@@ -380,4 +389,47 @@ void TESTNAME::test_cmdlstnr4()
     addressv6.set(ipaddr1);
     HMAPIAuxInfo auxInfo;
     CPPUNIT_ASSERT(!socketAPI.getLoadFeedback(host1, sourceURL, addressv6, auxInfo));
+}
+
+void TESTNAME::test_cmdlstnr5()
+{
+    HMControlTLSSocketClient socketAPI(server, port, certfile, keyfile, caFile);
+    HMAPIIPAddress address;
+    string ipaddr = "1.2.3.4";
+    string ipaddr1 = "2001::7334";
+    address.set(ipaddr);
+    HMAPIIPAddress addressv6;
+    addressv6.set(ipaddr1);
+    string hostGroupName = "test.netchasm.net";
+    vector<HMAPIAuxInfo> auxInfos;
+    CPPUNIT_ASSERT(socketAPI.getLoadFeedback(hostGroupName, hash, auxInfos));
+    CPPUNIT_ASSERT_EQUAL(2, (int)auxInfos.size());
+    HMAPIAuxInfo auxInfo =  auxInfos[0];
+    CPPUNIT_ASSERT(auxInfo.m_address == address);
+    CPPUNIT_ASSERT(auxInfo.m_host == host1);
+    CPPUNIT_ASSERT_EQUAL(30, (int)auxInfo.m_ttl);
+    CPPUNIT_ASSERT_EQUAL(0, (int)auxInfo.m_lfb.size());
+    CPPUNIT_ASSERT_EQUAL(2, (int)auxInfo.m_oob.size());
+    CPPUNIT_ASSERT("api.hm.com" == auxInfo.m_oob[0].m_host);
+    CPPUNIT_ASSERT("canl" == auxInfo.m_oob[0].m_resource);
+    CPPUNIT_ASSERT_EQUAL(10, (int )auxInfo.m_oob[0].m_shed);
+    CPPUNIT_ASSERT(!auxInfo.m_oob[0].m_forceDown);
+    CPPUNIT_ASSERT("api1.hm.com" == auxInfo.m_oob[1].m_host);
+    CPPUNIT_ASSERT("canl" == auxInfo.m_oob[1].m_resource);
+    CPPUNIT_ASSERT_EQUAL(20, (int )auxInfo.m_oob[1].m_shed);
+    CPPUNIT_ASSERT(auxInfo.m_oob[1].m_forceDown);
+    auxInfo = auxInfos[1];
+    CPPUNIT_ASSERT(auxInfo.m_host == host2);
+    CPPUNIT_ASSERT(auxInfo.m_address == addressv6);
+    CPPUNIT_ASSERT_EQUAL(30, (int )auxInfo.m_ttl);
+    CPPUNIT_ASSERT_EQUAL(1, (int )auxInfo.m_lfb.size());
+    CPPUNIT_ASSERT_EQUAL(0, (int )auxInfo.m_oob.size());
+    CPPUNIT_ASSERT("SG3" == auxInfo.m_lfb[0].m_datacenter);
+    CPPUNIT_ASSERT("api.hm.com" == auxInfo.m_lfb[0].m_host);
+    CPPUNIT_ASSERT("canl" == auxInfo.m_lfb[0].m_resource);
+    CPPUNIT_ASSERT_EQUAL(118, (int)auxInfo.m_lfb[0].m_load);
+    CPPUNIT_ASSERT_EQUAL(500, (int)auxInfo.m_lfb[0].m_target);
+    CPPUNIT_ASSERT_EQUAL(2000, (int)auxInfo.m_lfb[0].m_max);
+
+    CPPUNIT_ASSERT(!socketAPI.getLoadFeedback(hostGroupName, hash1, auxInfos));
 }

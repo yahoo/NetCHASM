@@ -49,7 +49,7 @@ target_link_libraries (netchasm_core PRIVATE yaml-cpp)
 
 if(NOT SKIP-KAFKA)
   ADD_DEFINITIONS(-DUSE_KAFKA)
-  target_link_libraries (netchasm_core PUBLIC rdkafka rdkafka++)
+  target_link_libraries (netchasm_core PRIVATE rdkafka rdkafka++)
 endif()
 
 if(NOT SKIP-ARES)

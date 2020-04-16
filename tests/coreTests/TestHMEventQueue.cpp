@@ -36,7 +36,8 @@ void TESTNAME::tearDown()
 void TESTNAME::test_basic_DNS_eventqueue()
 {
     string dummy = "dummy.hm.com";
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_STATIC, false);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
+    dnsHostCheckF.setPlugin(HM_DNS_PLUGIN_STATIC);
     m_currentState->m_dnsCache.insertDNSEntry(dummy,dnsHostCheckF,300,3000);
     m_eventQueue->addDNSTimeout(dummy, dnsHostCheckF, HMTimeStamp::now());
     std::this_thread::sleep_for(2s);

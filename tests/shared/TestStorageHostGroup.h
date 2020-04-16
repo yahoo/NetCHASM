@@ -9,8 +9,8 @@
 class TestStorageHostGroup : public HMStorageHostGroup
 {
 public:
-    TestStorageHostGroup(HMDataHostGroupMap* hostMap, HMDNSCache *dnsCache) :
-        HMStorageHostGroup(hostMap, dnsCache) {}
+    TestStorageHostGroup(HMDataHostGroupMap* hostMap, HMDNSCache* dnsCache) :
+        HMStorageHostGroup(hostMap, dnsCache), hostgroupmap(hostMap) {}
 
     bool test_getInternalHostGroupInfo(const std::string& hostGroupName, const HMDataHostGroup* &hostGroup)
         { return getInternalHostGroupInfo(hostGroupName, hostGroup); }
@@ -67,6 +67,7 @@ protected:
     bool removeHostGroupGroupAuxInfo(const std::string& hostGroup);
     std::set<std::string> groupNames;
     std::multimap<std::string, HMGroupCheckResult> hostGroupResults;
+    HMDataHostGroupMap *hostgroupmap;
 
 };
 

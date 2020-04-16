@@ -1,0 +1,12 @@
+syntax = "proto3";
+package netchasm;
+
+message HashHGPair {
+    string hostgroupname = 1;
+    int32 size = 2;
+    bytes hash = 3;
+}
+
+message HashInfo {
+    repeated HashHGPair items = 1;
+}

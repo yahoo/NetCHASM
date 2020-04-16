@@ -20,20 +20,22 @@ public:
         m_port(0),
         m_dualstack(HM_DUALSTACK_IPV4_ONLY),
         m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
-        m_DNSPlugin(HM_DNS_PLUGIN_ARES),
+        m_DNSType(HM_DNS_TYPE_LOOKUP),
         m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
         m_remoteCheckType(HM_REMOTE_CHECK_NONE),
-        m_TOSValue(0){};
+        m_TOSValue(0),
+        m_flowType(HM_FLOW_DNS_HEALTH_TYPE){};
 
-    HMDataHostCheck(HM_DNS_PLUGIN_CLASS dnsPlugin) :
+    HMDataHostCheck(HM_DNS_TYPE dnsType) :
             m_checkType(HM_CHECK_DEFAULT),
             m_port(0),
             m_dualstack(HM_DUALSTACK_IPV4_ONLY),
             m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
-            m_DNSPlugin(dnsPlugin),
+            m_DNSType(dnsType),
             m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
             m_remoteCheckType(HM_REMOTE_CHECK_NONE),
-            m_TOSValue(0){};
+            m_TOSValue(0),
+            m_flowType(HM_FLOW_DNS_HEALTH_TYPE){};
 	HMDataHostCheck(const HMAPIDataHostCheck&);
 	bool operator<(const HMDataHostCheck& k) const;
 	bool operator!=(const HMDataHostCheck& k) const;
@@ -149,7 +151,21 @@ public:
          Get the type of DNS check for the health check.
          \return the DNS check type.
      */
-    HM_DNS_PLUGIN_CLASS getDnsPlugin() const;
+    HM_DNS_TYPE getDnsType() const;
+
+    //! Get the type of flow type.
+    /*!
+         Get the type of flow type for the host group.
+         \return the flow type.
+     */
+    HM_FLOW_TYPE getFlowType() const;
+
+    //! Set the dns type used for the check.
+    /*!
+         Set the dns type used for the check.
+         \param the dns plugin type.
+     */
+    void setDNSType(HM_DNS_TYPE dnsPlugin);
 
 private:
     HM_CHECK_TYPE m_checkType;
@@ -158,11 +174,12 @@ private:
     std::string m_checkInfo;
     std::string m_remoteCheck;
     HM_DISTRIBUTED_FALLBACK m_distributedFallback;
-    HM_DNS_PLUGIN_CLASS m_DNSPlugin;
+    HM_DNS_TYPE m_DNSType;
     HM_CHECK_PLUGIN_CLASS m_checkPlugin;
     HM_REMOTE_CHECK_TYPE m_remoteCheckType;
     HMIPAddress m_sourceAddress;
     uint8_t m_TOSValue;
+    HM_FLOW_TYPE m_flowType;
 };
 
 #endif /* HMDATAHOSTCHECK_H_ */

@@ -352,7 +352,7 @@ void TESTNAME::test_cmdlstnr8()
     vector<string> result = {"loadfb3.hm1.com","loadfb3.hm2.com"};
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
-    CPPUNIT_ASSERT(socketAPI.getHostGroupParams(hostGroupName, checkInfo, hosts));
+    CPPUNIT_ASSERT(socketAPI.getHostGroupParams(hostGroupName, checkInfo));
     CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_TCP, (int )checkInfo.m_checkType);
     CPPUNIT_ASSERT_EQUAL(123, (int )checkInfo.m_port);
     CPPUNIT_ASSERT(checkInfo.m_ipv4);
@@ -370,10 +370,10 @@ void TESTNAME::test_cmdlstnr8()
     CPPUNIT_ASSERT("127.0.0.5" == checkInfo.m_sourceAddress.toString());
     CPPUNIT_ASSERT_EQUAL(1, (int)checkInfo.m_TOSValue);
     CPPUNIT_ASSERT("hm-hello" == checkInfo.m_checkInfo);
-    CPPUNIT_ASSERT_EQUAL(result.size(), hosts.size());
+    CPPUNIT_ASSERT_EQUAL(result.size(), checkInfo.m_hosts.size());
     for (uint32_t i = 0; i < result.size(); i++)
     {
-        CPPUNIT_ASSERT(result[i] == hosts[i]);
+        CPPUNIT_ASSERT(result[i] == checkInfo.m_hosts[i]);
     }
 }
 
@@ -384,7 +384,7 @@ void TESTNAME::test_cmdlstnr9()
 	string hostGroupName = "dummy.parse1.netchasm.net";
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
-    CPPUNIT_ASSERT(!socketAPI.getHostGroupParams(hostGroupName, checkInfo, hosts));
+    CPPUNIT_ASSERT(!socketAPI.getHostGroupParams(hostGroupName, checkInfo));
 }
 
 
@@ -406,7 +406,7 @@ void TESTNAME::test_cmdlstnr10()
     vector<string> result = { "loadfb3.hm1.com", "loadfb3.hm2.com" };
     HMAPICheckInfo checkInfo;
     vector<string> hosts;
-    CPPUNIT_ASSERT(socketAPI.getHostGroupParams(hostGroupName, checkInfo, hosts));
+    CPPUNIT_ASSERT(socketAPI.getHostGroupParams(hostGroupName, checkInfo));
     CPPUNIT_ASSERT_EQUAL((int )HM_CHECK_TCP, (int )checkInfo.m_checkType);
     CPPUNIT_ASSERT_EQUAL(123, (int )checkInfo.m_port);
     CPPUNIT_ASSERT(checkInfo.m_ipv4);
@@ -424,10 +424,10 @@ void TESTNAME::test_cmdlstnr10()
     CPPUNIT_ASSERT("127.0.0.5" == checkInfo.m_sourceAddress.toString());
     CPPUNIT_ASSERT_EQUAL(1, (int)checkInfo.m_TOSValue);
     CPPUNIT_ASSERT("hm-hello" == checkInfo.m_checkInfo);
-    CPPUNIT_ASSERT_EQUAL(result.size(), hosts.size());
+    CPPUNIT_ASSERT_EQUAL(result.size(), checkInfo.m_hosts.size());
     for (uint32_t i = 0; i < result.size(); i++)
     {
-        CPPUNIT_ASSERT(result[i] == hosts[i]);
+        CPPUNIT_ASSERT(result[i] == checkInfo.m_hosts[i]);
     }
 }
 

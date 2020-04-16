@@ -71,7 +71,6 @@ HMWorkDNSLookupLibEvent::libEventDNSCallback (int result, char type, int count, 
 HM_WORK_STATUS
 HMWorkDNSLookupLibEvent::dnsLookup()
 {
-    m_hostnames.insert(m_hostname);
     m_start = HMTimeStamp::now();
     m_end = m_start;
 

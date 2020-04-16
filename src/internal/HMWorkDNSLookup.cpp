@@ -30,15 +30,18 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
 
     // Make sure we completed the query with success and don't need another
     HMTimeStamp checkTime = currentState->m_dnsCache.nextQueryTime(m_hostname, m_dnsHostCheck);
-    if(checkTime <= HMTimeStamp::now())
+    if (m_reschedule)
     {
-        currentState->m_dnsCache.queueDNSQuery(m_hostname, m_dnsHostCheck, m_stateManager->m_workQueue);
+        if (checkTime <= HMTimeStamp::now())
+        {
+            currentState->m_dnsCache.queueDNSQuery(m_hostname, m_dnsHostCheck,
+                    m_stateManager->m_workQueue);
+        }
+        else
+        {
+            m_eventLoop->addDNSTimeout(m_hostname, m_dnsHostCheck, checkTime);
+        }
     }
-    else
-    {
-        m_eventLoop->addDNSTimeout(m_hostname, m_dnsHostCheck, checkTime);
-    }
-
     if(!result)
     {
         return HM_WORK_COMPLETE;
@@ -47,7 +50,7 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     // Now kick all the health checks waiting for this DNS lookup
     set<HMIPAddress> ips;
     set<HMIPAddress> expiredIps;
-    auto range = currentState->m_dnsWaitList.equal_range(HMDNSTypeMap(m_hostname, m_dnsHostCheck.getPlugin()));
+    auto range = currentState->m_dnsWaitList.equal_range(HMDNSTypeMap(m_hostname, m_dnsHostCheck.getType(), m_dnsHostCheck.getRemoteCheckGroup()));
     for(auto it = range.first; it != range.second; ++it)
     {
         uint8_t dualStack;
@@ -77,7 +80,7 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
         {
             for (auto iit = expiredIps.begin(); iit != expiredIps.end(); ++iit)
             {
-                HMLog(HM_LOG_DEBUG3, "[WORKER] Deleting DNS Entry for host %s with IP %s", m_hostname.c_str(), (*iit).toString().c_str());
+                HMLog(HM_LOG_NOTICE, "[WORKER] Deleting DNS Entry for host %s with IP %s", m_hostname.c_str(), (*iit).toString().c_str());
                 currentState->m_checkList.invalidateCheck(m_hostname, *iit, check,currentState->m_datastore.get());
             }
         }

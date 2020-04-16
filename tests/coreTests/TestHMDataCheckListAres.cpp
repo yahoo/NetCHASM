@@ -5,7 +5,6 @@
 #include "HMDNSCache.h"
 #include "HMStateManager.h"
 #include "HMStorage.h"
-#include "HMWorkHealthCheckRemote.h"
 #include "common.h"
 #include <unistd.h>
 

@@ -28,8 +28,8 @@ using namespace std;
 string server_path = HM_DEFAULT_USD_PATH;
 static void usage(char* name)
 {
-    string command = "man ";
-    command.append(name);
+    string command = "man hm_staticdns";
+    if(system(command.c_str()))
     {
         cout << "Usage: "<< name <<" [options] command" << endl << "Options:" << endl
             << "-s      <socket-path> [default: " << server_path << "]" << endl
@@ -199,6 +199,17 @@ int main(int argc, char* argv[])
     case HOSTRESULTS:
     case HOSTIPRESULTS:
     case LOADFBINFOIP:
+    case GETHANDLERTHEADSCOUNT:
+    case ADDHOSTGROUP:
+    case REMOVEHOSTGROUP:
+    case CLEARTRANSACTION:
+    case COMMITTRANSACTION:
+    case GETHOSTGROUPHASH:
+    case GETTRANSCONFIGHASH:
+    case REMOTEHOSTGROUPCHECK:
+    case REMOTESCHDINFO:
+    case LOADFBINFOHOST:
+    case REFRESH:
     case UNDEFINED:
         cerr << "Not all commands are supported at this time" << endl;
         return -3;

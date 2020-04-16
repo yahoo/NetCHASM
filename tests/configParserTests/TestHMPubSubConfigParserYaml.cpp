@@ -86,7 +86,8 @@ TESTNAME::setUp()
             - 192.168.1.1:9092\n\
     \n";
     fnoTopic.close();
-
+    currentState.m_resultPublisher = make_shared<HMResultPublisher>();
+    assert(currentState.m_resultPublisher);
 }
 void
 TESTNAME::tearDown()
@@ -105,10 +106,10 @@ TESTNAME::test_config1_tests()
 {
     HMPubSubConfigParser parser;
     CPPUNIT_ASSERT(!parser.parseConfig(singleKafka, currentState));
-    CPPUNIT_ASSERT_EQUAL(1, (int)currentState.m_resultPublisher.publishersCount());
-    HMPublisherKafka* publisher = (HMPublisherKafka*)currentState.m_resultPublisher.getpublisher("kafka");
+    CPPUNIT_ASSERT_EQUAL(1, (int)currentState.m_resultPublisher->publishersCount());
+    HMPublisherKafka* publisher = (HMPublisherKafka*)currentState.m_resultPublisher->getpublisher("kafka");
     CPPUNIT_ASSERT(!publisher);
-    publisher = (HMPublisherKafka*)currentState.m_resultPublisher.getpublisher("kafka1");
+    publisher = (HMPublisherKafka*)currentState.m_resultPublisher->getpublisher("kafka1");
     CPPUNIT_ASSERT(publisher);
     CPPUNIT_ASSERT(publisher->isPublishAll());
     CPPUNIT_ASSERT(!publisher->isPublishOnChange());
@@ -121,16 +122,16 @@ TESTNAME::test_config2_tests()
 {
     HMPubSubConfigParser parser;
     CPPUNIT_ASSERT(!parser.parseConfig(multipleKafka, currentState));
-    CPPUNIT_ASSERT_EQUAL(2, (int)currentState.m_resultPublisher.publishersCount());
-    HMPublisherKafka* publisher = (HMPublisherKafka*)currentState.m_resultPublisher.getpublisher("kafka");
+    CPPUNIT_ASSERT_EQUAL(2, (int)currentState.m_resultPublisher->publishersCount());
+    HMPublisherKafka* publisher = (HMPublisherKafka*)currentState.m_resultPublisher->getpublisher("kafka");
     CPPUNIT_ASSERT(!publisher);
-    publisher = (HMPublisherKafka*)currentState.m_resultPublisher.getpublisher("kafka1");
+    publisher = (HMPublisherKafka*)currentState.m_resultPublisher->getpublisher("kafka1");
     CPPUNIT_ASSERT(publisher);
     CPPUNIT_ASSERT(publisher->isPublishAll());
     CPPUNIT_ASSERT(!publisher->isPublishOnChange());
     CPPUNIT_ASSERT(publisher->getTopic() =="test");
     CPPUNIT_ASSERT(publisher->getConfig().brokers =="192.168.1.1:9092");
-    publisher = (HMPublisherKafka*) currentState.m_resultPublisher.getpublisher(
+    publisher = (HMPublisherKafka*) currentState.m_resultPublisher->getpublisher(
             "kafka2");
     CPPUNIT_ASSERT(publisher);
     CPPUNIT_ASSERT(!publisher->isPublishAll());

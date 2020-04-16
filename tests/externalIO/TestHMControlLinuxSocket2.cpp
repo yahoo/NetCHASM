@@ -147,7 +147,7 @@ socket.path: test_sock" << endl;
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName, hostGroup));
     HMDNSCache dnsCache;
-    HMDNSLookup dnsHostCheck(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
     set<HMIPAddress> addresses;
     addresses.insert(address);
     addresses.insert(address3);
@@ -157,7 +157,6 @@ socket.path: test_sock" << endl;
     addresses.insert(address2);
     dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
     dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
-
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(mdbm, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));

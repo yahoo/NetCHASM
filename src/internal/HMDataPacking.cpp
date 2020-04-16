@@ -1,5 +1,4 @@
 #include "HMDataPacking.h"
-
 using namespace google::protobuf::io;
 using namespace std;
 
@@ -89,7 +88,7 @@ HMDataPacking::unpackIPAddress(const netchasm::IPAddress& pAddress, HMIPAddress&
 }
 
 void
-HMDataPacking::packDataCheckResult(const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const
+HMDataPacking::packDataCheckResult(const string& hostname, const HMDataCheckResult& dataCheckResult, netchasm::DataCheckResult* pDataCheckResult) const
 {
     netchasm::IPAddress *address = new netchasm::IPAddress;
     packIPAddress(dataCheckResult.m_address, address);
@@ -119,6 +118,7 @@ HMDataPacking::packDataCheckResult(const HMDataCheckResult& dataCheckResult, net
     pDataCheckResult->set_forcehostdown(dataCheckResult.m_forceHostDown);
     pDataCheckResult->set_queuechecktime(dataCheckResult.m_queueCheckTime.getTimeSinceEpoch());
     pDataCheckResult->set_checktime(dataCheckResult.m_checkTime.getTimeSinceEpoch());
+    pDataCheckResult->set_hostname(hostname);
 }
 
 void
@@ -149,6 +149,7 @@ HMDataPacking::unpackDataCheckResult(const netchasm::DataCheckResult& pDataCheck
     dataCheckResult.m_forceHostDown = pDataCheckResult.forcehostdown();
     dataCheckResult.m_queueCheckTime = pDataCheckResult.queuechecktime();
     dataCheckResult.m_checkTime = pDataCheckResult.checktime();
+    dataCheckResult.m_host = pDataCheckResult.hostname();
 }
 
 void
@@ -234,13 +235,13 @@ HMDataPacking::unpackDataCheckParam(const netchasm::DataCheckParam& pDataCheckPa
 }
 
 void
-HMDataPacking::packCheckParamCheckResult(const HMDataCheckParams& dataCheckParams, const HMDataCheckResult& dataCheckResult, netchasm::CheckParamsCheckResult* pCheckParamCheckResult)
+HMDataPacking::packCheckParamCheckResult(const string& hostname, const HMDataCheckParams& dataCheckParams, const HMDataCheckResult& dataCheckResult, netchasm::CheckParamsCheckResult* pCheckParamCheckResult)
 {
 
     netchasm::DataCheckParam *checkParams = new netchasm::DataCheckParam;
     netchasm::DataCheckResult *checkResult = new netchasm::DataCheckResult;
     packDataCheckParam(dataCheckParams, checkParams);
-    packDataCheckResult(dataCheckResult, checkResult);
+    packDataCheckResult(hostname, dataCheckResult, checkResult);
     pCheckParamCheckResult->set_allocated_checkparam(checkParams);
     pCheckParamCheckResult->set_allocated_checkresult(checkResult);
 }
@@ -277,8 +278,11 @@ HMDataPacking::packDataHostGroup(const HMDataHostGroup& dataHostGroup, netchasm:
     pDataHostGroup->set_flapthreshold(dataHostGroup.getFlapThreshold());
     pDataHostGroup->set_passthroughinfo(dataHostGroup.getPassthroughInfo());
     pDataHostGroup->set_checkinfo(dataHostGroup.getCheckInfo());
+    pDataHostGroup->set_remotecheck(dataHostGroup.getRemoteCheck());
+    pDataHostGroup->set_remotechecktype((HM_REMOTE_CHECK_TYPE)dataHostGroup.getRemoteCheckType());
+    pDataHostGroup->set_distributedfallback(dataHostGroup.getDistributedFallback());
     pDataHostGroup->set_tosvalue(dataHostGroup.getTOSValue());
-    pDataHostGroup->set_dnstype(dataHostGroup.getDnsCheckPlugin());
+    pDataHostGroup->set_dnstype(dataHostGroup.getDNSType());
     netchasm::IPAddress* address = new netchasm::IPAddress;
     packIPAddress(dataHostGroup.getSourceAddress(), address);
     pDataHostGroup->set_allocated_sourceaddress(address);
@@ -294,9 +298,42 @@ HMDataPacking::packDataHostGroup(const HMDataHostGroup& dataHostGroup, netchasm:
 
 }
 
+void
+HMDataPacking::unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMDataHostGroup& dataHostGroup)
+{
+    dataHostGroup.setMeasurementOptions(pDataHostGroup.measurementoptions());
+    dataHostGroup.setDualStack((HM_DUALSTACK)pDataHostGroup.dualstack());
+    dataHostGroup.setCheckType((HM_CHECK_TYPE)pDataHostGroup.checktype());
+    dataHostGroup.setPort(pDataHostGroup.port());
+    dataHostGroup.setNumCheckRetries(pDataHostGroup.numcheckretries());
+    dataHostGroup.setCheckRetryDelay(pDataHostGroup.checkretrydelay());
+    dataHostGroup.setSmoothingWindow(pDataHostGroup.smoothingwindow());
+    dataHostGroup.setGroupThreshold(pDataHostGroup.groupthreshold());
+    dataHostGroup.setSlowThreshold(pDataHostGroup.slowthreshold());
+    dataHostGroup.setMaxFlaps(pDataHostGroup.maxflaps());
+    dataHostGroup.setCheckTimeout(pDataHostGroup.checktimeout());
+    dataHostGroup.setCheckTTL(pDataHostGroup.checkttl());
+    dataHostGroup.setFlapThreshold(pDataHostGroup.flapthreshold());
+    dataHostGroup.setPassthroughInfo(pDataHostGroup.passthroughinfo());
+    dataHostGroup.setCheckInfo(pDataHostGroup.checkinfo());
+    dataHostGroup.setDistributedFallback((HM_DISTRIBUTED_FALLBACK)pDataHostGroup.distributedfallback());
+    dataHostGroup.setTOSValue(pDataHostGroup.tosvalue());
+    HMIPAddress address;
+    unpackIPAddress(pDataHostGroup.sourceaddress(), address);
+    dataHostGroup.setSourceAddress(address);
+    for (string hostGrp : pDataHostGroup.hostgroups())
+    {
+        dataHostGroup.addHostGroup(hostGrp);
+    }
+    for (string host : pDataHostGroup.hosts())
+    {
+        dataHostGroup.addHost(host);
+    }
+
+}
 
 void
-HMDataPacking::unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMAPICheckInfo& apiCheckInfo, vector<string>& hosts)
+HMDataPacking::unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup, HMAPICheckInfo& apiCheckInfo)
 {
     apiCheckInfo.m_measurementOptions = pDataHostGroup.measurementoptions();
     apiCheckInfo.m_ipv4 = pDataHostGroup.dualstack() & HM_DUALSTACK_IPV4_ONLY;
@@ -314,8 +351,9 @@ HMDataPacking::unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup,
     apiCheckInfo.m_flapThreshold = pDataHostGroup.flapthreshold();
     apiCheckInfo.m_passthroughInfo = pDataHostGroup.passthroughinfo();
     apiCheckInfo.m_checkInfo = pDataHostGroup.checkinfo();
+    apiCheckInfo.m_distributedFallback = (HM_API_DISTRIBUTED_FALLBACK)pDataHostGroup.distributedfallback();
     apiCheckInfo.m_TOSValue = pDataHostGroup.tosvalue();
-    apiCheckInfo.m_dnsCheckType = (HM_DNS_CHECK_TYPE)pDataHostGroup.dnstype();
+    apiCheckInfo.m_dnsCheckType = (HM_API_DNS_CHECK_TYPE)pDataHostGroup.dnstype();
     unpackIPAddress(pDataHostGroup.sourceaddress(), apiCheckInfo.m_sourceAddress);
     for (string host : pDataHostGroup.hostgroups())
     {
@@ -323,7 +361,7 @@ HMDataPacking::unpackDataHostGroup(const netchasm::DataHostGroup pDataHostGroup,
     }
     for (string host : pDataHostGroup.hosts())
     {
-        hosts.push_back(host);
+        apiCheckInfo.m_hosts.push_back(host);
     }
 
 }
@@ -377,27 +415,38 @@ HMDataPacking::packDataHostGroup(HMDataHostGroup& dataGroupInfo, uint64_t& dataS
 }
 
 bool
-HMDataPacking::unpackDataHostGroup(unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& dataGroupInfo, vector<string>& hosts)
+HMDataPacking::unpackDataHostGroup(unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& dataGroupInfo)
 {
     netchasm::DataHostGroup groupInfo;
     if(groupInfo.ParseFromArray(data.get(), dataSize))
     {
-        unpackDataHostGroup(groupInfo, dataGroupInfo, hosts);
+        unpackDataHostGroup(groupInfo, dataGroupInfo);
         return true;
     }
     return false;
 }
 
+bool
+HMDataPacking::unpackDataHostGroup(unique_ptr<char[]>& data, uint64_t dataSize, HMDataHostGroup& dataHostGroup)
+{
+    netchasm::DataHostGroup groupInfo;
+    if(groupInfo.ParseFromArray(data.get(), dataSize))
+    {
+        unpackDataHostGroup(groupInfo, dataHostGroup);
+        return true;
+    }
+    return false;
+}
 
 unique_ptr<char[]>
-HMDataPacking::packDataCheckResults(vector<HMDataCheckResult>& dataCheckResults, uint64_t& dataSize)
+HMDataPacking::packDataCheckResults(const std::string& hostname, vector<HMDataCheckResult>& dataCheckResults, uint64_t& dataSize)
 {
     dataSize = 0;
     netchasm::DataCheckResults hostResults;
     for (HMDataCheckResult result : dataCheckResults)
     {
         netchasm::DataCheckResult *pResult = hostResults.add_results();
-        packDataCheckResult(result, pResult);
+        packDataCheckResult(hostname, result, pResult);
     }
     unique_ptr<char[]> data;
     if(!hostResults.IsInitialized())
@@ -411,7 +460,7 @@ HMDataPacking::packDataCheckResults(vector<HMDataCheckResult>& dataCheckResults,
 }
 
 bool
-HMDataPacking::unpackDataCheckResults(unique_ptr<char[]>& data, uint64_t dataSize, vector<HMAPICheckResult>& apiResults, string& hostName)
+HMDataPacking::unpackDataCheckResults(unique_ptr<char[]>& data, uint64_t dataSize, vector<HMAPICheckResult>& apiResults)
 {
     netchasm::DataCheckResults hostResults;
     if(hostResults.ParseFromArray(data.get(), dataSize))
@@ -420,7 +469,6 @@ HMDataPacking::unpackDataCheckResults(unique_ptr<char[]>& data, uint64_t dataSiz
         {
             HMAPICheckResult apiResult;
             unpackDataCheckResult(result, apiResult);
-            apiResult.m_host = hostName;
             apiResults.push_back(apiResult);
         }
         return true;
@@ -429,13 +477,13 @@ HMDataPacking::unpackDataCheckResults(unique_ptr<char[]>& data, uint64_t dataSiz
 }
 
 unique_ptr<char[]>
-HMDataPacking::packHostResults(vector<pair<HMDataCheckParams, HMDataCheckResult>>& hostResults, uint64_t& dataSize)
+HMDataPacking::packHostResults(const string& hostName, vector<pair<HMDataCheckParams, HMDataCheckResult>>& hostResults, uint64_t& dataSize)
 {
     netchasm::HostResult pHostResults;
     for (auto it : hostResults)
     {
         netchasm::CheckParamsCheckResult* checkParamCheckResult = pHostResults.add_hostresults();
-        packCheckParamCheckResult(it.first, it.second, checkParamCheckResult);
+        packCheckParamCheckResult(hostName, it.first, it.second, checkParamCheckResult);
     }
     unique_ptr<char[]> data;
     if(!pHostResults.IsInitialized())
@@ -449,13 +497,13 @@ HMDataPacking::packHostResults(vector<pair<HMDataCheckParams, HMDataCheckResult>
 }
 
 unique_ptr<char[]>
-HMDataPacking::packHostResults(multimap<HMDataCheckParams, HMDataCheckResult>& hostResults, uint64_t& dataSize)
+HMDataPacking::packHostResults(const string& hostName, multimap<HMDataCheckParams, HMDataCheckResult>& hostResults, uint64_t& dataSize)
 {
     netchasm::HostResult pHostResults;
     for (auto it : hostResults)
     {
         netchasm::CheckParamsCheckResult* checkParamCheckResult = pHostResults.add_hostresults();
-        packCheckParamCheckResult(it.first, it.second, checkParamCheckResult);
+        packCheckParamCheckResult(hostName, it.first, it.second, checkParamCheckResult);
     }
     unique_ptr<char[]> data;
     if(!pHostResults.IsInitialized())
@@ -535,7 +583,7 @@ HMDataPacking::packHostGroupInfo(HMDataHostGroup& group,  vector<HMGroupCheckRes
          netchasm::HostGroupCheckResult* groupCheckResult = pHostGroupInfo.add_groupcheckresult();
          groupCheckResult->set_hostname(it.m_hostName);
          netchasm::DataCheckResult* result = new netchasm::DataCheckResult;
-         packDataCheckResult(it.m_result, result);
+         packDataCheckResult(it.m_hostName, it.m_result, result);
          groupCheckResult->set_allocated_hostresults(result);
     }
     unique_ptr<char[]> data;
@@ -550,18 +598,38 @@ HMDataPacking::packHostGroupInfo(HMDataHostGroup& group,  vector<HMGroupCheckRes
 }
 
 bool
-HMDataPacking::unpackHostGroupInfo(unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& apiCheckInfo, vector<string>& hosts, vector<HMAPICheckResult>& apiCheckResults)
+HMDataPacking::unpackHostGroupInfo(unique_ptr<char[]>& data, uint64_t dataSize, HMAPICheckInfo& apiCheckInfo, vector<HMAPICheckResult>& apiCheckResults)
 {
     netchasm::HostGroupInfo pHostGroupInfo;
     if(pHostGroupInfo.ParseFromArray(data.get(), dataSize))
     {
-        unpackDataHostGroup(pHostGroupInfo.hostgroup(), apiCheckInfo, hosts);
+        unpackDataHostGroup(pHostGroupInfo.hostgroup(), apiCheckInfo);
         for(netchasm::HostGroupCheckResult pResult : pHostGroupInfo.groupcheckresult())
         {
             HMAPICheckResult result;
             result.m_host = pResult.hostname();
             unpackDataCheckResult(pResult.hostresults(), result);
             apiCheckResults.push_back(std::move(result));
+        }
+        return true;
+    }
+    return false;
+}
+
+bool
+HMDataPacking::unpackHostGroupInfo(unique_ptr<char[]>& data, uint64_t dataSize, HMDataHostGroup& dataHostGroup, vector<HMGroupCheckResult>& checkResults)
+{
+    netchasm::HostGroupInfo pHostGroupInfo;
+    if(pHostGroupInfo.ParseFromArray(data.get(), dataSize))
+    {
+        unpackDataHostGroup(pHostGroupInfo.hostgroup(), dataHostGroup);
+        for(netchasm::HostGroupCheckResult pResult : pHostGroupInfo.groupcheckresult())
+        {
+            HMGroupCheckResult result;
+            result.m_hostName = pResult.hostname();
+            unpackDataCheckResult(pResult.hostresults(), result.m_result);
+            result.m_address = result.m_result.m_address;
+            checkResults.push_back(std::move(result));
         }
         return true;
     }
@@ -682,7 +750,7 @@ bool HMDataPacking::unpackAuxInfo(unique_ptr<char[]>& data, uint64_t dataSize,
         for (netchasm::OOB oob : pAuxInfoResult.oob())
         {
             HMAuxOOB oobData;
-            oobData.m_forceDown = oob.forcedown();
+            oobData.m_forceDown = (HM_OOB_FORCEDOWN)oob.forcedown();
             oobData.m_host = oob.host();
             oobData.m_resource = oob.resource();
             oobData.m_shed = oob.shed();
@@ -696,7 +764,7 @@ bool HMDataPacking::unpackAuxInfo(unique_ptr<char[]>& data, uint64_t dataSize,
 }
 
 unique_ptr<char[]>
-HMDataPacking::packAuxInfo(std::vector<HMGroupAuxResult>& auxResults, uint64_t checkTTL, uint64_t& dataSize)
+HMDataPacking::packAuxInfo(vector<HMGroupAuxResult>& auxResults, uint64_t checkTTL, uint64_t& dataSize)
 {
     netchasm::AuxResults pAuxResults;
     for (auto it : auxResults)
@@ -793,9 +861,62 @@ HMDataPacking::unpackAuxInfo(unique_ptr<char[]>& data, uint64_t dataSize, vector
     return false;
 }
 
+bool
+HMDataPacking::unpackAuxInfo(unique_ptr<char[]>& data, uint64_t dataSize, vector<HMGroupAuxResult>& auxResults)
+{
+    netchasm::AuxResults pAuxResults;
+    if(pAuxResults.ParseFromArray(data.get(), dataSize))
+    {
+        for(netchasm::AuxInfo pAuxInfo : pAuxResults.auxinfos())
+        {
+            HMGroupAuxResult auxInfo;
+            unpackIPAddress(pAuxInfo.address(), auxInfo.m_address);
+            auxInfo.m_hostName = pAuxInfo.host();
+            auxInfo.m_info.m_ts.setTime(pAuxInfo.updatetime());
+            for (netchasm::LFB lfb : pAuxInfo.lfb())
+            {
+                std::unique_ptr<HMAuxLoadFB> pLFB = make_unique<HMAuxLoadFB>();
+                pLFB->m_datacenter = lfb.datacenter();
+                pLFB->m_host = lfb.host();
+                pLFB->m_load = lfb.load();
+                pLFB->m_max = lfb.max();
+                pLFB->m_resource = lfb.resource();
+                pLFB->m_target = lfb.target();
+                pLFB->m_ts.setTime(lfb.ts());
+                pLFB->m_type = (HM_AUX_TYPE)lfb.type();
+                auxInfo.m_info.m_auxData.push_back(std::move(pLFB));
+            }
+            for (netchasm::OOB oob : pAuxInfo.oob())
+            {
+                std::unique_ptr<HMAuxOOB> pOOB = make_unique<HMAuxOOB>();
+                pOOB->m_forceDown = (HM_OOB_FORCEDOWN)oob.forcedown();
+                pOOB->m_host = oob.host();
+                pOOB->m_resource = oob.resource();
+                pOOB->m_shed = oob.shed();
+                pOOB->m_ts.setTime(oob.ts());
+                pOOB->m_type = (HM_AUX_TYPE)oob.type();
+                auxInfo.m_info.m_auxData.push_back(std::move(pOOB));
+            }
+            auxResults.push_back(auxInfo);
+        }
+        return true;
+    }
+    return false;
+}
+
+void
+HMDataPacking::packHostInfo(const HMAPIHostSchedInfo& schedInfo, netchasm::HostSchedInfo* hostSchedInfo)
+{
+    hostSchedInfo->set_lastchecktime(schedInfo.m_lastCheckTime);
+    hostSchedInfo->set_nextchecktime(schedInfo.m_nextCheckTime);
+    hostSchedInfo->set_state(schedInfo.m_state);
+    netchasm::IPAddress* address = new netchasm::IPAddress;
+    packIPAddress(schedInfo.m_address, address);
+    hostSchedInfo->set_allocated_address(address);
+}
 
 unique_ptr<char[]>
-HMDataPacking::packHostSchedInfo(HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& dataSize)
+HMDataPacking::packHostSchedInfo(const HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& dataSize)
 {
     netchasm::DNSSchedInfo pDNSSchedInfo;
     pDNSSchedInfo.set_hasv4(dnsSchedInfo.m_hasv4);
@@ -806,15 +927,10 @@ HMDataPacking::packHostSchedInfo(HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& data
     pDNSSchedInfo.set_v6nextchecktime(dnsSchedInfo.m_v6NextCheckTime);
     pDNSSchedInfo.set_v4state(dnsSchedInfo.m_v4State);
     pDNSSchedInfo.set_v6state(dnsSchedInfo.m_v6State);
-    for (auto it : dnsSchedInfo.m_hostScheduleInfo)
+    for (const auto& it : dnsSchedInfo.m_hostScheduleInfo)
     {
         netchasm::HostSchedInfo* hostSchedInfo =  pDNSSchedInfo.add_hostschedinfo();
-        hostSchedInfo->set_lastchecktime(it.m_lastCheckTime);
-        hostSchedInfo->set_nextchecktime(it.m_nextCheckTime);
-        hostSchedInfo->set_state(it.m_state);
-        netchasm::IPAddress* address = new netchasm::IPAddress;
-        packIPAddress(it.m_address, address);
-        hostSchedInfo->set_allocated_address(address);
+        packHostInfo(it, hostSchedInfo);
     }
     unique_ptr<char[]> data;
     if(!pDNSSchedInfo.IsInitialized())
@@ -825,6 +941,30 @@ HMDataPacking::packHostSchedInfo(HMAPIDNSSchedInfo& dnsSchedInfo, uint64_t& data
     data = make_unique<char[]>(dataSize);
     pDNSSchedInfo.SerializeToArray(data.get(), dataSize);
     return data;
+}
+
+unique_ptr<char[]>
+HMDataPacking::packRemoteHostGroupSchedInfo(const HMAPIHostSchedInfo& hostSchedInfo, uint64_t& dataSize)
+{
+    netchasm::HostSchedInfo pHostSchedInfo;
+    packHostInfo(hostSchedInfo, &pHostSchedInfo);
+    unique_ptr<char[]> data;
+    if (!pHostSchedInfo.IsInitialized())
+    {
+        return data;
+    }
+    dataSize = pHostSchedInfo.ByteSize();
+    data = make_unique<char[]>(dataSize);
+    pHostSchedInfo.SerializeToArray(data.get(), dataSize);
+    return data;
+}
+
+void HMDataPacking::unpackHostSchedInfo(netchasm::HostSchedInfo& pHostSchdInfo, HMAPIHostSchedInfo& hostSchedInfo)
+{
+    unpackIPAddress(pHostSchdInfo.address(), hostSchedInfo.m_address);
+    hostSchedInfo.m_lastCheckTime = pHostSchdInfo.lastchecktime();
+    hostSchedInfo.m_nextCheckTime = pHostSchdInfo.nextchecktime();
+    hostSchedInfo.m_state = (HM_API_WORK_STATE)pHostSchdInfo.state();
 }
 
 bool
@@ -844,12 +984,21 @@ HMDataPacking::unpackHostSchedInfo(unique_ptr<char[]>& data, uint64_t dataSize, 
         for(netchasm::HostSchedInfo pHostSchdInfo : pDNSSchedInfo.hostschedinfo())
         {
             HMAPIHostSchedInfo hostSchedInfo;
-            unpackIPAddress(pHostSchdInfo.address(), hostSchedInfo.m_address);
-            hostSchedInfo.m_lastCheckTime = pHostSchdInfo.lastchecktime();
-            hostSchedInfo.m_nextCheckTime = pHostSchdInfo.nextchecktime();
-            hostSchedInfo.m_state = (HM_API_WORK_STATE)pHostSchdInfo.state();
+            unpackHostSchedInfo(pHostSchdInfo, hostSchedInfo);
             dnsSchedInfo.m_hostScheduleInfo.push_back(hostSchedInfo);
         }
+        return true;
+    }
+    return false;
+}
+
+bool
+HMDataPacking::unpackRemoteHostGroupSchedInfo(unique_ptr<char[]>& data, uint64_t dataSize, HMAPIHostSchedInfo& hostSchedInfo)
+{
+    netchasm::HostSchedInfo pHostSchedInfo;
+    if(pHostSchedInfo.ParseFromArray(data.get(), dataSize))
+    {
+        unpackHostSchedInfo(pHostSchedInfo, hostSchedInfo);
         return true;
     }
     return false;
@@ -864,7 +1013,7 @@ HMDataPacking::packDataHostCheck(HMDataHostCheck& dataHostCheck, uint64_t& dataS
     pDataHostCheck.set_checktype(dataHostCheck.getCheckType());
     pDataHostCheck.set_checkinfo(dataHostCheck.getCheckInfo());
     pDataHostCheck.set_tosvalue(dataHostCheck.getTOSValue());
-    pDataHostCheck.set_dnstype(dataHostCheck.getDnsPlugin());
+    pDataHostCheck.set_dnstype(dataHostCheck.getDnsType());
     netchasm::IPAddress* address = new netchasm::IPAddress;
     packIPAddress(dataHostCheck.getSourceAddress(), address);
     pDataHostCheck.set_allocated_sourceaddress(address);
@@ -890,7 +1039,7 @@ HMDataPacking::unpackDataHostCheck(unique_ptr<char[]>& data, uint64_t dataSize, 
         dataHostGroup.setPort(pDataHostCheck.port());
         dataHostGroup.setDualStack((HM_DUALSTACK)pDataHostCheck.dualstack());
         dataHostGroup.setCheckInfo(pDataHostCheck.checkinfo());
-        dataHostGroup.setDnsCheckPlugin((HM_DNS_PLUGIN_CLASS)pDataHostCheck.dnstype());
+        dataHostGroup.setDNSType((HM_DNS_TYPE)pDataHostCheck.dnstype());
         HMIPAddress address;
         unpackIPAddress(pDataHostCheck.sourceaddress(), address);
         dataHostGroup.setSourceAddress(address);
@@ -1035,6 +1184,140 @@ HMDataPacking::unpackBool(unique_ptr<char[]>& data, uint64_t dataSize)
     if(pBool.ParseFromArray(data.get(), dataSize))
     {
         return pBool.data();
+    }
+    return false;
+}
+
+unique_ptr<char[]>
+HMDataPacking::packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize)
+{
+    unique_ptr<char[]> data;
+    netchasm::HashInfo pHashInfo;
+    for(auto& it: hostGroupMap)
+    {
+        netchasm::HashHGPair *hashHGPair = pHashInfo.add_items();
+        hashHGPair->set_hostgroupname(it.first);
+        hashHGPair->set_size(it.second.getHashValue().m_hashSize);
+        hashHGPair->set_hash(it.second.getHashValue().m_hashValue, it.second.getHashValue().m_hashSize);
+    }
+
+    if(!pHashInfo.IsInitialized())
+    {
+        return data;
+    }
+    dataSize = pHashInfo.ByteSize();
+    data = make_unique<char[]>(dataSize);
+    pHashInfo.SerializeToArray(data.get(), dataSize);
+    return data;
+}
+
+bool
+HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMHash>& hashInfo)
+{
+    netchasm::HashInfo pHashInfo;
+    if(pHashInfo.ParseFromArray(data.get(), dataSize))
+    {
+        for(const netchasm::HashHGPair& pHashPair: pHashInfo.items())
+        {
+            auto it = hashInfo.insert(make_pair(pHashPair.hostgroupname(), HMHash()));
+            it.first->second.m_hashSize = pHashPair.size();
+            if(pHashPair.size())
+            {
+                memcpy(it.first->second.m_hashValue , pHashPair.hash().c_str(), pHashPair.size());
+            }
+        }
+    }
+    return false;
+}
+
+bool
+HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMAPIHash>& hashInfo)
+{
+    netchasm::HashInfo pHashInfo;
+    if(pHashInfo.ParseFromArray(data.get(), dataSize))
+    {
+        for(const netchasm::HashHGPair& pHashPair: pHashInfo.items())
+        {
+            auto it = hashInfo.insert(make_pair(pHashPair.hostgroupname(), HMAPIHash()));
+            it.first->second.m_hashSize = pHashPair.size();
+            if(pHashPair.size())
+            {
+                memcpy(it.first->second.m_hashValue , pHashPair.hash().c_str(), pHashPair.size());
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
+unique_ptr<char[]>
+HMDataPacking::packHash(string& name, const HMAPIHash& hash, uint64_t& dataSize)
+{
+    unique_ptr<char[]> data;
+    netchasm::HashHGPair pHashHGPair;
+    pHashHGPair.set_hostgroupname(name);
+    pHashHGPair.set_size(hash.m_hashSize);
+    pHashHGPair.set_hash(hash.m_hashValue, hash.m_hashSize);
+
+    if (!pHashHGPair.IsInitialized())
+    {
+        return data;
+    }
+    dataSize = pHashHGPair.ByteSize();
+    data = make_unique<char[]>(dataSize);
+    pHashHGPair.SerializeToArray(data.get(), dataSize);
+    return data;
+}
+
+unique_ptr<char[]>
+HMDataPacking::packHash(string& name, const HMHash& hash, uint64_t& dataSize)
+{
+    unique_ptr<char[]> data;
+    netchasm::HashHGPair pHashHGPair;
+    pHashHGPair.set_hostgroupname(name);
+    pHashHGPair.set_size(hash.m_hashSize);
+    pHashHGPair.set_hash(hash.m_hashValue, hash.m_hashSize);
+
+    if (!pHashHGPair.IsInitialized())
+    {
+        return data;
+    }
+    dataSize = pHashHGPair.ByteSize();
+    data = make_unique<char[]>(dataSize);
+    pHashHGPair.SerializeToArray(data.get(), dataSize);
+    return data;
+}
+
+bool HMDataPacking::unpackHash(unique_ptr<char[]>& data, uint64_t dataSize,
+        HMHash& hash)
+{
+    netchasm::HashHGPair pHash;
+    if (pHash.ParseFromArray(data.get(), dataSize))
+    {
+
+        hash.m_hashSize = pHash.size();
+        if (pHash.size())
+        {
+            memcpy(hash.m_hashValue, pHash.hash().c_str(), pHash.size());
+        }
+        return true;
+    }
+    return false;
+}
+
+bool HMDataPacking::unpackHash(unique_ptr<char[]>& data, uint64_t dataSize,
+        HMAPIHash& hash)
+{
+    netchasm::HashHGPair pHash;
+    if (pHash.ParseFromArray(data.get(), dataSize))
+    {
+
+        hash.m_hashSize = pHash.size();
+        if (pHash.size())
+        {
+            memcpy(hash.m_hashValue, pHash.hash().c_str(), pHash.size());
+        }
+        return true;
     }
     return false;
 }

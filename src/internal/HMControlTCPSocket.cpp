@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <future>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <HMControlTCPSocket.h>
 #include <netinet/in.h>
 #include "HMLogBase.h"
@@ -37,6 +38,13 @@ HMControlTCPSocket::init()
     {
         //LCOV_EXCL_START;
         throwException("Failed to create socket TCP error desc: ");
+        //LCOV_EXCL_STOP;
+    }
+
+    if (fcntl(m_socket, F_SETFL, O_NONBLOCK) < 0)
+    {
+        //LCOV_EXCL_START;
+        throwException("Failed to set non blocking socket:");
         //LCOV_EXCL_STOP;
     }
 
@@ -100,10 +108,8 @@ HMControlTCPSocket::listernerShutDown()
 }
 
 void
-HMControlTCPSocket::handleClient(char* client)
+HMControlTCPSocket::handleClient(int clientSock)
 {
-
-    int clientSock = *(int*)client;
     if(clientSock == -1)
     {
         //LCOV_EXCL_START
@@ -113,35 +119,46 @@ HMControlTCPSocket::handleClient(char* client)
         //LCOV_EXCL_STOP
     }
     HMSocketUtilTCP utilTcp(clientSock);
-    int done = 0;
+    bool keepOpen = false;
+    bool done;
     do
     {
+        done = false;
         struct timeval timeToWait;
         timeToWait.tv_sec = 3;
         timeToWait.tv_usec = 0;
         string command;
-        if (!utilTcp.receiveCommand(command, timeToWait))
+        HM_SOCK_DATA_STATUS status = utilTcp.receiveCommand(command, timeToWait);
+        switch(status)
         {
-            done = 1;
-
-        }
-        else
-        {
-            HMLog(HM_LOG_DEBUG3, "[CORE] HMCommandListener::run command = %s",
+        case HM_SOCK_DATA_EMPTY:
+        case HM_SOCK_DATA_FAILED:
+            keepOpen = false;
+            done = true;
+            break;
+        case HM_SOCK_DATA_TIMEOUT:
+            done = true;
+            break;
+        case HM_SOCK_DATA_OK:
+            HMLog(HM_LOG_DEBUG, "[TCPSERVER] NetCHASM daemon socket received command = %s",
                     command.c_str());
-
             if (command == "quit")
             {
-                done = 1;
+                keepOpen = false;
+                done = true;
+            }
+            else if (command == HM_CMD_KEEPOPENSTR)
+            {
+                keepOpen = true;
             }
             else
             {
                 handleCommands(command, utilTcp);
             }
         }
-    } while (!done);
-
-    lock_guard<mutex> lg(m_handlerMutex);
+    } while (m_keepRunning && (keepOpen || !done));
+    utilTcp.closeSocket();
+    lock_guard<shared_timed_mutex> lg(m_handlerMutex);
     m_handlerThreadsStatus[this_thread::get_id()] = true;
     return;
 }
@@ -156,7 +173,8 @@ void HMControlTCPSocket::handleConnections()
         FD_SET(m_socket, &fds);
         FD_SET(m_pipesfd[0], &fds);
         int max = m_socket>m_pipesfd[0]?m_socket:m_pipesfd[0];
-        int res = select(max + 1, &fds, NULL, NULL, NULL);
+        timeval tv { 3, 0};
+        int res = select(max + 1, &fds, NULL, NULL, &tv);
         if(res < 0)
         {
             //LCOV_EXCL_START
@@ -169,9 +187,10 @@ void HMControlTCPSocket::handleConnections()
             if(clientSock > 0)
             {
                 cleanHandlerThreads();
+                lock_guard<shared_timed_mutex> lg(m_handlerMutex);
                 m_handlerThreads.push_back(
                         thread(&HMControlTCPSocket::handleClient, this,
-                                (char*) &clientSock));
+                                clientSock));
                 HMLog(HM_LOG_DEBUG, "[CORE] HMCommandListener::run accept on client sock = %d", clientSock);
             }
         }

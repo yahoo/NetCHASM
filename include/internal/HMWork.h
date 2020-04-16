@@ -178,8 +178,6 @@ public:
     HMTimeStamp m_end;
     uint64_t m_ID;
     HM_WORK_STATUS m_workStatus;
-    std::map<HMDataCheckParams, HMDataCheckResult> m_hostResults;
-    HMAuxInfo m_auxInfo;
 
 
 protected:

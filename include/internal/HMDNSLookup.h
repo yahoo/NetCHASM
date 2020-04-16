@@ -17,33 +17,45 @@ class HMCheckHeader;
 class HMDNSTypeMap
 {
 public:
-    HMDNSTypeMap(std::string name, HM_DNS_PLUGIN_CLASS plugin) :
+    HMDNSTypeMap(std::string name, HM_DNS_TYPE type, const std::string& remoteCheck) :
         m_name(name),
-        m_plugin(plugin) {}
+        m_type(type),
+        m_remoteCheckGroup(remoteCheck) {}
     bool operator<(const HMDNSTypeMap& k) const;
     bool operator!=(const HMDNSTypeMap& k) const;
     bool operator==(const HMDNSTypeMap& k) const;
 
 private:
     std::string m_name;
-    HM_DNS_PLUGIN_CLASS m_plugin;
+    HM_DNS_TYPE m_type;
+    std::string m_remoteCheckGroup;
 };
 
 class HMDNSLookup
 {
 public:
     HMDNSLookup() :
-        m_plugin(HM_DNS_PLUGIN_ARES),
-        m_ipv6(false) {}
-    HMDNSLookup(bool ipv6) :
-        m_plugin(HM_DNS_PLUGIN_ARES),
-        m_ipv6(ipv6) {}
-    HMDNSLookup(HM_DNS_PLUGIN_CLASS plugin) :
-        m_plugin(plugin),
-        m_ipv6(false) {}
-    HMDNSLookup(HM_DNS_PLUGIN_CLASS plugin, bool ipv6) :
-        m_plugin(plugin),
-        m_ipv6(ipv6) {}
+        m_type(HM_DNS_TYPE_LOOKUP),
+        m_ipv6(false),
+        m_plugin(HM_DNS_PLUGIN_NONE){}
+    HMDNSLookup(HM_DNS_TYPE type) :
+        m_type(type),
+        m_ipv6(false),
+        m_plugin(HM_DNS_PLUGIN_NONE){}
+    HMDNSLookup(HM_DNS_TYPE type, const std::string& remoteCheck) :
+        m_type(type),
+        m_ipv6(false),
+        m_remoteCheckGroup(remoteCheck),
+        m_plugin(HM_DNS_PLUGIN_NONE) {}
+    HMDNSLookup(HM_DNS_TYPE type, bool ipv6) :
+        m_type(type),
+        m_ipv6(ipv6),
+        m_plugin(HM_DNS_PLUGIN_NONE) {}
+    HMDNSLookup(HM_DNS_TYPE type, bool ipv6, const std::string& remoteCheck) :
+        m_type(type),
+        m_ipv6(ipv6),
+        m_remoteCheckGroup(remoteCheck),
+        m_plugin(HM_DNS_PLUGIN_NONE){}
 
     bool operator<(const HMDNSLookup& k) const;
     bool operator!=(const HMDNSLookup& k) const;
@@ -67,10 +79,34 @@ public:
          Get the type of DNS check for the health check.
          \return the DNS check type.
      */
+    HM_DNS_TYPE getType() const;
+
+    //! Get the remote check.
+    /*!
+         Get the remote check for the health check.
+         \return the remote check host-group.
+     */
+
+    const std::string& getRemoteCheckGroup() const;
+
+    //! Get the type of DNS plugin.
+    /*!
+         Get the type of DNS plugin.
+         \return the DNS check plugin.
+     */
     HM_DNS_PLUGIN_CLASS getPlugin() const;
 
+    //! Set the type of DNS plugin.
+    /*!
+         Set the type of DNS plugin.
+         \param the DNS check plugin.
+     */
+    void setPlugin(HM_DNS_PLUGIN_CLASS plugin);
+
 private:
-    HM_DNS_PLUGIN_CLASS m_plugin;
+    HM_DNS_TYPE m_type;
     bool m_ipv6;
+    std::string m_remoteCheckGroup;
+    HM_DNS_PLUGIN_CLASS m_plugin;
 };
 #endif /* HMDNSHOSTCHECK_H_ */

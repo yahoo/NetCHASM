@@ -13,10 +13,41 @@
 
 using namespace std;
 
-HMSocketUtilLinux::HMSocketUtilLinux(int sock, std::string& sockPath) :
-        HMSocketUtilBase(true, sock),
-        m_socketPath(sockPath)
+bool
+HMSocketUtilLinux::createSocket()
 {
+    if ((m_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
+    {
+        m_errorMsg = "Failed to create socket, error: " + std::string(strerror(errno));
+        m_socket = -1;
+        m_reason = HM_REASON_INTERNAL_ERROR;
+        return false;
+    }
+    return true;
+}
+
+bool
+HMSocketUtilLinux::connectSocket()
+{
+    if(!createSocket())
+    {
+        return false;
+    }
+    int len;
+    struct sockaddr_un remote;
+    remote.sun_family = AF_UNIX;
+    sprintf(remote.sun_path, "%s", m_socketPath.c_str());
+    len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+    if (connect(m_socket, (struct sockaddr *) &remote, len) == -1)
+    {
+        m_errorMsg = "Failed to connect socket to " + m_socketPath + ", error: " + std::string(strerror(errno));
+        closeSocket();
+        m_socket = -1;
+        m_reason = HM_REASON_CONNECT_FAILURE;
+        return false;
+    }
+    m_connected = true;
+    return true;
 }
 
 void
@@ -25,6 +56,8 @@ HMSocketUtilLinux::closeSocket()
     if(m_socket != -1)
     {
         close(m_socket);
+        m_connected = false;
+        m_socket = -1;
     }
 }
 
@@ -32,6 +65,20 @@ HMSocketUtilLinux::~HMSocketUtilLinux()
 {
     closeSocket();
 }
+
+void
+HMSocketUtilLinux::reconnect()
+{
+    if (connectSocket())
+    {
+        setConnectionReset(false);
+        if (isPersistent())
+        {
+            openPersistant();
+        }
+    }
+}
+
 bool
 HMSocketUtilLinux::sendData(const char* buffer, uint64_t size)
 {
@@ -55,7 +102,7 @@ HMSocketUtilLinux::sendData(const char* buffer, uint64_t size)
     return true;
 }
 
-bool HMSocketUtilLinux::recvData(char* data, uint64_t size, timeval& tv)
+HM_SOCK_DATA_STATUS HMSocketUtilLinux::recvData(char* data, uint64_t size, timeval tv)
 {
     size_t offset = 0;
     fd_set fdset;
@@ -69,28 +116,28 @@ bool HMSocketUtilLinux::recvData(char* data, uint64_t size, timeval& tv)
             char buf[1024];
             strerror_r(errno, buf, sizeof(buf));
             buf[sizeof(buf) - 1] = '\0';
-            HMLog(HM_LOG_ERROR, "select Error, error desc: %s", buf);
-            return false;
+            HMLog(HM_LOG_ERROR, "select Error, error %d desc: %s",errno, buf);
+            return HM_SOCK_DATA_FAILED;
         }
         if (ret == 0)
         {
             HMLog(HM_LOG_DEBUG, "select timed out, closing Socket");
-            return false;
+            return HM_SOCK_DATA_TIMEOUT;
         }
         if (FD_ISSET(m_socket, &fdset))
         {
             int n = recv(m_socket, (void*) data, size, 0);
             if (n == 0)
             {
-                return false;
+                return HM_SOCK_DATA_EMPTY;
             }
             if (n < 0)
             {
-                return false;
+                return HM_SOCK_DATA_FAILED;
             }
             offset += n;
         }
     }
     while (offset < size);
-    return true;
+    return HM_SOCK_DATA_OK;
 }

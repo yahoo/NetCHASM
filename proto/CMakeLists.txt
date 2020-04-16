@@ -10,6 +10,7 @@ list(APPEND PROTO netchasm/hostgroupinfo.proto)
 list(APPEND PROTO netchasm/hostresults.proto)
 list(APPEND PROTO netchasm/hostschdinfo.proto)
 list(APPEND PROTO netchasm/threadinfo.proto)
+list(APPEND PROTO netchasm/hashinfo.proto)
 
 foreach( file  ${PROTO})
     message( "Generating proto buf files for ${file}" )

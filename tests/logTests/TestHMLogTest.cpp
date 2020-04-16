@@ -18,7 +18,7 @@ void TESTNAME::setUp()
 
 void TESTNAME::tearDown()
 {
-
+    hlog = nullptr;
 }
 
 void TESTNAME::test_logbase()

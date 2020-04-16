@@ -39,6 +39,8 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_indirect_hosts1);
     CPPUNIT_TEST(test_config18_tests);
     CPPUNIT_TEST(test_config19_tests);
+    CPPUNIT_TEST(test_config21_tests);
+    CPPUNIT_TEST(test_config22_tests);
     CPPUNIT_TEST(test_neg_configs);
     CPPUNIT_TEST(test_write_configs);
     CPPUNIT_TEST(test_write_configs1);
@@ -78,6 +80,8 @@ protected:
     void test_indirect_hosts1();
     void test_config18_tests();
     void test_config19_tests();
+    void test_config21_tests();
+    void test_config22_tests();
     void test_neg_configs();
     void test_write_configs();
     void test_write_configs1();

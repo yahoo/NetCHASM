@@ -22,13 +22,23 @@ class HMSocketUtilTCPS : public HMSocketUtilTCP
 {
 public:
 
-    HMSocketUtilTCPS(SSL_CTX* ctx, HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue);
-    HMSocketUtilTCPS(SSL* ssl);
-    virtual ~HMSocketUtilTCPS();
+    HMSocketUtilTCPS(SSL_CTX* ctx, const HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue, bool persistant) :
+            HMSocketUtilTCP(address, port, timeInfo, sourceAddress, tosValue, persistant),
+            m_ctx(ctx),
+            m_ssl(NULL)
+    { }
 
+    HMSocketUtilTCPS(SSL* ssl) :
+            HMSocketUtilTCP(SSL_get_fd(ssl)),
+            m_ctx(NULL),
+            m_ssl(ssl)
+    { }
+
+    virtual ~HMSocketUtilTCPS();
     HMSocketUtilTCPS& operator=(const HMSocketUtilTCPS&) = delete;        // Disallow copying
     HMSocketUtilTCPS(const HMSocketUtilTCPS&) = delete;
-
+    //! Called to close the socket.
+    void closeSocket();
 private:
     HMSocketUtilTCPS();
     SSL_CTX* m_ctx;
@@ -44,12 +54,13 @@ private:
          \param data buffer.
          \param size of the data buffer.
          \param wait time for the data.
+         \return Status of results fetch.
      */
-    bool recvData(char* data, uint64_t size, timeval& tv);
+    HM_SOCK_DATA_STATUS recvData(char* data, uint64_t size, timeval tv);
     //! Called to connect to a socket.
     bool connectSocket();
-    //! Called to close the socket.
-    void closeSocket();
+    //! Called to reset the connection.
+    void reconnect();
 };
 
 #endif /* HMSOCKETUTIL_TCPS_H_ */

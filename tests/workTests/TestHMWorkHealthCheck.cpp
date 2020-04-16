@@ -71,7 +71,7 @@ TESTNAME::test_HMWorkHealthCheck_IPV4()
 	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
 	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
 	hostCheck.setCheckParams(hostGroup);
-    HMDNSLookup dnsHostCheckF(HM_DNS_PLUGIN_ARES, false);
+    HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_LOOKUP, false);
     HMDataCheckParams paramsNormal;
     HMDataCheckParams paramsTimedout;
 
@@ -440,7 +440,7 @@ void
 TESTNAME::test_HMWorkHealthCheck_IPV6()
 {
     TestStorage* storage = dynamic_cast<TestStorage*>(m_currentState->m_datastore.get());
-    HMDNSLookup dnsHostCheckT(HM_DNS_PLUGIN_ARES, true);
+    HMDNSLookup dnsHostCheckT(HM_DNS_TYPE_LOOKUP, true);
     string checkParams = "/check.html";
     HMDataHostCheck hostCheck;
     string host_group = "dummy";
@@ -504,7 +504,10 @@ TESTNAME::test_HMWorkHealthCheck_IPV6()
 
     m_currentState->m_checkList.insertCheck("HostGroup1", error, hostCheck, paramsNormal, ips);
     m_currentState->m_checkList.insertCheck("HostGroup2", error, hostCheck, paramsTimedout, ips);
-
+    m_currentState->m_dnsCache.insertDNSEntry(basic, dnsHostCheckT, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(success, dnsHostCheckT, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(failure, dnsHostCheckT, 10000, 10000);
+    m_currentState->m_dnsCache.insertDNSEntry(error, dnsHostCheckT, 10000, 10000);
     m_currentState->m_dnsCache.updateDNSEntry(basic, dnsHostCheckT, ips1);
     m_currentState->m_dnsCache.updateDNSEntry(success, dnsHostCheckT, ips);
     m_currentState->m_dnsCache.updateDNSEntry(failure, dnsHostCheckT, ips);

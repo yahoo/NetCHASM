@@ -19,6 +19,13 @@ class HMDataCheckParams;
 class HMDNSTypeMap;
 
 //! The supported types of DNS lookup classes.
+enum HM_DNS_TYPE : uint8_t
+{
+    HM_DNS_TYPE_LOOKUP,
+    HM_DNS_TYPE_STATIC
+};
+
+//! The supported types of DNS lookup classes.
 enum HM_DNS_PLUGIN_CLASS : uint8_t
 {
     HM_DNS_PLUGIN_ARES,
@@ -58,6 +65,12 @@ const uint16_t HM_CONTROL_SOCKET_DEFAULT_PORTV4 = 10053;
 
 //! The default port(v6) for remote check mode.
 const uint16_t HM_CONTROL_SOCKET_DEFAULT_PORTV6 = 10054;
+
+//! The maximum parallel connection to a remote host.
+const uint8_t HM_MAX_REMOTE_CONNECTIONS = 128;
+
+//! The maximum default connection to a remote host.
+const uint8_t HM_DEFAULT_REMOTE_CONNECTIONS = 5;
 
 //! The master health check command.
 const std::string HM_MASTER_HEALTH_CHECK_COMMAND = "netchasm_status";
@@ -122,7 +135,18 @@ enum HM_REMOTE_CHECK_TYPE : uint8_t
 {
     HM_REMOTE_CHECK_NONE,
     HM_REMOTE_CHECK_TCP,
-    HM_REMOTE_CHECK_TCPS
+    HM_REMOTE_CHECK_TCPS,
+    HM_REMOTE_SHARED_CHECK_TCP,
+    HM_REMOTE_SHARED_CHECK_TCPS,
+    HM_REMOTE_SHARED_CHECK_LINUX
+};
+
+//! The supported health check flow types.
+enum HM_FLOW_TYPE : uint8_t
+{
+    HM_FLOW_DNS_HEALTH_TYPE,
+    HM_FLOW_REMOTE_HOSTGROUP_TYPE,
+    HM_FLOW_REMOTE_HOST_TYPE
 };
 
 
@@ -190,6 +214,10 @@ enum HM_CHECK_TYPE : uint8_t
     HM_CHECK_AUX_HTTP,
     HM_CHECK_AUX_HTTPS,
     HM_CHECK_AUX_HTTPS_NO_PEER_CHECK,
+    HM_CHECK_MTLS_HTTPS,
+    HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK,
+    HM_CHECK_AUX_MTLS_HTTPS,
+    HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK,
     HM_CHECK_TCPS,
     HM_CHECK_MARK_HTTP,
     HM_CHECK_MARK_HTTPS,
@@ -250,7 +278,9 @@ enum HM_WORK_TYPE : uint8_t
     HM_WORK_NONE,
     HM_WORK_HEALTHCHECK,
     HM_WORK_DNSLOOKUP,
-    HM_WORK_AUXFETCH
+    HM_WORK_AUXFETCH,
+    HM_WORK_REMOTECHECK,
+    HM_WORK_REMOTEHOSTCHECK,
 };
 
 //! The supported aux data types.
@@ -272,6 +302,7 @@ enum HM_SOCK_DATA_STATUS : uint8_t
 {
     HM_SOCK_DATA_OK,
     HM_SOCK_DATA_EMPTY,
+    HM_SOCK_DATA_TIMEOUT,
     HM_SOCK_DATA_FAILED
 };
 
@@ -332,6 +363,7 @@ enum HM_COMMAND_TASKS
     RELOAD,
     HOSTGROUPINFO,
     LOADFBINFO,
+    LOADFBINFOHOST,
     LOADFBINFOIP,
     THREADINFO,
     WORKQUEUEINFO,
@@ -342,8 +374,10 @@ enum HM_COMMAND_TASKS
     HOSTCHECK,
     HOSTGROUPPARAMS,
     HOSTSCHDINFO,
+    REMOTESCHDINFO,
     HEALTHCHECK,
     DNSCHECK,
+    REMOTEHOSTGROUPCHECK,
     GETLOGLEVEL,
     SETLOGLEVEL,
     SETCONNECTIONTIMEOUT,
@@ -362,6 +396,14 @@ enum HM_COMMAND_TASKS
     HOSTIPRESULTS,
     SETREMOTEQUERY,
     GETREMOTEQUERY,
+    GETHANDLERTHEADSCOUNT,
+    ADDHOSTGROUP,
+    REMOVEHOSTGROUP,
+    CLEARTRANSACTION,
+    COMMITTRANSACTION,
+    GETHOSTGROUPHASH,
+    GETTRANSCONFIGHASH,
+    REFRESH,
     ADDDNSADDRESSES,
     REMOVEDNSADDRESSES,
     GETDNSADDRESSES,
@@ -404,6 +446,14 @@ enum HM_CONTROL_SOCKET_VERSIONS : uint8_t
     HM_CONTROL_SOCKET_VERSION1 = 1
 };
 
+
+//! The commit transaction API status.
+enum HM_COMMIT_TRANSACTION_STATUS : uint8_t
+{
+    HM_COMMIT_TRANSACTION_SUCCESS = 1,
+    HM_COMMIT_TRANSACTION_HASH_MISMATCH = 2,
+    HM_COMMIT_TRANSACTION_FAILURE = 3
+};
 //! Print the config parser readable check type .
 std::string printCheckTypeConfigs(HM_CHECK_TYPE ct);
 //! Print the human readable check type.
@@ -413,7 +463,7 @@ std::string printWorkType(HM_WORK_TYPE work);
 //! Print the human readable measurement options.
 std::string printMeasurementOptions(uint16_t);
 //! Print the human readable DNS type.
-std::string printDnsType(HM_DNS_PLUGIN_CLASS dt);
+std::string printDnsType(HM_DNS_TYPE dt);
 //! Print the human readable dual stack.
 std::string printDualStack(HM_DUALSTACK ds);
 //! Print the human readable mode.
@@ -424,5 +474,8 @@ std::string printReason(HM_REASON reason);
 std::string printStatus(HM_HOST_STATUS status);
 //! Print the human readable version of the response code.
 std::string printResponse(HM_RESPONSE response);
-
+//! Print the human readable version of the Remote Check type.
+std::string printRemoteCheckType(HM_REMOTE_CHECK_TYPE type);
+//! Print the human readable version of the flow type.
+std::string printFlowType(HM_FLOW_TYPE type);
 #endif /* HMCONSTANTS_H_ */

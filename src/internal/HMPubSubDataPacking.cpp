@@ -12,7 +12,7 @@ HMPubSubDataPacking::packPublishResults(const string& hostName, const int mark, 
     netchasm::PublishResults pPublishResults;
     netchasm::DataCheckResult* result = new netchasm::DataCheckResult;
     pPublishResults.set_publisherversion(HM_PUBSUB_VERSION);
-    m_dataPacking.packDataCheckResult(dataCheckresult, result);
+    m_dataPacking.packDataCheckResult(hostName, dataCheckresult, result);
     pPublishResults.set_allocated_results(result);
     pPublishResults.set_hostname(hostName);
     pPublishResults.set_mark(mark);

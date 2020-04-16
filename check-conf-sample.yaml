@@ -199,8 +199,12 @@
 # Specifies the type of service value in the socket. Currently implemented for TCP and HTTP types only.
 
 # dns-type: <type>
-# values: ares, static
-# default: ares
+# values: lookup, static
+# default: lookup
+
+# flow-type: <type>
+# values: dns-health,remote-hostgroup,remote-host
+# default: dns-health
 
 # Specifies the type of DNS resolution. Ares uses the C-Ares library. 
 # Static is you can provide IP address manually throught the hm_staticdns utility 

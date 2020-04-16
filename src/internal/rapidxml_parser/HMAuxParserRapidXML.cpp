@@ -343,6 +343,7 @@ HMAuxParserRapidXML::parseNewLFB(const string& hostname,
 
     errno = 0;
     int64_t tempTime = strtol((const char*) attr->value(), &endptr, 10);
+    tempTime = tempTime * 1000;
     if ((errno == ERANGE && (tempTime == LONG_MAX || tempTime == LONG_MIN))
             || (errno != 0 && tempTime == 0))
     {
@@ -485,7 +486,7 @@ HMAuxParserRapidXML::parseNewLFB(const string& hostname,
             {
                 errno = 0;
                 tempTime = strtol((const char*) currentNode->value(), &endptr, 10);
-
+                tempTime = tempTime * 1000;
                 if ((errno == ERANGE && (tempTime == LONG_MAX || tempTime == LONG_MIN))
                         || (errno != 0 && tempTime == 0))
                 {
@@ -546,6 +547,7 @@ HMAuxParserRapidXML::parseOOB(const string& hostname,
 
     errno = 0;
     int64_t tempTime = strtol((const char*) attr->value(), &endptr, 10);
+    tempTime = tempTime * 1000;
     if ((errno == ERANGE && (tempTime == LONG_MAX || tempTime == LONG_MIN))
             || (errno != 0 && tempTime == 0))
     {
@@ -558,7 +560,8 @@ HMAuxParserRapidXML::parseOOB(const string& hostname,
     }
     filets.setTime(tempTime);
     auxInfo.m_ts = filets;
-
+    HMLog(HM_LOG_DEBUG3, "oob xml for %s timestamp %s", hostname.c_str(),
+            auxInfo.m_ts.print("%Y-%m-%dT%H:%M:%SZ").c_str());
     resourceNode = rootNode->first_node("resource-oob");
     if(resourceNode == nullptr)
     {
@@ -634,6 +637,7 @@ HMAuxParserRapidXML::parseOOB(const string& hostname,
             {
                 errno = 0;
                 tempTime = strtol((const char*)currentNode->value(), &endptr, 10);
+                tempTime = tempTime * 1000;
                 if((errno == ERANGE && (tempTime == LONG_MAX || tempTime == LONG_MIN))
                         || (errno != 0 && tempTime == 0))
                 {
@@ -672,11 +676,11 @@ HMAuxParserRapidXML::parseOOB(const string& hostname,
             {
                 oob.m_shed = 0;
             }
-
+            oob.m_forceDown = HM_OOB_FORCEDOWN_NONE;
             currentNode = hostNode->first_node("force-down");
             if(currentNode != nullptr)
             {
-                oob.m_forceDown = string(currentNode->value()) == "true";
+                oob.m_forceDown = string(currentNode->value()) == "true"? HM_OOB_FORCEDOWN_TRUE : HM_OOB_FORCEDOWN_FALSE;
             }
 
             auxInfo.m_auxData.push_back(make_unique<HMAuxOOB>(oob));

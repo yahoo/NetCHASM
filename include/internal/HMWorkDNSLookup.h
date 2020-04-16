@@ -57,7 +57,6 @@ public:
     HM_WORK_STATUS processWork();
 
 protected:
-    std::set<std::string> m_hostnames;
     std::set<HMIPAddress> m_ips;
     HMDNSLookup m_dnsHostCheck;
 };

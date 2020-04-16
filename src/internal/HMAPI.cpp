@@ -3,6 +3,7 @@
 #include "HMAPI.h"
 #include "HMDataHostGroup.h"
 #include "HMIPAddress.h"
+#include "HMStorage.h"
 
 using namespace std;
 
@@ -31,7 +32,8 @@ HMAPICheckResult::HMAPICheckResult() :
                 m_prevTime(0),
                 m_forceHostDown(false),
                 m_queueCheckTime(0),
-                m_checkTime(0) {}
+                m_checkTime(0),
+                m_remoteCheckTime(0) {}
 
 HMAPICheckResult::HMAPICheckResult(HMDataCheckResult& k)
 {
@@ -70,6 +72,7 @@ HMAPICheckResult::HMAPICheckResult(HMDataCheckResult& k)
     m_forceHostDown = k.m_forceHostDown;
     m_queueCheckTime = k.m_queueCheckTime.getTimeSinceEpoch();
     m_checkTime = k.m_checkTime.getTimeSinceEpoch();
+    m_remoteCheckTime = k.m_remoteCheckTime.getTimeSinceEpoch();
 }
 
 HMAPICheckResult::HMAPICheckResult(HMGroupCheckResult& k)
@@ -110,6 +113,7 @@ HMAPICheckResult::HMAPICheckResult(HMGroupCheckResult& k)
     m_forceHostDown = k.m_result.m_forceHostDown;
     m_queueCheckTime = k.m_result.m_queueCheckTime.getTimeSinceEpoch();
     m_checkTime = k.m_result.m_checkTime.getTimeSinceEpoch();
+    m_remoteCheckTime = k.m_result.m_checkTime.getTimeSinceEpoch();
 }
 
 
@@ -220,7 +224,7 @@ HMAPICheckInfo::HMAPICheckInfo() :
         m_flapThreshold(0),
         m_passthroughInfo(0),
         m_TOSValue(0),
-        m_dnsCheckType(HM_API_DNS_ARES){}
+        m_dnsCheckType(HM_API_DNS_LOOKUP){}
 
 HMAPICheckInfo::HMAPICheckInfo(HMDataHostGroup& hostGroup)
 {
@@ -242,7 +246,13 @@ HMAPICheckInfo::HMAPICheckInfo(HMDataHostGroup& hostGroup)
     m_passthroughInfo = hostGroup.getPassthroughInfo();
     m_sourceAddress.set(hostGroup.getSourceAddress());
     m_TOSValue = hostGroup.getTOSValue();
-    m_dnsCheckType = (HM_DNS_CHECK_TYPE)hostGroup.getDnsCheckPlugin();
+    m_dnsCheckType = (HM_API_DNS_CHECK_TYPE)hostGroup.getDNSType();
+    if (hostGroup.getHostList()->size() != 0)
+    {
+        m_hosts.resize(hostGroup.getHostList()->size());
+        std::copy(hostGroup.getHostList()->begin(),
+                hostGroup.getHostList()->end(), m_hosts.begin());
+    }
     if (hostGroup.getHostGroupList()->size() != 0)
     {
         m_hostGroups.resize(hostGroup.getHostGroupList()->size());
@@ -258,7 +268,7 @@ HMAPICheckInfo::HMAPICheckInfo(HMDataHostCheck& dataHostCheck, HMDataCheckParams
     m_checkType = (HM_API_CHECK_TYPE)dataHostCheck.getCheckType();
     m_port = dataHostCheck.getPort();
     m_checkInfo = dataHostCheck.getCheckInfo();
-    m_dnsCheckType = (HM_DNS_CHECK_TYPE)dataHostCheck.getDnsPlugin();
+    m_dnsCheckType = (HM_API_DNS_CHECK_TYPE)dataHostCheck.getDnsType();
     m_TOSValue = dataHostCheck.getTOSValue();
     m_numCheckRetries = checkParams.getNumCheckRetries();
     m_checkRetryDelay = checkParams.getCheckRetryDelay();
@@ -293,6 +303,12 @@ HMAPICheckInfo::operator=(HMDataHostGroup& hostGroup)
     m_passthroughInfo = hostGroup.getPassthroughInfo();
     m_sourceAddress.set(hostGroup.getSourceAddress());
     m_TOSValue = hostGroup.getTOSValue();
+    if (hostGroup.getHostList()->size() != 0)
+    {
+        m_hosts.resize(hostGroup.getHostList()->size());
+        std::copy(hostGroup.getHostList()->begin(),
+                hostGroup.getHostList()->end(), m_hosts.begin());
+    }
     if (hostGroup.getHostGroupList()->size() != 0)
     {
         m_hostGroups.resize(hostGroup.getHostGroupList()->size());
@@ -333,3 +349,33 @@ HMAPICheckInfo::operator !=(const HMAPICheckInfo& k) const
     return !(*this == k);
 }
 
+HMAPIHash::HMAPIHash(HMHash& k)
+{
+    m_hashSize =  k.m_hashSize;
+    if(m_hashSize != 0)
+    {
+        memcpy(m_hashValue, k.m_hashValue, m_hashSize);
+    }
+}
+
+bool HMAPIHash::operator ==(const HMAPIHash& k) const
+{
+    if(m_hashSize == 0 || k.m_hashSize == 0)
+    {
+        return true;
+    }
+    if(m_hashSize != k.m_hashSize)
+    {
+        return false;
+    }
+    if(memcmp(m_hashValue, k.m_hashValue, m_hashSize) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool HMAPIHash::operator !=(const HMAPIHash& k) const
+{
+    return !(*this == k);
+}

@@ -20,19 +20,26 @@ class HMSocketUtilTCP : public HMSocketUtilBase
 {
 public:
 
-    HMSocketUtilTCP(HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue);
-    HMSocketUtilTCP(int sock);
-    virtual ~HMSocketUtilTCP();
+    HMSocketUtilTCP(const HMIPAddress& address, uint16_t port, timeval &timeInfo, const HMIPAddress& sourceAddress, const uint8_t tosValue, bool persistant) :
+            HMSocketUtilBase(false, -1, persistant),
+            m_connectTimeInfo(timeInfo),
+            m_address(address),
+            m_sourceAddress(sourceAddress),
+            m_port(port),
+            m_tos(tosValue),
+            m_clientPort(-1)
+    { }
 
+    HMSocketUtilTCP(int sock) :
+            HMSocketUtilBase(true, sock, false),
+            m_port(0),
+            m_tos(0),
+            m_clientPort(-1)
+    { }
+
+    virtual ~HMSocketUtilTCP();
     HMSocketUtilTCP& operator=(const HMSocketUtilTCP&) = delete;        // Disallow copying
     HMSocketUtilTCP(const HMSocketUtilTCP&) = delete;
-
-    //! Called to get the reason of socket connection failure.
-    HM_REASON getReason() const;
-    //! Called to get the error message.
-    const std::string& getErrorMsg() const;
-    //! Called to get the connect time.
-    const HMTimeStamp& getConnectTime() const;
 
     /*!
          Called to receive checkinfo.
@@ -42,46 +49,13 @@ public:
      */
     bool getCheckInfo(std::string& checkinfo, uint32_t size, timeval& tv);
 
-    /*!
-     Ping the remote host for status.
-     \param wait time for the data.
-     \returns true on success
-     */
-    bool pingRemoteHost(timeval& tv);
-    /*!
-         Called to receive Host results from remote host.
-         \param name of the host.
-         \param address of the remote host.
-         \param datahost check of the host.
-         \param timeout period
-         \param Datastructure to store results
-     */
-    HM_SOCK_DATA_STATUS getHostResults(std::string& hostName, HMIPAddress& address, HMDataHostCheck& dataHostCheck,
-            timeval &tv,
-            std::map<HMDataCheckParams, HMDataCheckResult>& hostResults);
-
-    /*!
-         Called to receive Load Feedback results from remote host.
-         \param name of the host.
-         \param address of the remote host.
-         \param datahost check of the host.
-         \param timeout period
-         \param Datastructure to store results
-    */
-    HM_SOCK_DATA_STATUS getLoadFeedback(std::string& hostName, HMIPAddress& address,
-            HMDataHostCheck& dataHostCheck, timeval &tv, HMAuxInfo& auxData);
-
-protected:
-    HM_REASON m_reason;
-    std::string m_errorMsg;
-    timeval m_connectTimeInfo;
-    HMTimeStamp m_connectTime;
-    //! Called to get the connect to a socket.
-    virtual bool connectSocket();
-
-protected:
     //! Called to get the close a socket.
     virtual void closeSocket();
+
+protected:
+    timeval m_connectTimeInfo;
+    //! Called to get the connect to a socket.
+    virtual bool connectSocket();
 
 private:
     HMSocketUtilTCP();
@@ -89,8 +63,11 @@ private:
     HMIPAddress m_sourceAddress;
     uint16_t m_port;
     uint8_t m_tos;
+    int m_clientPort;
     //! Called to get the create a socket.
     bool createSocket();
+    //! Called to reset the connection.
+    virtual void reconnect();
     /*!
          Called to send data across the socket.
          \param data buffer.
@@ -102,8 +79,10 @@ private:
          \param data buffer.
          \param size of the data buffer.
          \param wait time for the data.
+         \return Status of results fetch.
      */
-    virtual bool recvData(char* data, uint64_t size, timeval& tv);
+    virtual HM_SOCK_DATA_STATUS recvData(char* data, uint64_t size, timeval tv);
+
 };
 
 #endif /* HMSOCKETUTIL_TCP_H_ */

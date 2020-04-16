@@ -23,7 +23,7 @@ HMDataHostCheck::HMDataHostCheck(const HMAPIDataHostCheck& apiDataHostCheck)
         m_dualstack = (HM_DUALSTACK) (m_dualstack | HM_DUALSTACK_IPV6_ONLY);
     }
     m_checkPlugin = HM_CHECK_PLUGIN_DEFAULT;
-    m_DNSPlugin = (HM_DNS_PLUGIN_CLASS)apiDataHostCheck.m_dnsCheckType;
+    m_DNSType = (HM_DNS_TYPE)apiDataHostCheck.m_dnsCheckType;
     m_remoteCheckType = HM_REMOTE_CHECK_NONE;
     m_distributedFallback = HM_DISTRIBUTED_FALLBACK_NONE;
     m_sourceAddress.set(apiDataHostCheck.m_sourceAddress);
@@ -34,35 +34,39 @@ HMDataHostCheck::HMDataHostCheck(const HMAPIDataHostCheck& apiDataHostCheck)
 bool
 HMDataHostCheck::operator<(const HMDataHostCheck& k) const
 {
-	if(m_checkType == k.m_checkType)
-	{
-		if(m_port == k.m_port)
-		{
-			if(m_dualstack == k.m_dualstack)
-			{
-			    if(m_checkInfo == k.m_checkInfo)
-			    {
-			        if(m_remoteCheck == k.m_remoteCheck)
-			        {
-			            if(m_sourceAddress == k.m_sourceAddress)
-			            {
-			                if(m_TOSValue == k.m_TOSValue)
-			                {
-			                    return m_distributedFallback < k.m_distributedFallback;
-			                }
-			                return m_TOSValue < k.m_TOSValue;
-			            }
-			            return m_sourceAddress < k.m_sourceAddress;
-			        }
-			        return m_remoteCheck < k.m_remoteCheck;
-			    }
-				return m_checkInfo < k.m_checkInfo;
-			}
-			return m_dualstack < k.m_dualstack;
-		}
-		return m_port < k.m_port;
-	}
-	return m_checkType < k.m_checkType;
+    if (m_checkType == k.m_checkType)
+    {
+        if (m_port == k.m_port)
+        {
+            if (m_dualstack == k.m_dualstack)
+            {
+                if (m_checkInfo == k.m_checkInfo)
+                {
+                    if (m_remoteCheck == k.m_remoteCheck)
+                    {
+                        if (m_sourceAddress == k.m_sourceAddress)
+                        {
+                            if (m_TOSValue == k.m_TOSValue)
+                            {
+                                if (m_distributedFallback == k.m_distributedFallback)
+                                {
+                                    return m_flowType < k.m_flowType;
+                                }
+                                return m_distributedFallback < k.m_distributedFallback;
+                            }
+                            return m_TOSValue < k.m_TOSValue;
+                        }
+                        return m_sourceAddress < k.m_sourceAddress;
+                    }
+                    return m_remoteCheck < k.m_remoteCheck;
+                }
+                return m_checkInfo < k.m_checkInfo;
+            }
+            return m_dualstack < k.m_dualstack;
+        }
+        return m_port < k.m_port;
+    }
+    return m_checkType < k.m_checkType;
 }
 
 bool
@@ -81,7 +85,8 @@ HMDataHostCheck::operator==(const HMDataHostCheck& k) const
             && m_remoteCheck == k.m_remoteCheck
             && m_sourceAddress == k.m_sourceAddress
             && m_TOSValue == k.m_TOSValue
-            && m_distributedFallback == k.m_distributedFallback)
+            && m_distributedFallback == k.m_distributedFallback
+            && m_flowType == k.m_flowType)
     {
         return true;
     }
@@ -101,7 +106,8 @@ HMDataHostCheck::setCheckParams(const HMDataHostGroup& dataHostGroup)
     m_distributedFallback = dataHostGroup.getDistributedFallback();
     m_sourceAddress = dataHostGroup.getSourceAddress();
     m_TOSValue = dataHostGroup.getTOSValue();
-    m_DNSPlugin = dataHostGroup.getDnsCheckPlugin();
+    m_DNSType = dataHostGroup.getDNSType();
+    m_flowType = dataHostGroup.getFlowType();
 }
 
 HM_CHECK_TYPE
@@ -269,7 +275,17 @@ uint8_t HMDataHostCheck::getTOSValue() const
     return m_TOSValue;
 }
 
-HM_DNS_PLUGIN_CLASS HMDataHostCheck::getDnsPlugin() const
+HM_DNS_TYPE HMDataHostCheck::getDnsType() const
 {
-    return m_DNSPlugin;
+    return m_DNSType;
+}
+
+HM_FLOW_TYPE HMDataHostCheck::getFlowType() const
+{
+    return m_flowType;
+}
+
+void HMDataHostCheck::setDNSType(HM_DNS_TYPE dnstype)
+{
+    m_DNSType = dnstype;
 }
