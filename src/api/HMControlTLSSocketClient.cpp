@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <future>
 
+#include "HMDataPacking.h"
 #include "HMControlTLSSocketClient.h"
 #include "HMControlBase.h"
 
@@ -92,6 +93,7 @@ HMControlTLSSocketClient::HMControlTLSSocketClient(HMAPIIPAddress& address, uint
         m_port(port),
         m_ssl(NULL)
 {
+    dataPacking = make_unique<HMDataPacking>();
     SSL_library_init();
     OpenSSL_add_all_algorithms();
     SSL_load_error_strings();

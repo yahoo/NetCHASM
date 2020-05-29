@@ -279,33 +279,60 @@ HMStateManager::loadCertificates()
                                 ERR_error_string(ERR_get_error(), NULL));
             return false;
         }
-        if (SSL_CTX_use_certificate_file(m_newState->m_ctx->getCtx(),
-                m_newState->getCertFile().c_str(),
-                SSL_FILETYPE_PEM) <= 0)
+        if(!m_newState->getCertFile().empty())
         {
-            HMLog(HM_LOG_CRITICAL, "Failed loading certificate file, err:%s",
-                    ERR_error_string(ERR_get_error(), NULL));
+            if (SSL_CTX_use_certificate_file(m_newState->m_ctx->getCtx(),
+                    m_newState->getCertFile().c_str(),
+                    SSL_FILETYPE_PEM) <= 0)
+            {
+                HMLog(HM_LOG_CRITICAL, "Failed loading certificate file, err:%s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return false;
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_CRITICAL, "enable-secure-remote parameter is enabled but the cert-file parameter is not specified");
             return false;
         }
-        if (SSL_CTX_use_PrivateKey_file(m_newState->m_ctx->getCtx(),
-                m_newState->getKeyFile().c_str(), SSL_FILETYPE_PEM) <= 0)
+        if(!m_newState->getKeyFile().empty())
         {
-            HMLog(HM_LOG_CRITICAL, "Failed loading private key file, err:%s",
-                    ERR_error_string(ERR_get_error(), NULL));
+            if (SSL_CTX_use_PrivateKey_file(m_newState->m_ctx->getCtx(),
+                    m_newState->getKeyFile().c_str(), SSL_FILETYPE_PEM) <= 0)
+            {
+                HMLog(HM_LOG_CRITICAL, "Failed loading private key file, err:%s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return false;
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_CRITICAL, "enable-secure-remote parameter is enabled but the key-file parameter is not specified");
             return false;
         }
+        
         if (!SSL_CTX_check_private_key(m_newState->m_ctx->getCtx()))
         {
             HMLog(HM_LOG_CRITICAL,
                     "Private key does not match the public certificate");
             return false;
         }
-        if (!SSL_CTX_load_verify_locations(m_newState->m_ctx->getCtx(), m_newState->getCaFile().c_str(), NULL))
+
+        if(!m_newState->getCaFile().empty())
         {
-            HMLog(HM_LOG_CRITICAL, "failed loading CA certificate, err: %s",
-                    ERR_error_string(ERR_get_error(), NULL));
+            if (!SSL_CTX_load_verify_locations(m_newState->m_ctx->getCtx(), m_newState->getCaFile().c_str(), NULL))
+            {
+                HMLog(HM_LOG_CRITICAL, "failed loading CA certificate, err: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return false;
+            }
+        }
+        else
+        {
+            HMLog(HM_LOG_CRITICAL, "enable-secure-remote parameter is enabled but the ca-file parameter is not specified");
             return false;
         }
+
         if (m_newState->isEnableMutualAuth())
         {
             SSL_CTX_set_verify(m_newState->m_ctx->getCtx(),

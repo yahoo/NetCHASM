@@ -43,7 +43,7 @@ HM_SOCK_DATA_STATUS HMSocketUtilBase::receiveCommand(std::string& command, timev
 bool
 HMSocketUtilBase::sendCommand(const string& cmd)
 {
-   return sendMessage(&cmd.at(0), cmd.length());
+   return sendMessage(cmd.c_str(), cmd.length());
 }
 
 HM_SOCK_DATA_STATUS

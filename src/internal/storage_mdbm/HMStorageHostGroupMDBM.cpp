@@ -645,7 +645,7 @@ HMStorageHostGroupMDBM::storeHostGroupCheckResults(const string& hostGroupName)
             return false;
         }
         *(uint32_t*)target = (uint32_t)it->second.m_hostName.size();
-        strncpy(target + sizeof(uint32_t), &it->second.m_hostName.at(0), it->second.m_hostName.size());
+        strncpy(target + sizeof(uint32_t), it->second.m_hostName.c_str(), it->second.m_hostName.size());
         memcpy(target + sizeof(uint32_t) + it->second.m_hostName.size(), &it->second.m_address, sizeof(HMIPAddress));
         target += (sizeof(uint32_t) + it->second.m_hostName.size() + sizeof(HMIPAddress));
         target += it->second.m_result.serialize(target, end - target);
@@ -858,7 +858,7 @@ HMStorageHostGroupMDBM::storeHostGroupAuxInfo(const string& hostGroupName)
                     hostGroupName.c_str());
             return false;
         }
-        strncpy(target + sizeof(uint32_t), &it->second.m_hostName.at(0),
+        strncpy(target + sizeof(uint32_t), it->second.m_hostName.c_str(),
                 it->second.m_hostName.size());
         memcpy(target + sizeof(uint32_t) + it->second.m_hostName.size(), &it->second.m_address, sizeof(HMIPAddress));
         *(uint64_t*)(target + sizeof(uint32_t) + it->second.m_hostName.size() + sizeof(HMIPAddress)) = it->second.m_info.m_ts.getTimeSinceEpoch();

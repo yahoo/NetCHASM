@@ -99,17 +99,17 @@ HMAuxLoadFB::serialize(char* buf, uint32_t size) const
 
     if (ptr->m_hostSize > 0)
     {
-        strncpy(target, &m_host.at(0), m_host.size());
+        strncpy(target, m_host.c_str(), m_host.size());
         target += m_host.size();
     }
     if (ptr->m_resourceSize > 0)
     {
-        strncpy(target, &m_resource.at(0), m_resource.size());
+        strncpy(target, m_resource.c_str(), m_resource.size());
         target += m_resource.size();
     }
     if (ptr->m_datacenterSize > 0)
     {
-        strncpy(target, &m_datacenter.at(0), m_datacenter.size());
+        strncpy(target, m_datacenter.c_str(), m_datacenter.size());
     }
 
     return totalSize;
@@ -243,12 +243,12 @@ HMAuxOOB::serialize(char* buf, uint32_t size) const
 
     if (ptr->m_hostSize > 0)
     {
-        strncpy(target, &m_host.at(0), m_host.size());
+        strncpy(target, m_host.c_str(), m_host.size());
         target += m_host.size();
     }
     if (ptr->m_resourceSize > 0)
     {
-        strncpy(target, &m_resource.at(0), m_resource.size());
+        strncpy(target, m_resource.c_str(), m_resource.size());
     }
 
     return totalSize;
@@ -350,8 +350,8 @@ HMAuxKey::serialize(char* buf, uint32_t size) const
     buf += (sizeof(uint32_t) * 2);
 
     memcpy(buf, &m_address, sizeof(HMIPAddress));
-    strncpy(buf + sizeof(HMIPAddress), &m_hostName.at(0), m_hostName.size());
-    strncpy((buf + sizeof(HMIPAddress) + m_hostName.size()), &m_sourceUrl.at(0), m_sourceUrl.size());
+    strncpy(buf + sizeof(HMIPAddress), m_hostName.c_str(), m_hostName.size());
+    strncpy((buf + sizeof(HMIPAddress) + m_hostName.size()), m_sourceUrl.c_str(), m_sourceUrl.size());
 
     return totalSize;
 }

@@ -107,7 +107,21 @@ HMWorkQueue::getWork(unique_ptr<HMWork>& work, bool& threadShutdown)
                     HM_WORK_TYPE workType = work->getWorkType();
                     if(workType == HM_WORK_DNSLOOKUP)
                     {
-                        HMLog(HM_LOG_WARNING, "[CORE] DNS Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                        HMLog(HM_LOG_INFO, "[CORE] DNS Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                                work->m_hostname.c_str(),
+                                totalTime,
+                                ttl);
+                    }
+                    else if(workType == HM_WORK_REMOTECHECK)
+                    {
+                        HMLog(HM_LOG_INFO, "[CORE] Remote Host Group Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                                work->m_hostname.c_str(),
+                                totalTime,
+                                ttl);
+                    }
+                    else if(workType == HM_WORK_REMOTEHOSTCHECK)
+                    {
+                        HMLog(HM_LOG_INFO, "[CORE] Remote Host Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
                                 work->m_hostname.c_str(),
                                 totalTime,
                                 ttl);

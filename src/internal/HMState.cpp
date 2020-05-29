@@ -960,6 +960,7 @@ HMState::restoreRunningCheckState(shared_ptr<HMState> src)
                     if(!m_checkList.getCheckResult(*it, tmp_result)
                             || tmp_result.m_checkTime < result.m_checkTime)
                     {
+                        result.m_queryState = HM_CHECK_INACTIVE;
                         bool found = m_checkList.updateCheck(*it, result);
                         //update the last checktime in remote host cache
                         if(it->m_hostCheck.getFlowType() == HM_FLOW_REMOTE_HOST_TYPE)

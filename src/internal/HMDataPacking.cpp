@@ -1251,7 +1251,7 @@ HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<s
 }
 
 unique_ptr<char[]>
-HMDataPacking::packHash(string& name, const HMAPIHash& hash, uint64_t& dataSize)
+HMDataPacking::packHash(const string& name, const HMAPIHash& hash, uint64_t& dataSize)
 {
     unique_ptr<char[]> data;
     netchasm::HashHGPair pHashHGPair;
@@ -1270,7 +1270,7 @@ HMDataPacking::packHash(string& name, const HMAPIHash& hash, uint64_t& dataSize)
 }
 
 unique_ptr<char[]>
-HMDataPacking::packHash(string& name, const HMHash& hash, uint64_t& dataSize)
+HMDataPacking::packHash(const string& name, const HMHash& hash, uint64_t& dataSize)
 {
     unique_ptr<char[]> data;
     netchasm::HashHGPair pHashHGPair;

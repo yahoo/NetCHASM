@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <future>
 
+#include "HMDataPacking.h"
 #include "HMControlLinuxSocketClient.h"
 #include "HMControlBase.h"
 
@@ -59,6 +60,7 @@ HMControlLinuxSocketClient::connectSocket()
 HMControlLinuxSocketClient::HMControlLinuxSocketClient(const string& socketPath) :
         m_server_path(socketPath)
 {
+    dataPacking = make_unique<HMDataPacking>();
     if (connectSocket())
     {
         m_connected = true;

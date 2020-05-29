@@ -86,8 +86,8 @@ public:
     virtual std::unique_ptr<char[]> packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize);
     virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMHash>& hashInfo);
     virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMAPIHash>& hashInfo);
-    virtual std::unique_ptr<char[]> packHash(std::string& name, const HMAPIHash& hash, uint64_t& dataSize);
-    virtual std::unique_ptr<char[]> packHash(std::string& name, const HMHash& hash, uint64_t& dataSize);
+    virtual std::unique_ptr<char[]> packHash(const std::string& name, const HMAPIHash& hash, uint64_t& dataSize);
+    virtual std::unique_ptr<char[]> packHash(const std::string& name, const HMHash& hash, uint64_t& dataSize);
     virtual bool unpackHash(std::unique_ptr<char[]>& data, uint64_t dataSize, HMHash& hash);
     virtual bool unpackHash(std::unique_ptr<char[]>& data, uint64_t dataSize, HMAPIHash& hash);
     virtual std::unique_ptr<char[]> packListInt64(const std::set<int>& listItems, uint64_t& dataSize);

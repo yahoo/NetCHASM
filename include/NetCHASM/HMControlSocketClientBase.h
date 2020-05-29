@@ -7,12 +7,15 @@
 #include <string>
 #include <thread>
 #include <iostream>
+#include <map>
+#include <set>
 #include <vector>
 
 #include "HMAPI.h"
-#include "HMDataPacking.h"
 
 class HMDataCheckParams;
+class HMDataPacking;
+class HMAuxInfo;
 //! Base client class to support socket communications
 class HMControlSocketClientBase
 {
@@ -185,7 +188,7 @@ public:
 		 \param ipaddress of the host in the hostgroup to force set it down.
 		 \return true if successful.
 	*/
-	bool setForceStatusDown(std::string& hostGroupName, HMAPIIPAddress& address);
+	bool setForceStatusDown(const std::string& hostGroupName, HMAPIIPAddress& address);
 
 
     /*!
@@ -202,7 +205,7 @@ public:
          \param ipaddress of the host in the hostgroup to unset the force set down.
          \return true if successful.
     */
-    bool unsetForceStatusDown(std::string& hostGroupName, HMAPIIPAddress& address);
+    bool unsetForceStatusDown(const std::string& hostGroupName, HMAPIIPAddress& address);
 
 
     /*!
@@ -237,7 +240,7 @@ public:
          \param vector to get all the host names.
          \return true if successful.
     */
-    bool getHostList(std::string& hostGroupName,
+    bool getHostList(const std::string& hostGroupName,
             std::vector<std::string>& hostList);
 
     /*!
@@ -246,7 +249,7 @@ public:
          \param vector to get all the host names and structure to fill host group params.
          \return true if successful.
     */
-    bool getHostGroupParams(std::string& hostGroupName,
+    bool getHostGroupParams(const std::string& hostGroupName,
             HMAPICheckInfo& checkInfo);
 
     /*!
@@ -256,7 +259,7 @@ public:
          \param structure to fill host group results.
          \return true if successful.
     */
-    bool getHostGroupResults(std::string& hostGroupName,
+    bool getHostGroupResults(const std::string& hostGroupName,
             HMAPICheckInfo& checkInfo,
             std::vector<HMAPICheckResult>& hostResults);
 
@@ -268,7 +271,7 @@ public:
          \param structure to fill host group results.
          \return true if successful.
     */
-    bool getHostGroupResults(std::string& hostGroupName,
+    bool getHostGroupResults(const std::string& hostGroupName,
             const HMAPIHash& hash,
             HMAPICheckInfo& checkInfo,
             std::vector<HMAPICheckResult>& hostResults);
@@ -280,7 +283,7 @@ public:
          \param structure to fill host results.
          \return true if successful.
     */
-    bool getHostResults(std::string& hostGroupName, std::string& hostName,
+    bool getHostResults(const std::string& hostGroupName, std::string& hostName,
             std::vector<HMAPICheckResult>& hostResults);
 
     /*!
@@ -289,7 +292,7 @@ public:
          \param structure to fill aux results.
          \return true if successful.
     */
-    bool getLoadFeedback(std::string& hostGroupName,
+    bool getLoadFeedback(const std::string& hostGroupName,
             std::vector<HMAPIAuxInfo>& auxInfo);
 
     /*!
@@ -299,7 +302,7 @@ public:
          \param structure to fill aux results.
          \return true if successful.
     */
-    bool getLoadFeedback(std::string& hostGroupName, const HMAPIHash& hash,
+    bool getLoadFeedback(const std::string& hostGroupName, const HMAPIHash& hash,
             std::vector<HMAPIAuxInfo>& auxInfo);
 
     /*!
@@ -310,7 +313,7 @@ public:
          \param structure to fill aux results.
          \return true if successful.
      */
-    bool getLoadFeedback(std::string& hostName, std::string& sourceURL,
+    bool getLoadFeedback(const std::string& hostName, std::string& sourceURL,
             HMAPIIPAddress& address, HMAPIAuxInfo& auxInfo);
     /*!
          Get aux results for host and corresponding IP.
@@ -320,7 +323,7 @@ public:
          \param structure to fill aux results.
          \return true if successful.
      */
-    bool getLoadFeedback(std::string& hostName,
+    bool getLoadFeedback(const std::string& hostName,
             std::string& sourceURL, HMAPIIPAddress& address, HMAuxInfo& auxInfo);
 
     /*!
@@ -338,7 +341,7 @@ public:
          \param structure to fill host check details results.
          \return true if successful.
      */
-    bool getHostResults(std::string& hostName,
+    bool getHostResults(const std::string& hostName,
             HMAPIDataHostCheck& apiDataHostCheck,
             std::vector<std::pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults);
 
@@ -349,7 +352,7 @@ public:
          \param structure to fill host check details results.
          \return true if successful.
      */
-    bool getHostResults(std::string& hostName, HMAPIIPAddress& address,
+    bool getHostResults(const std::string& hostName, HMAPIIPAddress& address,
             HMAPIDataHostCheck& apiDataHostCheck,
             std::vector<std::pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults);
 
@@ -385,14 +388,14 @@ public:
          \param Hostgroup structure to be added.
          \return true if successful.
      */
-    bool addHostGroup(std::string& hostGroupName, HMAPICheckInfo& checkInfo);
+    bool addHostGroup(const std::string& hostGroupName, HMAPICheckInfo& checkInfo);
 
     /*!
          Remove Host Group.
          \param hostGroupname to remove from configs.
          \return true if successful.
      */
-    bool removeHostGroup(std::string& hostGroupName);
+    bool removeHostGroup(const std::string& hostGroupName);
 
     /*!
      Reset transaction state to current configs.
@@ -524,10 +527,10 @@ public:
          \return true is connected.
      */
     bool isConnected() const;
-    HMDataPacking dataPacking;
-    virtual ~HMControlSocketClientBase() { }
+    std::unique_ptr<HMDataPacking> dataPacking;
+    virtual ~HMControlSocketClientBase();
 protected:
-    HMControlSocketClientBase() : m_connected(false) { }
+    HMControlSocketClientBase();
     void extract(std::string &str, std::vector<std::string> &list);
     void setError(std::string msg);
     bool m_connected;

@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <future>
 
+#include "HMDataPacking.h"
 #include "HMControlTCPSocketClient.h"
 #include "HMControlBase.h"
 
@@ -74,6 +75,7 @@ HMControlTCPSocketClient::HMControlTCPSocketClient(HMAPIIPAddress& address, uint
         m_address(address),
         m_port(port)
 {
+    dataPacking = make_unique<HMDataPacking>();
     if (connectSocket())
     {
         m_connected = true;

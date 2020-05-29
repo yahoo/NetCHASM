@@ -345,4 +345,11 @@ public:
     HM_API_DNS_CHECK_TYPE m_dnsCheckType;
 };
 
+//code helper functions
+std::string printReasonString(uint8_t reason);
+
+std::string printResponseString(uint8_t response);
+
+std::string printStatusString(uint16_t status);
+
 #endif /* INCLUDE_HEALTHMON_HMAPI_H_ */

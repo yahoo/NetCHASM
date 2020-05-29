@@ -12,6 +12,7 @@ from netchasm import datahostgroup_pb2
 from netchasm import ipaddress_pb2
 from netchasm import datacheckresult_pb2
 from netchasm import hostschdinfo_pb2
+from netchasm import hashinfo_pb2
 
 CheckTypes = ["HM_CHECK_DEFAULT",
     "HM_CHECK_NONE",
@@ -72,24 +73,92 @@ def getAddress(x):
 		addr = socket.inet_ntop(x.type ,  pack('<LLLL', x.addr0, x.addr1, x.addr2, x.addr3))
 	return addr
 
+class HashHGPair:
+	def __init__(self, pHash = None):
+		if pHash is None:
+			self.groupName=''
+			self.size = 0
+			self.hash = b''
+		else:
+			self.groupName = pHash.hostgroupname
+			self.size = pHash.size
+			self.hash = pHash.hash
+
+	def packData(self):
+		pHash = hashinfo_pb2.HashHGPair()
+		pHash.hostgroupname = self.groupName
+		pHash.size = self.size
+		pHash.hash = self.hash
+		return pHash
+
+
 class GroupParams:
-	def __init__(self,x):
-		self.checkType = CheckTypes[x.checkType]
-		self.port = x.port
-		self.dualStack = DualStackL[x.dualstack]
-		self.smoothingWindow = x.smoothingWindow
-		self.maxFlaps = x.maxFlaps
-		self.flapThreshold = x.flapThreshold
-		self.numCheckRetries = x.numCheckRetries
-		self.checkRetryDelay = x.checkRetryDelay
-		self.groupThreshold = x.groupThreshold
-		self.slowThreshold = x.slowThreshold
-		self.checkTimeout = x.checkTimeout
-		self.checkTTL = x.checkTTL
-		self.mode = x.passthroughInfo
-		self.check_info = x.checkInfo
-		self.hosts = x.hosts
-		self.hostgroups = x.hostgroups
+	def __init__(self, x = None):
+		if x is None:
+			self.groupName = ''
+			self.checkType = 0
+			self.port = 0
+			self.dualStack = 1
+			self.smoothingWindow = 10
+			self.maxFlaps = 4
+			self.flapThreshold = 60000
+			self.numCheckRetries = 0
+			self.checkRetryDelay = 0
+			self.groupThreshold = 20
+			self.slowThreshold = 20
+			self.checkTimeout = 10000
+			self.checkTTL = 30000
+			self.passthroughInfo = 0
+			self.checkInfo = ''
+			self.hosts = []
+			self.hostgroups = []
+			self.remoteCheckType = 0
+			self.distributedFallback = 0
+			self.measurementOptions = 0
+			self.remoteCheck = ''
+		else:
+			self.checkType = CheckTypes[x.checkType]
+			self.port = x.port
+			self.dualStack = DualStackL[x.dualstack]
+			self.smoothingWindow = x.smoothingWindow
+			self.maxFlaps = x.maxFlaps
+			self.flapThreshold = x.flapThreshold
+			self.numCheckRetries = x.numCheckRetries
+			self.checkRetryDelay = x.checkRetryDelay
+			self.groupThreshold = x.groupThreshold
+			self.slowThreshold = x.slowThreshold
+			self.checkTimeout = x.checkTimeout
+			self.checkTTL = x.checkTTL
+			self.passthroughInfo = x.passthroughInfo
+			self.checkInfo = x.checkInfo
+			self.hosts = x.hosts
+			self.hostgroups = x.hostgroups
+
+	def packData(self):
+		hostgroupparams = datahostgroup_pb2.DataHostGroup()
+		hostgroupparams.checkType = self.checkType
+		hostgroupparams.port = self.port
+		hostgroupparams.dualstack = self.dualStack
+		hostgroupparams.smoothingWindow = self.smoothingWindow
+		hostgroupparams.maxFlaps = self.maxFlaps
+		hostgroupparams.flapThreshold = self.flapThreshold
+		hostgroupparams.numCheckRetries = self.numCheckRetries
+		hostgroupparams.checkRetryDelay = self.checkRetryDelay
+		hostgroupparams.groupThreshold = self.groupThreshold
+		hostgroupparams.slowThreshold = self.slowThreshold
+		hostgroupparams.checkTimeout = self.checkTimeout
+		hostgroupparams.checkTTL = self.checkTTL
+		hostgroupparams.passthroughInfo = self.passthroughInfo
+		hostgroupparams.measurementOptions = self.measurementOptions 
+		hostgroupparams.checkInfo = self.checkInfo
+		hostgroupparams.remoteCheckType = self.remoteCheckType
+		hostgroupparams.distributedFallback = self.distributedFallback
+		hostgroupparams.remoteCheck = self.remoteCheck
+		for host in self.hosts:
+			hostgroupparams.hosts.append(host)
+		for hostg in self.hostgroups:
+			hostgroupparams.hostgroups.append(hostg)
+		return hostgroupparams
 
 class HostCheck:
 	def __init__(self, x):
@@ -141,8 +210,6 @@ class DNS_SchedInfo:
 			self.v6LastCheckTime = None
 			self.v6NextCheckTime = None
 			self.v6State = None
-	
-
 
 class Host_SchedInfo:
 	def __init__(self, x):
@@ -150,7 +217,7 @@ class Host_SchedInfo:
 		self.lastCheckTime = time.localtime(x.lastCheckTime/1000)
 		self.nextCheckTime = time.localtime(x.nextCheckTime/1000)
 		self.state = States[x.state]
-	
+
 class HealthMonClient:
 	def __init__(self, path = '/home/y/var/run/netchasm/controlsocket'):
 		self.server_address = path
@@ -193,6 +260,9 @@ class HealthMonClient:
 		sock.send(pack('!Q', msgLen))
 		sock.send(msg.encode())
 
+	def __sendBlob(self, sock, blob):
+		sock.send(blob)
+
 	def __receiveList(self, sock):
 		size = self.__receivePacketSize(sock)
 		if size != 0:
@@ -216,7 +286,6 @@ class HealthMonClient:
 		if sock:
 			self.__sendMessage(sock,'1 threadinfo')
 			size = self.__receivePacketSize(sock)
-			print(size)
 			if size != 0:
 				data = self.__receiveData(sock, size)
 				ti = threadinfo_pb2.ThreadInfo()
@@ -306,14 +375,110 @@ class HealthMonClient:
 					return grpParams
 		return None
 
+	def removeHostGroup(self, hostGroupName):
+		sock = self.__createSocket()
+		cmd = '1 removehostgroup ' + hostGroupName
+		if sock:
+			self.__sendMessage(sock, cmd)
+			size = self.__receivePacketSize(sock)
+			if size:
+				data = self.__receiveData(sock, size)
+				self.__closeSocket(sock)
+				boolPacket = generalparams_pb2.Bool()
+				if boolPacket.ParseFromString(data):
+					return boolPacket.data
+		return False
+
+	def getConfigHash(self):
+		sock = self.__createSocket()
+		cmd = '1 gettransconfighash'
+		if sock:
+			self.__sendMessage(sock, cmd)
+			size = self.__receivePacketSize(sock)
+			if size:
+				data = self.__receiveData(sock, size)
+				self.__closeSocket(sock)
+				hashPacket = hashinfo_pb2.HashHGPair()
+				if hashPacket.ParseFromString(data):
+					return HashHGPair(hashPacket)
+		return HashHGPair()			
+
+	def commitTransaction(self, hashValue):
+		sock = self.__createSocket()
+		pHash = hashValue.packData()
+		bytesData = pHash.SerializeToString()
+		cmd = '1 committransation ' + str(len(bytesData))
+		if sock:
+			self.__sendMessage(sock, cmd)
+			self.__sendBlob(sock, bytesData)
+			x = self.__receiveUInt(sock)
+			self.__closeSocket(sock)
+			return x
+		return 0
+
+	def clearTransaction(self):
+		sock = self.__createSocket()
+		cmd = '1 cleartransation'
+		if sock:
+			self.__sendMessage(sock, cmd)
+			size = self.__receivePacketSize(sock)
+			if size:
+				data = self.__receiveData(sock, size)
+				self.__closeSocket(sock)
+				boolPacket = generalparams_pb2.Bool()
+				if boolPacket.ParseFromString(data):
+					return boolPacket.data
+		return False
+
+	def addHostGroup(self, hostGroup):
+		sock = self.__createSocket()
+		pHostGroup = hostGroup.packData()
+		bytesData = pHostGroup.SerializeToString()
+		cmd = '1 addhostgroup ' + hostGroup.groupName + ' ' + str(len(bytesData))
+		if sock:
+			self.__sendMessage(sock, cmd)
+			self.__sendBlob(sock, bytesData)
+			size = self.__receivePacketSize(sock)
+			if size:
+				data = self.__receiveData(sock, size)
+				self.__closeSocket(sock)
+				boolPacket = generalparams_pb2.Bool()
+				if boolPacket.ParseFromString(data):
+					return boolPacket.data
+		return False
+
 # Usage Example
 '''
 hm = HealthMonClient()
+
 print(hm.workInfo())
 print(hm.threadInfo())
 print(hm.scheduleQueueInfo())
 
 print(hm.hostGroupList())
+ha = hm.getConfigHash()
+print(vars(ha))
+print(hm.removeHostGroup("ymaven.b1.b.corp.yahoo.com"))
+ha = hm.getConfigHash()
+print(vars(ha))
+print(hm.commitTransaction(ha))
+gp = GroupParams()
+gp.groupName = 'ymaven2.b1.b.corp.yahoo.com'
+gp.checkInfo = '//<host:port>/akamai'
+gp.port = 9999
+gp.checkRetries = 3
+gp.checkRetryDelay = 5000
+gp.checkType = 2
+gp.passthroughInfo = 0
+gp.ttl = 100000
+gp.timeout = 10000
+gp.hosts.append('ymaven-01.infra.corp.gq1.yahoo.com')
+gp.hosts.append('ymaven-01.infra.corp.ne1.yahoo.com')
+gp.hosts.append('ymaven-02.infra.corp.gq1.yahoo.com')
+gp.hosts.append('ymaven-02.infra.corp.ne1.yahoo.com')
+print(hm.addHostGroup(gp))
+ha = hm.getConfigHash()
+print(hm.commitTransaction(ha))
 
 hgl = hm.hostGroupList()
 

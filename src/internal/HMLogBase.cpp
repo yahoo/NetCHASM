@@ -69,6 +69,7 @@ HMLogBase::initLogging(HM_LOG_LEVEL level, bool threaded)
     entry->tid = syscall(SYS_gettid,0);
     gettimeofday(&entry->tv, NULL);
     entry->ready = true;
+    entry->next = nullptr;
     m_droppedLogs = 0;
     if (m_threaded)
     {
@@ -321,6 +322,11 @@ HMLogBase::getEntry(struct LogEntry*& entry)
         return;
     }
 
+    if(!m_keepRunning)
+    {
+        entry = nullptr;
+        return;
+    }
     m_writeHead->next = new LogEntry;
     entry = m_writeHead->next;
     m_writeHead = m_writeHead->next;
@@ -364,7 +370,8 @@ HMLogBase::flushBuffer()
         lk.unlock();
     }
 
-    if(m_readHead != nullptr)
+    HMLockGuard<HMUtilitySpinLock> lg(m_spinLock);
+    while (m_readHead != nullptr)
     {
         // write the last entry
         entry = m_readHead;
@@ -375,6 +382,7 @@ HMLogBase::flushBuffer()
             m_current++;
             writeLog(entry);
         }
+        m_readHead = m_readHead->next;
         free(entry->entry);
         delete entry;
     }

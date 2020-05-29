@@ -451,18 +451,18 @@ HMDataHostGroup::serialize(char* buf, uint32_t size) const
 
     // now we serialize the strings
     char* target = buf + sizeof(SerStruct);
-    strncpy(target, &m_groupName.at(0), m_groupName.size());
+    strncpy(target, m_groupName.c_str(), m_groupName.size());
     target += m_groupName.size();
 
     if(ptr->m_checkInfoSize)
     {
-        strncpy(target, &m_checkInfo.at(0), m_checkInfo.size());
+        strncpy(target, m_checkInfo.c_str(), m_checkInfo.size());
         target += m_checkInfo.size();
     }
 
     if (ptr->m_remoteCheckSize)
     {
-        strncpy(target, &m_remoteCheck.at(0), m_remoteCheck.size());
+        strncpy(target, m_remoteCheck.c_str(), m_remoteCheck.size());
         target += m_remoteCheck.size();
     }
 
@@ -470,7 +470,7 @@ HMDataHostGroup::serialize(char* buf, uint32_t size) const
     for(auto it = m_hosts.begin(); it != m_hosts.end(); ++it)
     {
         *(uint32_t*)target = (uint32_t)it->size();
-        strncpy((target + sizeof(uint32_t)) , &(it->at(0)), it->size());
+        strncpy((target + sizeof(uint32_t)) , it->c_str(), it->size());
         target += (sizeof(uint32_t) + it->size());
     }
 
@@ -479,7 +479,7 @@ HMDataHostGroup::serialize(char* buf, uint32_t size) const
     {
         HMLog(HM_LOG_DEBUG3, "Host group %s  serializing %s", m_groupName.c_str(), it->c_str());
         *(uint32_t*)target = (uint32_t)it->size();
-        strncpy((target + sizeof(uint32_t)) , &(it->at(0)), it->size());
+        strncpy((target + sizeof(uint32_t)) , it->c_str(), it->size());
         target += (sizeof(uint32_t) + it->size());
     }
 

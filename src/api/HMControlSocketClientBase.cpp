@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <future>
 
+#include "HMDataPacking.h"
 #include "HMControlSocketClientBase.h"
 #include "HMControlBase.h"
 
@@ -44,6 +45,16 @@ bool
 HMControlSocketClientBase::isConnected() const
 {
     return m_connected;
+}
+
+HMControlSocketClientBase::~HMControlSocketClientBase()
+{
+
+}
+
+HMControlSocketClientBase::HMControlSocketClientBase() : m_connected(false)
+{
+
 }
 
 void
@@ -93,7 +104,7 @@ bool HMControlSocketClientBase::receiveUInt(T& x)
         unique_ptr<char[]> recvbuf = make_unique<char[]>(packetSize);
         if (recvMessage((char*) recvbuf.get(), packetSize))
         {
-            return dataPacking.unpackUInt(recvbuf, packetSize, x);
+            return dataPacking->unpackUInt(recvbuf, packetSize, x);
         }
     }
     return false;
@@ -114,7 +125,7 @@ bool HMControlSocketClientBase::receiveInt(T& x)
         unique_ptr<char[]> recvbuf = make_unique<char[]>(packetSize);
         if (recvMessage((char*) recvbuf.get(), packetSize))
         {
-            return dataPacking.unpackInt(recvbuf, packetSize, x);
+            return dataPacking->unpackInt(recvbuf, packetSize, x);
         }
     }
     return false;
@@ -130,8 +141,7 @@ HMControlSocketClientBase::getThreadInfo(HMAPIThreadInfo& threadInfo)
         uint64_t dataSize = 0;
         if (receivePacket(data, dataSize))
         {
-            HMDataPacking dataPacking;
-            dataPacking.unpackThreadInfo(data, dataSize, threadInfo);
+            dataPacking->unpackThreadInfo(data, dataSize, threadInfo);
             return true;
         }
     }
@@ -159,7 +169,7 @@ HMControlSocketClientBase::getHostScheduleInfo(const string& hostGroupName, cons
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackHostSchedInfo(recvbuf, packetSize,
+            if (dataPacking->unpackHostSchedInfo(recvbuf, packetSize,
                     dns))
             {
                 return true;
@@ -179,7 +189,7 @@ HMControlSocketClientBase::getRemoteScheduleInfo(const string& hostGroupName, HM
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
+            if (dataPacking->unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
                     hostGroupSchdInfo))
             {
                 return true;
@@ -199,7 +209,7 @@ HMControlSocketClientBase::getRemoteScheduleInfo(const string& hostGroupName, co
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
+            if (dataPacking->unpackRemoteHostGroupSchedInfo(recvbuf, packetSize,
                     hostGroupSchdInfo))
             {
                 return true;
@@ -307,7 +317,7 @@ HMControlSocketClientBase::isRecycleOn()
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            recycle = dataPacking.unpackBool(recvbuf, packetSize);
+            recycle = dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return recycle;
@@ -391,7 +401,7 @@ HMControlSocketClientBase::setForceStatusDown(const string& hostGroupName, const
 }
 
 bool
-HMControlSocketClientBase::setForceStatusDown(string& hostGroupName, HMAPIIPAddress& address)
+HMControlSocketClientBase::setForceStatusDown(const string& hostGroupName, HMAPIIPAddress& address)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_SETHOSTSTATUS + " " + hostGroupName + " " + address.toString() +  " 1";
     return sendMessage(cmd);
@@ -405,7 +415,7 @@ HMControlSocketClientBase::unsetForceStatusDown(const string& hostGroupName, con
 }
 
 bool
-HMControlSocketClientBase::unsetForceStatusDown(string& hostGroupName, HMAPIIPAddress& address)
+HMControlSocketClientBase::unsetForceStatusDown(const string& hostGroupName, HMAPIIPAddress& address)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_SETHOSTSTATUS + " " + hostGroupName + " " + address.toString() + " 0";
     return sendMessage(cmd);
@@ -422,7 +432,7 @@ HMControlSocketClientBase::reload(const string& masterConfig)
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            return dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return false;
@@ -438,7 +448,7 @@ HMControlSocketClientBase::reload()
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            return dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return false;
@@ -454,7 +464,7 @@ HMControlSocketClientBase::refresh()
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            return dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return false;
@@ -470,7 +480,7 @@ HMControlSocketClientBase::getHostGroupList(vector<string>& hostGroupNames)
                 unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, true))
         {
-            return dataPacking.unpackList(recvbuf, packetSize,
+            return dataPacking->unpackList(recvbuf, packetSize,
                     hostGroupNames);
         }
     }
@@ -478,7 +488,7 @@ HMControlSocketClientBase::getHostGroupList(vector<string>& hostGroupNames)
 }
 
 bool
-HMControlSocketClientBase::getHostList(string& hostGroupName, vector<string>& hostList)
+HMControlSocketClientBase::getHostList(const string& hostGroupName, vector<string>& hostList)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTLIST + " " + hostGroupName;
     if (sendMessage(cmd))
@@ -487,7 +497,7 @@ HMControlSocketClientBase::getHostList(string& hostGroupName, vector<string>& ho
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, true))
         {
-            return dataPacking.unpackList(recvbuf, packetSize,
+            return dataPacking->unpackList(recvbuf, packetSize,
                     hostList);
         }
     }
@@ -495,7 +505,7 @@ HMControlSocketClientBase::getHostList(string& hostGroupName, vector<string>& ho
 }
 
 bool
-HMControlSocketClientBase::getHostGroupParams(string& hostGroupName, HMAPICheckInfo& checkInfo)
+HMControlSocketClientBase::getHostGroupParams(const string& hostGroupName, HMAPICheckInfo& checkInfo)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTGROUPPARAMS + " " + hostGroupName;
     if (sendMessage(cmd))
@@ -504,14 +514,14 @@ HMControlSocketClientBase::getHostGroupParams(string& hostGroupName, HMAPICheckI
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackDataHostGroup(recvbuf, packetSize, checkInfo);
+            return dataPacking->unpackDataHostGroup(recvbuf, packetSize, checkInfo);
         }
     }
     return false;
 }
 
 bool
-HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
+HMControlSocketClientBase::getHostGroupResults(const string& hostGroupName, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
 {
     hostResults.clear();
     vector<string> hosts;
@@ -522,7 +532,7 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheck
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackHostGroupInfo(recvbuf, packetSize,
+            if (dataPacking->unpackHostGroupInfo(recvbuf, packetSize,
                     checkInfo, hostResults))
             {
                 return true;
@@ -533,11 +543,11 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, HMAPICheck
 }
 
 bool
-HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, const HMAPIHash& hash, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
+HMControlSocketClientBase::getHostGroupResults(const string& hostGroupName, const HMAPIHash& hash, HMAPICheckInfo& checkInfo, vector<HMAPICheckResult>& hostResults)
 {
     hostResults.clear();
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packHash(hostGroupName, hash, dataSize);
+    unique_ptr<char[]> data = dataPacking->packHash(hostGroupName, hash, dataSize);
     vector<string> hosts;
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTGROUP + " " + hostGroupName + " " + to_string(dataSize);
     if (sendMessage(cmd))
@@ -548,7 +558,7 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, const HMAP
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                if (dataPacking.unpackHostGroupInfo(recvbuf, packetSize,
+                if (dataPacking->unpackHostGroupInfo(recvbuf, packetSize,
                         checkInfo, hostResults))
                 {
                     return true;
@@ -560,7 +570,7 @@ HMControlSocketClientBase::getHostGroupResults(string& hostGroupName, const HMAP
 }
 
 bool
-HMControlSocketClientBase::getHostResults(string& hostGroupName, string& hostName, vector<HMAPICheckResult>& hostResults)
+HMControlSocketClientBase::getHostResults(const string& hostGroupName, string& hostName, vector<HMAPICheckResult>& hostResults)
 {
     hostResults.clear();
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTCHECK + " " + hostGroupName + " " + hostName;
@@ -570,7 +580,7 @@ HMControlSocketClientBase::getHostResults(string& hostGroupName, string& hostNam
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            dataPacking.unpackDataCheckResults(recvbuf, packetSize,
+            dataPacking->unpackDataCheckResults(recvbuf, packetSize,
                     hostResults);
             return true;
         }
@@ -579,7 +589,7 @@ HMControlSocketClientBase::getHostResults(string& hostGroupName, string& hostNam
 }
 
 bool
-HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, vector<HMAPIAuxInfo>& auxInfo)
+HMControlSocketClientBase::getLoadFeedback(const string& hostGroupName, vector<HMAPIAuxInfo>& auxInfo)
 {
     auxInfo.clear();
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFB + " " + hostGroupName;
@@ -589,7 +599,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, vector<HMAPIAu
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackAuxInfo(recvbuf, packetSize,
+            if (dataPacking->unpackAuxInfo(recvbuf, packetSize,
                     auxInfo))
 
             {
@@ -601,11 +611,11 @@ HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, vector<HMAPIAu
 }
 
 bool
-HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, const HMAPIHash& hash, vector<HMAPIAuxInfo>& auxInfo)
+HMControlSocketClientBase::getLoadFeedback(const string& hostGroupName, const HMAPIHash& hash, vector<HMAPIAuxInfo>& auxInfo)
 {
     auxInfo.clear();
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packHash(hostGroupName, hash, dataSize);
+    unique_ptr<char[]> data = dataPacking->packHash(hostGroupName, hash, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFB + " " + hostGroupName + " " + to_string(dataSize);
     if (sendMessage(cmd))
     {
@@ -615,8 +625,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, const HMAPIHas
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                if (dataPacking.unpackAuxInfo(recvbuf, packetSize, auxInfo))
-
+                if (dataPacking->unpackAuxInfo(recvbuf, packetSize, auxInfo))
                 {
                     return true;
                 }
@@ -627,7 +636,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostGroupName, const HMAPIHas
 }
 
 bool
-HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, HMAPIIPAddress& address, HMAPIAuxInfo& auxInfo)
+HMControlSocketClientBase::getLoadFeedback(const string& hostName, string& sourceURL, HMAPIIPAddress& address, HMAPIAuxInfo& auxInfo)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFBIP + " " + hostName + " " + sourceURL + " " + address.toString();
     if (sendMessage(cmd))
@@ -636,7 +645,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, 
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackAuxInfo(recvbuf, packetSize,
+            if (dataPacking->unpackAuxInfo(recvbuf, packetSize,
                     auxInfo))
 
             {
@@ -648,7 +657,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, 
 }
 
 bool
-HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, HMAPIIPAddress& address, HMAuxInfo& auxInfo)
+HMControlSocketClientBase::getLoadFeedback(const string& hostName, string& sourceURL, HMAPIIPAddress& address, HMAuxInfo& auxInfo)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFBIP + " " + hostName + " " + sourceURL + " " + address.toString();
     if (sendMessage(cmd))
@@ -657,7 +666,7 @@ HMControlSocketClientBase::getLoadFeedback(string& hostName, string& sourceURL, 
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            if (dataPacking.unpackAuxInfo(recvbuf, packetSize,
+            if (dataPacking->unpackAuxInfo(recvbuf, packetSize,
                     auxInfo))
 
             {
@@ -674,7 +683,7 @@ HMControlSocketClientBase::getLoadFeedback(const string& hostName, const HMAPIDa
     auxResults.clear();
     HMDataHostCheck dataHostCheck(apiDataHostCheck);
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
+    unique_ptr<char[]> data = dataPacking->packDataHostCheck(dataHostCheck, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_LOADFBHOST + " " + hostName + " " + to_string(dataSize);
     if (sendMessage(cmd))
     {
@@ -684,7 +693,7 @@ HMControlSocketClientBase::getLoadFeedback(const string& hostName, const HMAPIDa
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                if (dataPacking.unpackAuxInfo(recvbuf, packetSize, auxResults))
+                if (dataPacking->unpackAuxInfo(recvbuf, packetSize, auxResults))
 
                 {
                     return true;
@@ -696,12 +705,12 @@ HMControlSocketClientBase::getLoadFeedback(const string& hostName, const HMAPIDa
 }
 
 bool
-HMControlSocketClientBase::getHostResults(string& hostName, HMAPIDataHostCheck& apiDataHostCheck, vector<pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults)
+HMControlSocketClientBase::getHostResults(const string& hostName, HMAPIDataHostCheck& apiDataHostCheck, vector<pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults)
 {
     hostResults.clear();
     HMDataHostCheck dataHostCheck(apiDataHostCheck);
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
+    unique_ptr<char[]> data = dataPacking->packDataHostCheck(dataHostCheck, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTRESULTS + " " + hostName + " "
             + to_string(dataSize);
     if (sendMessage(cmd))
@@ -712,7 +721,7 @@ HMControlSocketClientBase::getHostResults(string& hostName, HMAPIDataHostCheck& 
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                return dataPacking.unpackHostResults(recvbuf,
+                return dataPacking->unpackHostResults(recvbuf,
                         packetSize, hostResults);
             }
         }
@@ -722,12 +731,12 @@ HMControlSocketClientBase::getHostResults(string& hostName, HMAPIDataHostCheck& 
 
 
 bool
-HMControlSocketClientBase::getHostResults(string& hostName, HMAPIIPAddress& address,HMAPIDataHostCheck& apiDataHostCheck, vector<pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults)
+HMControlSocketClientBase::getHostResults(const string& hostName, HMAPIIPAddress& address,HMAPIDataHostCheck& apiDataHostCheck, vector<pair<HMAPICheckInfo, HMAPICheckResult>>& hostResults)
 {
     hostResults.clear();
     HMDataHostCheck dataHostCheck(apiDataHostCheck);
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packDataHostCheck(dataHostCheck, dataSize);
+    unique_ptr<char[]> data = dataPacking->packDataHostCheck(dataHostCheck, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_HOSTIPRESULTS + " " + hostName + " " + address.toString() + " "
             + to_string(dataSize);
     if (sendMessage(cmd))
@@ -738,7 +747,7 @@ HMControlSocketClientBase::getHostResults(string& hostName, HMAPIIPAddress& addr
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                return dataPacking.unpackHostResults(recvbuf,
+                return dataPacking->unpackHostResults(recvbuf,
                         packetSize, hostResults);
             }
         }
@@ -756,7 +765,7 @@ HMControlSocketClientBase::getRemoteQueryOn(bool& remoteQueryStatus)
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, true))
         {
-            remoteQueryStatus = dataPacking.unpackBool(recvbuf, packetSize);
+            remoteQueryStatus = dataPacking->unpackBool(recvbuf, packetSize);
             return true;
         }
     }
@@ -789,17 +798,17 @@ HMControlSocketClientBase::getHandlerThreadCount(uint64_t& count)
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, false))
         {
-            return dataPacking.unpackUInt(recvbuf, packetSize, count);
+            return dataPacking->unpackUInt(recvbuf, packetSize, count);
         }
     }
     return false;
 }
 bool
-HMControlSocketClientBase::addHostGroup(string& hostGroupName, HMAPICheckInfo& checkInfo)
+HMControlSocketClientBase::addHostGroup(const string& hostGroupName, HMAPICheckInfo& checkInfo)
 {
     uint64_t dataSize = 0;
     HMDataHostGroup hostGroup(hostGroupName, checkInfo);
-    unique_ptr<char[]> data = dataPacking.packDataHostGroup(hostGroup, dataSize);
+    unique_ptr<char[]> data = dataPacking->packDataHostGroup(hostGroup, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_ADDHOSTGROUP + " " + hostGroupName + " "
             + to_string(dataSize);
     if (sendMessage(cmd))
@@ -810,7 +819,7 @@ HMControlSocketClientBase::addHostGroup(string& hostGroupName, HMAPICheckInfo& c
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize))
             {
-                return dataPacking.unpackBool(recvbuf, packetSize);
+                return dataPacking->unpackBool(recvbuf, packetSize);
             }
         }
     }
@@ -818,7 +827,7 @@ HMControlSocketClientBase::addHostGroup(string& hostGroupName, HMAPICheckInfo& c
 }
 
 bool
-HMControlSocketClientBase::removeHostGroup(string& hostGroupName)
+HMControlSocketClientBase::removeHostGroup(const string& hostGroupName)
 {
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REMOVEHOSTGROUP + " " + hostGroupName;
     if (sendMessage(cmd))
@@ -827,7 +836,7 @@ HMControlSocketClientBase::removeHostGroup(string& hostGroupName)
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            return dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return false;
@@ -843,7 +852,7 @@ HMControlSocketClientBase::clearTransaction()
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackBool(recvbuf, packetSize);
+            return dataPacking->unpackBool(recvbuf, packetSize);
         }
     }
     return false;
@@ -861,7 +870,7 @@ HMControlSocketClientBase::getTransactionalHashInfo(map<string, HMAPIHash>& hash
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackHashInfo(recvbuf, packetSize,
+            return dataPacking->unpackHashInfo(recvbuf, packetSize,
                     hashinfo);
         }
     }
@@ -878,7 +887,7 @@ HMControlSocketClientBase::getTransactionConfigHash(HMAPIHash& hash)
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize))
         {
-            return dataPacking.unpackHash(recvbuf, packetSize,
+            return dataPacking->unpackHash(recvbuf, packetSize,
                     hash);
         }
     }
@@ -890,7 +899,7 @@ HMControlSocketClientBase::commitTransaction(const HMAPIHash& hash)
 {
     uint64_t dataSize = 0;
     string configHash = "config";
-    unique_ptr<char[]> data = dataPacking.packHash(configHash, hash, dataSize);
+    unique_ptr<char[]> data = dataPacking->packHash(configHash, hash, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_COMMITTRANSACTION + " " + to_string(dataSize);
     if (sendMessage(cmd))
     {
@@ -901,7 +910,7 @@ HMControlSocketClientBase::commitTransaction(const HMAPIHash& hash)
             if (receivePacket(recvbuf, packetSize))
             {
                 uint8_t status;
-                if(dataPacking.unpackUInt(recvbuf, packetSize, status))
+                if(dataPacking->unpackUInt(recvbuf, packetSize, status))
                 {
                     return (HM_API_COMMIT_TRANSACTION_STATUS)status;
                 }
@@ -917,7 +926,7 @@ bool
 HMControlSocketClientBase::addDNSAddresses(const string& hostName, vector<HMAPIIPAddress>& addresses)
 {
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packIPAddresses(addresses, dataSize);
+    unique_ptr<char[]> data = dataPacking->packIPAddresses(addresses, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_ADDDNSADDRESSES + " " + hostName + " "
             + to_string(dataSize);
     if (sendMessage(cmd))
@@ -928,7 +937,7 @@ HMControlSocketClientBase::addDNSAddresses(const string& hostName, vector<HMAPII
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize, true))
             {
-                return dataPacking.unpackBool(recvbuf, packetSize);
+                return dataPacking->unpackBool(recvbuf, packetSize);
             }
         }
     }
@@ -939,7 +948,7 @@ bool
 HMControlSocketClientBase::removeDNSAddresses(const string& hostName, vector<HMAPIIPAddress>& addresses)
 {
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packIPAddresses(addresses, dataSize);
+    unique_ptr<char[]> data = dataPacking->packIPAddresses(addresses, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " " + HM_CMD_REMOVEDNSADDRESSES + " " + hostName + " "
             + to_string(dataSize);
     if (sendMessage(cmd))
@@ -950,7 +959,7 @@ HMControlSocketClientBase::removeDNSAddresses(const string& hostName, vector<HMA
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize, true))
             {
-                return dataPacking.unpackBool(recvbuf, packetSize);
+                return dataPacking->unpackBool(recvbuf, packetSize);
             }
         }
     }
@@ -968,7 +977,7 @@ HMControlSocketClientBase::getDNSAddresses(const string& hostName, vector<HMAPII
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, true))
         {
-            return dataPacking.unpackIPAddresses(recvbuf, packetSize, addresses);
+            return dataPacking->unpackIPAddresses(recvbuf, packetSize, addresses);
         }
     }
     return false;
@@ -979,7 +988,7 @@ bool
 HMControlSocketClientBase::addHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, const set<int>& values)
 {
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packListInt64(values, dataSize);
+    unique_ptr<char[]> data = dataPacking->packListInt64(values, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
             + HM_CMD_SETHOSTMARK + " " + hostGroupName + " " + hostName + " " + address.toString() + " " + to_string(dataSize);
     if (sendMessage(cmd))
@@ -990,7 +999,7 @@ HMControlSocketClientBase::addHostMark(const string& hostGroupName, const string
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize, true))
             {
-                return dataPacking.unpackBool(recvbuf, packetSize);
+                return dataPacking->unpackBool(recvbuf, packetSize);
             }
         }
     }
@@ -1001,7 +1010,7 @@ bool
 HMControlSocketClientBase::removeHostMark(const string& hostGroupName, const string& hostName, const HMAPIIPAddress& address, const set<int>& values)
 {
     uint64_t dataSize = 0;
-    unique_ptr<char[]> data = dataPacking.packListInt64(values, dataSize);
+    unique_ptr<char[]> data = dataPacking->packListInt64(values, dataSize);
     string cmd = to_string(HM_CONTROL_SOCKET_VERSION) + " "
             + HM_CMD_REMOVEHOSTMARK + " " + hostGroupName + " " + hostName+ " " + address.toString() + " " + to_string(dataSize);
     if (sendMessage(cmd))
@@ -1012,7 +1021,7 @@ HMControlSocketClientBase::removeHostMark(const string& hostGroupName, const str
             unique_ptr<char[]> recvbuf;
             if (receivePacket(recvbuf, packetSize, true))
             {
-                return dataPacking.unpackBool(recvbuf, packetSize);
+                return dataPacking->unpackBool(recvbuf, packetSize);
             }
         }
     }
@@ -1030,7 +1039,7 @@ HMControlSocketClientBase::getHostMark(const string& hostGroupName, const string
         unique_ptr<char[]> recvbuf;
         if (receivePacket(recvbuf, packetSize, false))
         {
-            return dataPacking.unpackListInt64(recvbuf, packetSize, values);
+            return dataPacking->unpackListInt64(recvbuf, packetSize, values);
         }
     }
     return false;

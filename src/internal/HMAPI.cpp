@@ -379,3 +379,23 @@ bool HMAPIHash::operator !=(const HMAPIHash& k) const
 {
     return !(*this == k);
 }
+
+//code helper functions
+string
+printReasonString(uint8_t reason)
+{
+    return printReason(HM_REASON(reason));
+}
+
+string
+printResponseString(uint8_t response)
+{
+    return printResponse(HM_RESPONSE(response));
+}
+
+string
+printStatusString(uint16_t status)
+{
+    return printStatus(HM_HOST_STATUS(status));
+}
+
