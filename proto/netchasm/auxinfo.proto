@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "netchasm/ipaddress.proto";
+
+package netchasm;
+message OOB {
+    uint32 type = 1;
+    uint32 shed = 2;
+    uint32 ts = 3;
+    uint32 forceDown = 4;
+    string host = 5;
+    string resource = 6;
+}
+
+message LFB {
+    uint32 type = 1;
+    uint64 ts = 2;
+    int64 load = 3;
+    int64 target = 4;
+    int64 max = 5;
+    string host = 6;
+    string resource = 7;
+    string datacenter = 8;
+}
+
+message AuxInfo {
+    string host = 1;
+    IPAddress address = 2;
+    uint64 ttl = 3;
+    uint64 updatetime = 4;
+    repeated OOB oob = 5;
+    repeated LFB lfb = 6;
+}
+
+message AuxResults {
+    repeated AuxInfo auxInfos = 1;
+}

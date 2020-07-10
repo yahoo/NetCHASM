@@ -52,8 +52,8 @@
 class HMStorageHost : public HMStorage
 {
 public:
-    HMStorageHost(HMDataHostGroupMap* hostGroupMap) :
-        HMStorage(hostGroupMap) {}
+    HMStorageHost(HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
+        HMStorage(hostGroupMap, dnsCache) {}
 
     virtual ~HMStorageHost() {};
 
@@ -63,8 +63,10 @@ public:
           \param the checkList restore.
           \param the DNS cache to restore.
           \param the Aux Cached to restore.
+          \param the Remote Host-groupCached to restore.
+          \param the Remote Host Cached to restore.
     */
-    void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache);
+    void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache);
 
     //! Clear the backend datastore.
     /*!
@@ -232,6 +234,26 @@ public:
      */
     void updateHostGroups(std::set<std::string>& hostGroups);
 
+    //! Store the health check results for a given host group.
+    /*!
+         Store the health check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the check results (HMGroupCheckResult)
+         \return true if the results stored successfully.
+     */
+    bool storeHostGroupCheckResult(const std::string& hostgroupname,
+            std::vector<HMGroupCheckResult>& checkResult);
+
+    //! Store the aux check results for a given host group.
+    /*!
+         Store the aux check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the aux results (HMGroupCheckResult)
+         \return true if the results stored successfully.
+     */
+    bool storeHostGroupAuxResult(const std::string& hostgroupname,
+            std::vector<HMGroupAuxResult>& auxResult);
+
     //! Get the health check results for a given host group.
     /*!
          Get the health check results for a given host group.
@@ -245,6 +267,16 @@ public:
             bool noCache,
             bool onlyResolved,
             std::vector<HMGroupCheckResult>& results);
+
+    //! Get the health check results for a given host group.
+    /*!
+         Get the health check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the check results (HMGroupCheckResult)
+         \return true if the results vector contains the results.
+     */
+    bool getGroupCheckResults(const std::string& groupName,
+                std::vector<HMGroupCheckResult>& results);
 
     //! Get the aux info for a given host group.
     /*!

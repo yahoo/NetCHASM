@@ -16,6 +16,8 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_basic_datacheckparams);
     CPPUNIT_TEST(test_basic_query);
+    CPPUNIT_TEST(test_basic_queryV6);
+    CPPUNIT_TEST(test_basic_querydual);
     CPPUNIT_TEST(test_basic_result);
     CPPUNIT_TEST(test_basic_result1);
     CPPUNIT_TEST(test_basic_result2);
@@ -40,6 +42,8 @@ public:
     void tearDown();
     void test_basic_datacheckparams();
     void test_basic_query();
+    void test_basic_queryV6();
+    void test_basic_querydual();
     void test_basic_result();
     void test_basic_result1();
     void test_basic_result2();

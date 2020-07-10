@@ -150,7 +150,6 @@ HMDataCheckParams::nextCheckTime(const HMIPAddress& address)
     
     HMTimeStamp nextchecktime;
     nextchecktime =  now + HMTimeStamp::HOURINMS;
-    
     if(it->second.m_queryState == HM_CHECK_INACTIVE || it->second.m_queryState == HM_CHECK_FAILED)
     {
         if((it->second.m_checkTime + m_checkTTL) < now)
@@ -264,13 +263,20 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
             printStatus(it->second.m_status).c_str());
 
 
-    it->second.m_softStatus = (HM_HOST_STATUS)(it->second.m_softStatus & ~(HM_HOST_STATUS_UP));
+    if(reason != HM_REASON_REMOTE_NODATA)
+    {
+        it->second.m_softStatus = (HM_HOST_STATUS)(it->second.m_softStatus & ~(HM_HOST_STATUS_UP));
+    }
+    it->second.m_statusChanged = false;
     it->second.m_address = address;
     it->second.m_response = response;
     it->second.m_reason = reason;
     it->second.m_start = start;
     it->second.m_end = end;
     it->second.m_port = port;
+
+    // Fix the possible race condition during DNS timeouts
+    it->second.m_queryState = HM_CHECK_INACTIVE;
 
     if(response == HM_RESPONSE_DNS_FAILED)
     {
@@ -280,7 +286,6 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
 
     it->second.m_numChecks++;
     it->second.m_checkTime = HMTimeStamp::now();
-    it->second.m_queryState = HM_CHECK_INACTIVE;
 
     if(response == HM_RESPONSE_CONNECTED)
     {
@@ -317,7 +322,19 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
         {
             it->second.m_numConnectFailures++;
         }
+        else if(reason == HM_REASON_REMOTE_NODATA)
+        {
+            it->second.m_numConnectFailures++;
+        }
     }
+    it->second.m_softReason = it->second.m_reason;
+    // Remote check failure will not go through retry or flapping logic
+    if (reason == HM_REASON_REMOTE_NODATA)
+    {
+        return;
+    }
+
+    it->second.m_remoteCheckTime.setTime(0);
     unsigned long flap = m_flapThreshold  ?m_flapThreshold : HM_DEFAULT_FLAP_THRESHOLD;
     
     //Failed on Retry
@@ -326,8 +343,8 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
             && ++(it->second.m_numFailedChecks) <= m_numCheckRetries) 
     {
         HMLog(HM_LOG_NOTICE,
-                "[CHECK] Check failed for %s. Check %d of %d failed reason %s for hostgroups %s ",
-                hostname.c_str(),
+                "[CHECK] Check failed for %s(%s). Check %d of %d failed reason %s for hostgroups %s ",
+                hostname.c_str(), address.toString().c_str(),
                 it->second.m_numFailedChecks,
                 m_numCheckRetries + 1,
                 printReason(it->second.m_reason).c_str(),
@@ -348,8 +365,8 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     {
         //Host is up , previously host was down
         HMLog(HM_LOG_NOTICE,
-                "[CHECK] Check successful after retry (%d), target host=%s port=%d status=%s reason=%s for hostgroups %s",
-                it->second.m_numFailedChecks, hostname.c_str(),
+                "[CHECK] Check successful after retry (%d), target host=%s(%s) port=%d status=%s reason=%s for hostgroups %s",
+                it->second.m_numFailedChecks, hostname.c_str(), address.toString().c_str(),
                 it->second.m_port, printStatus(it->second.m_status).c_str(),
                 printReason(it->second.m_reason).c_str(),
                 printHostGroups().c_str());
@@ -359,8 +376,8 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     if (it->second.m_numFailedChecks > m_numCheckRetries)
     {
         HMLog(HM_LOG_NOTICE,
-                "[CHECK] %s is marked DOWN: failed checks(%d) reached maximum number of retries(%d), Failed reason:%s for hostgroups %s",
-                hostname.c_str(), it->second.m_numFailedChecks,
+                "[CHECK] %s(%s) is marked DOWN: failed checks(%d) reached maximum number of retries(%d), Failed reason:%s for hostgroups %s",
+                hostname.c_str(), address.toString().c_str(), it->second.m_numFailedChecks,
                 m_numCheckRetries + 1, printReason(it->second.m_reason).c_str(),
                 printHostGroups().c_str());
         it->second.m_status = (HM_HOST_STATUS) (it->second.m_status
@@ -386,12 +403,12 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
             string status =
                     (it->second.m_numFlaps > m_maxFlaps) ?
                             "FLAPPING" :
-                            ((it->second.m_flapStatus & HM_HOST_STATUS_UP) ?
+                            ((it->second.m_softStatus & HM_HOST_STATUS_UP) ?
                                     "UP" : "DOWN");
-
-            HMLog(HM_LOG_INFO,
-                    "[CHECK] Target %s host=%s port=%d reason=%s for hostgroups %s ",
-                    status.c_str(), hostname.c_str(), it->second.m_port,
+            it->second.m_statusChanged = true;
+            HMLog(HM_LOG_NOTICE,
+                    "[CHECK] Target %s host=%s(%s) port=%d reason=%s for hostgroups %s ",
+                    status.c_str(), hostname.c_str(), address.toString().c_str(), it->second.m_port,
                     printReason(it->second.m_reason).c_str(),
                     printHostGroups().c_str());
         }
@@ -402,9 +419,9 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
         if(it->second.m_numFailedChecks > m_numCheckRetries)
         {
             HMLog(HM_LOG_NOTICE,
-                    "[CHECK] %s is marked DOWN: flaps (%d) exceeded maximum number of flaps(%d), Failed reason:%s for hostgroups %s",
-                    hostname.c_str(), it->second.m_numFlaps, m_maxFlaps,
-
+                    "[CHECK] %s(%s) is marked DOWN: flaps (%d) exceeded maximum number of flaps(%d), Failed reason:%s for hostgroups %s",
+                    hostname.c_str(), address.toString().c_str(),
+                    it->second.m_numFlaps, m_maxFlaps,
                     printReason(it->second.m_reason).c_str(),
                     printHostGroups().c_str());
             it->second.m_status = (HM_HOST_STATUS)(it->second.m_status & ~HM_HOST_STATUS_UP);
@@ -419,8 +436,9 @@ HMDataCheckParams::updateCheck(string& hostname, const HMIPAddress& address, HM_
     it->second.m_flapStatus = it->second.m_softStatus;
 
     HMLog(HM_LOG_DEBUG,
-            "[CHECK] UpdateCheck completed target host=%s port=%d status=%s reason=%s for hostgroups %s",
+            "[CHECK] UpdateCheck completed target host=%s(%s) port=%d status=%s reason=%s for hostgroups %s",
             hostname.c_str(),
+            address.toString().c_str(),
             it->second.m_port,
             printStatus(it->second.m_status).c_str(),
             printReason(it->second.m_reason).c_str(),
@@ -457,6 +475,24 @@ HMDataCheckParams::getCheckResult(const HMIPAddress& address, HMDataCheckResult&
     return true;
 }
 
+bool
+HMDataCheckParams::getAddresses(HM_DUALSTACK dualstack, set<HMIPAddress>& addresses)
+{
+    shared_lock<shared_timed_mutex> lock(m_sharedMutex);
+    for(const auto& it : m_checkData)
+    {
+        if((dualstack & HM_DUALSTACK_IPV6_ONLY) && (it.first.getType() == AF_INET6))
+        {
+            addresses.insert(it.first);
+        }
+        if((dualstack & HM_DUALSTACK_IPV4_ONLY) && it.first.getType() == AF_INET)
+        {
+            addresses.insert(it.first);
+        }
+    }
+    return addresses.size() > 0;
+}
+
 HMTimeStamp
 HMDataCheckParams::getCheckTime(HMIPAddress& address)
 {
@@ -471,67 +507,67 @@ HMDataCheckParams::getCheckTime(HMIPAddress& address)
 }
 
 uint8_t
-HMDataCheckParams::getNumCheckRetries()
+HMDataCheckParams::getNumCheckRetries() const
 {
     return m_numCheckRetries;
 }
 
 uint32_t
-HMDataCheckParams::getCheckRetryDelay()
+HMDataCheckParams::getCheckRetryDelay() const
 {
     return m_checkRetryDelay;
 }
 
 uint16_t
-HMDataCheckParams::getMeasurementOptions()
+HMDataCheckParams::getMeasurementOptions() const
 {
     return m_measurementOptions;
 }
 
 uint32_t
-HMDataCheckParams::getSmoothingWindow()
+HMDataCheckParams::getSmoothingWindow() const
 {
     return m_smoothingWindow;
 }
 
 uint32_t
-HMDataCheckParams::getGroupThreshold()
+HMDataCheckParams::getGroupThreshold() const
 {
     return m_groupThreshold;
 }
 
 uint32_t
-HMDataCheckParams::getSlowThreshold()
+HMDataCheckParams::getSlowThreshold() const
 {
     return m_slowThreshold;
 }
 
 uint32_t
-HMDataCheckParams::getMaxFlaps()
+HMDataCheckParams::getMaxFlaps() const
 {
     return m_maxFlaps;
 }
 
 uint64_t
-HMDataCheckParams::getTimeout()
+HMDataCheckParams::getTimeout() const
 {
     return m_checkTimeout;
 }
 
 uint64_t
-HMDataCheckParams::getTTL()
+HMDataCheckParams::getTTL() const
 {
     return m_checkTTL;
 }
 
 uint32_t
-HMDataCheckParams::getFlapTheshold()
+HMDataCheckParams::getFlapThreshold() const
 {
     return m_flapThreshold;
 }
 
 uint32_t
-HMDataCheckParams::getPassthroughInfo()
+HMDataCheckParams::getPassthroughInfo() const
 {
     return m_passthroughInfo;
 }
@@ -567,6 +603,13 @@ bool
 HMDataCheckParams::getHostGroups(vector<string>& hostGroups) const
 {
     hostGroups = m_hostGroups;
+    return true;
+}
+
+bool
+HMDataCheckParams::getHostGroups(set<string>& hostGroups) const
+{
+    hostGroups.insert(m_hostGroups.begin(), m_hostGroups.end());
     return true;
 }
 
@@ -647,7 +690,7 @@ HMDataCheckParams::setResponse(string& hostname,
                 && rt >= it->second.m_smoothedResponseTime + slowThreshold
                 && ++it->second.m_numSlowResponses <= m_numCheckRetries)
         {
-            HMLog(HM_LOG_DEBUG,
+            HMLog(HM_LOG_NOTICE,
                     "[CHECK]%s(%15s): skip slow response (%d of %d): rt = %u,  total rt= %u, (smth rt=%u,st=%u,d=%u)",
                     hostname.c_str(),
                     it->first.toString().c_str(),
@@ -667,7 +710,7 @@ HMDataCheckParams::setResponse(string& hostname,
             it->second.m_smoothedResponseTime = srt;
 
             HMLog(HM_LOG_DEBUG3,
-                    "[CHECK] %s: check complete: rt = %us, smoothed rt = %us, total rt = %us with response %s",
+                    "[CHECK] %s: check complete: rt = %u ms, smoothed rt = %u ms, total rt = %u ms with response %s",
                     it->first.toString().c_str(),
                     it->second.m_responseTime,
                     it->second.m_smoothedResponseTime,
@@ -679,7 +722,7 @@ HMDataCheckParams::setResponse(string& hostname,
     else
     {
         it->second.m_reason = HM_REASON_RESPONSE_TIMEOUT;
-        HMLog(HM_LOG_DEBUG3,
+        HMLog(HM_LOG_NOTICE,
               "[CHECK] %s: responded t=%us (rt =%us, total rt=%us)  after timeout: %ums with reason %s",
               it->first.toString().c_str(),
               srt,
@@ -689,3 +732,4 @@ HMDataCheckParams::setResponse(string& hostname,
               printReason(it->second.m_reason).c_str());
     }
 }
+

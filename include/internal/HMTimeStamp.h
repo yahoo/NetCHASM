@@ -72,7 +72,7 @@ public:
          \param the format to use to print the time stamp.
          \return the string representation of the time stamp.
      */
-    std::string print(std::string format);
+    std::string print(std::string format) const;
 
     //! Print the elapsed time from this time stamp to now.
     /*!

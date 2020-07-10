@@ -2,7 +2,7 @@
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include "TestHMStorage.h"
 
-#include <TestStorage.h>
+#include "TestStorage.h"
 #include "common.h"
 
 using namespace std;
@@ -25,6 +25,7 @@ void TESTNAME::test_HMStorage_Construction()
     HMIPAddress address;
     address.set("192.168.0.1");
 
+    HMDNSCache dnsCache;
     HMConfigInfo configInfo;
     HMDataHostCheck hostCheck;
     HMDataCheckParams checkParams;
@@ -43,7 +44,7 @@ void TESTNAME::test_HMStorage_Construction()
     CPPUNIT_ASSERT(checkHeader.m_hostCheck == hostCheck);
     CPPUNIT_ASSERT(checkHeader.m_hostname == hostname);
     HMDataHostGroupMap hostGroupMap;
-    TestStorage myStorage(&hostGroupMap);
+    TestStorage myStorage(&hostGroupMap, &dnsCache);
 }
 
 void TESTNAME::test_HMStorage_OpenClose()
@@ -60,8 +61,8 @@ void TESTNAME::test_HMStorage_OpenClose()
     HMDataCheckResult result;
     HMDataHostGroupMap hostGroupMap;
 
-    TestStorage* readOnlyStorage = new TestStorage(&hostGroupMap);
-    TestStorage* rwStorage = new TestStorage(&hostGroupMap);
+    TestStorage* readOnlyStorage = new TestStorage(&hostGroupMap, &dnsCache);
+    TestStorage* rwStorage = new TestStorage(&hostGroupMap, &dnsCache);
 
     readOnlyStorage->m_commitCalls = 10;
     CPPUNIT_ASSERT(readOnlyStorage->openStore(true));

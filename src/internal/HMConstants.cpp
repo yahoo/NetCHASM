@@ -1,7 +1,8 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
 #include "HMConstants.h"
-
+#include "HMDataHostCheck.h"
+#include "HMLogBase.h"
 using namespace std;
 
 string
@@ -46,13 +47,34 @@ printCheckTypeConfigs(HM_CHECK_TYPE ct)
         return "ftps-explicit-no-peer-check";
 
     case HM_CHECK_AUX_HTTP:
-        return "http-auxfetch";
+        return "http";
 
     case HM_CHECK_AUX_HTTPS:
-        return "https-auxfetch";
+        return "https";
 
     case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
-        return "https-no-peer-check-auxfetch";
+        return "https-no-peer-check";
+
+    case HM_CHECK_AUX_MTLS_HTTPS:
+        return "https-mtls";
+
+    case HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK:
+        return "https-mtls-no-peer-check";
+
+    case HM_CHECK_MTLS_HTTPS:
+        return "https-mtls";
+
+    case HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK:
+        return "https-mtls-no-peer-check";
+
+    case HM_CHECK_MARK_HTTP:
+        return "http-mark";
+
+    case HM_CHECK_MARK_HTTPS:
+        return "https-mark";
+
+    case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+        return "https-mark-no-peer-check";
 
     default:
         return "default (empty) value";
@@ -73,6 +95,9 @@ printCheckType(HM_CHECK_TYPE ct)
 
     case HM_CHECK_TCP:
         return "tcp";
+
+    case HM_CHECK_TCPS:
+        return "tcps";
 
     case HM_CHECK_HTTPS:
         return "https";
@@ -110,6 +135,27 @@ printCheckType(HM_CHECK_TYPE ct)
     case HM_CHECK_AUX_HTTPS_NO_PEER_CHECK:
         return "aux https-no-peer-check";
 
+    case HM_CHECK_AUX_MTLS_HTTPS:
+        return "https-mtls";
+
+    case HM_CHECK_AUX_MTLS_HTTPS_NO_PEER_CHECK:
+        return "https-mtls-no-peer-check";
+
+    case HM_CHECK_MTLS_HTTPS:
+        return "https-mtls";
+
+    case HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK:
+        return "https-mtls-no-peer-check";
+
+    case HM_CHECK_MARK_HTTP:
+        return "http-mark";
+
+    case HM_CHECK_MARK_HTTPS:
+        return "https-mark";
+
+    case HM_CHECK_MARK_HTTPS_NO_PEER_CHECK:
+        return "https-mark-no-peer-check";
+
     default:
         return "default (empty) value";
     }
@@ -128,6 +174,10 @@ printWorkType(HM_WORK_TYPE work)
         return "DNS Lookup";
     case HM_WORK_AUXFETCH:
         return "Aux Fetch";
+    case HM_WORK_REMOTECHECK:
+        return "Remote HostGroup";
+    case HM_WORK_REMOTEHOSTCHECK:
+        return "Remote Host";
     default:
         return "Invalid Work Type";
     }
@@ -153,6 +203,20 @@ printMeasurementOptions(uint16_t rtMode)
         return "smoothed-total";
     }
     return "connect";
+}
+
+string
+printDnsType(HM_DNS_TYPE dt)
+{
+    switch(dt)
+    {
+    case HM_DNS_TYPE_LOOKUP:
+        return "lookup";
+    case HM_DNS_TYPE_STATIC:
+        return "Static";
+    default:
+        return "Invalid DNS type";
+    }
 }
 
 string
@@ -210,6 +274,8 @@ printReason(HM_REASON reason)
         return "Response 5xx";
     case HM_REASON_INTERNAL_ERROR:
         return "Internal Error";
+    case HM_REASON_REMOTE_NODATA:
+        return "Remote No Data";
     default:
         return "Invalid Response Code";
     }
@@ -260,25 +326,70 @@ printResponse(HM_RESPONSE response)
         return "Failed";
     case HM_RESPONSE_DNS_FAILED:
         return "DNS Failed";
+    case HM_RESPONSE_REMOTE_FAILED:
+        return "Remote Failed";
     default:
         return "Invalid Response";
     }
 }
 
 string
-printWorkState(HM_WORK_STATE state)
+printRemoteCheckType(HM_REMOTE_CHECK_TYPE type)
 {
-    switch(state)
+    switch(type)
     {
-    case HM_CHECK_INACTIVE:
-        return "INACTIVE";
-    case HM_CHECK_QUEUED:
-        return "QUEUED";
-    case HM_CHECK_IN_PROGRESS:
-        return "IN PROGRESS";
-    case HM_CHECK_FAILED:
-        return "FAILED";
+    case HM_REMOTE_CHECK_NONE:
+        return "None";
+        break;
+    case HM_REMOTE_CHECK_TCP:
+        return "RemoteTCP";
+        break;
+    case HM_REMOTE_CHECK_TCPS:
+        return "RemoteTCPS";
+        break;
+    case HM_REMOTE_SHARED_CHECK_TCP:
+        return "RemoteSharedTCP";
+        break;
+    case HM_REMOTE_SHARED_CHECK_TCPS:
+        return "RemoteSharedTCPS";
+        break;
+    case HM_REMOTE_SHARED_CHECK_LINUX:
+        return "RemoteSharedLINUX";
+        break;
     default:
-        return "Invalid Response";
+        return "Invalid";
+    };
+}
+
+string
+printFlowType(HM_FLOW_TYPE type)
+{
+    switch(type)
+    {
+    case HM_FLOW_DNS_HEALTH_TYPE:
+        return "dns-health";
+        break;
+    case HM_FLOW_REMOTE_HOSTGROUP_TYPE:
+        return "remote-hostgroup";
+        break;
+    case HM_FLOW_REMOTE_HOST_TYPE:
+        return "remote-host";
+        break;
+    default:
+        return "Invalid";
+    };
+}
+
+bool CompareCheckList::operator()(const std::pair<std::string,HMDataHostCheck>& lhs,
+        const std::pair<std::string,HMDataHostCheck>& rhs) const {
+
+    if(lhs.first  == rhs.first)
+    {
+        if(lhs.second == rhs.second)
+        {
+            return (uint8_t)lhs.second.getDnsType() < rhs.second.getDnsType();
+        }
+        return lhs.second < rhs.second;
     }
+    return lhs.first < rhs.first;
 }

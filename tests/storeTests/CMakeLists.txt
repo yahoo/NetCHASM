@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
-
 include(ExternalProject)
-project(bkln_netchasm)
+project(netchasm)
 
-file(GLOB SOURCES "./*.cpp")
+list(APPEND SOURCES "TestHMStorage.cpp" "TestHMStorageHost.cpp" "TestHMStorageHostGroup.cpp" "TestHMStorageText.cpp")
+if(NOT SKIP-MDBM)
+	list(APPEND SOURCES "TestHMStorageHostGroupMDBM.cpp")
+endif()
+
 add_executable(storetests ${SOURCES} ../shared/common.cpp ../shared/TestStorage.cpp ../shared/TestStorageHost.cpp ../shared/TestStorageHostGroup.cpp ../CppUnitTestRunner.cc)
 set_property(TARGET storetests PROPERTY CXX_STANDARD 14)
 

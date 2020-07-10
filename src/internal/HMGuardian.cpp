@@ -23,12 +23,47 @@ using namespace std;
 
 // LCOV_EXCL_START; Tested in functional testing
 
-static HMGuardian* guardian;
+static HMGuardian* guardian = nullptr;
+static unique_ptr<HMStateManager> monitor = nullptr;
 
 static void parentTermCallback(int s)
 {
     (void)s;
     guardian->callback();
+}
+
+//LCOV_EXCL_START
+static void ctrlC_Callback(int s)
+{
+    (void)(s);
+    // Signal the main process to quit
+    if(monitor)
+    {
+        monitor->shutdown();
+    }
+}
+//LCOV_EXCL_STOP
+
+
+void setupSignals()
+{
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = ctrlC_Callback;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
+    struct sigaction sigTermHandler;
+    sigTermHandler.sa_handler = ctrlC_Callback;
+    sigemptyset(&sigTermHandler.sa_mask);
+    sigTermHandler.sa_flags = 0;
+    sigaction(SIGTERM, &sigTermHandler, NULL);
+
+    struct sigaction sigPipeHandler;
+    sigPipeHandler.sa_handler = SIG_IGN;
+    sigemptyset(&sigPipeHandler.sa_mask);
+    sigPipeHandler.sa_flags = 0;
+    sigaction(SIGPIPE, &sigPipeHandler, NULL);
 }
 
 HMGuardian::~HMGuardian()
@@ -39,6 +74,16 @@ HMGuardian::~HMGuardian()
         yGuardianLog->shutDownLogging();
         delete yGuardianLog;
     }
+}
+
+bool HMGuardian::startNetCHASM(const string& masterConfig,
+        HM_LOG_LEVEL logLevel)
+{
+    monitor = make_unique<HMStateManager>();
+    setupSignals();
+    bool rc = monitor->healthCheck(masterConfig, logLevel);
+    monitor.reset();
+    return rc;
 }
 
 int
@@ -71,8 +116,7 @@ HMGuardian::runGuardian(HM_LOG_LEVEL logLevel, const string& masterConfig)
 
         if (!(hmonPid = fork()))
         {
-            auto monitor = make_unique<HMStateManager>();
-            bool rc = monitor->healthCheck(masterConfig, logLevel);
+            bool rc = startNetCHASM(masterConfig, logLevel);
             exit(rc ? EXIT_SUCCESS : EXIT_FAILURE);
         }
         else if (hmonPid > 0)

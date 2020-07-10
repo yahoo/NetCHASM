@@ -21,11 +21,13 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_operations_nequal_checkinfo);
     CPPUNIT_TEST(test_operations_nequal_dualstack);
     CPPUNIT_TEST(test_operations_equal_checkplugin);
+    CPPUNIT_TEST(test_operations_nequal_remote_check);
     CPPUNIT_TEST(test_print_entry);
     CPPUNIT_TEST(test_operations_less_checktype);
     CPPUNIT_TEST(test_operations_less_port);
     CPPUNIT_TEST(test_operations_less_dualstack);
     CPPUNIT_TEST(test_operations_less_checkinfo);
+    CPPUNIT_TEST(test_operations_less_remote_check);
     CPPUNIT_TEST(test_parseCheckInfo_1);
     CPPUNIT_TEST(test_parseCheckInfo_2);
     CPPUNIT_TEST(test_parseCheckInfo_3);
@@ -66,6 +68,7 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_parseCheckInfo_38);
     CPPUNIT_TEST(test_parseCheckInfo_39);
     CPPUNIT_TEST(test_parseCheckInfo_40);
+    CPPUNIT_TEST(test_basic_data_host_check2);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -80,11 +83,13 @@ public:
     void test_operations_nequal_checkinfo();
     void test_operations_nequal_dualstack();
     void test_operations_equal_checkplugin();
+    void test_operations_nequal_remote_check();
     void test_print_entry();
     void test_operations_less_checktype();
     void test_operations_less_port();
     void test_operations_less_dualstack();
     void test_operations_less_checkinfo();
+    void test_operations_less_remote_check();
     void test_parseCheckInfo_1();
     void test_parseCheckInfo_2();
     void test_parseCheckInfo_3();
@@ -125,6 +130,7 @@ public:
     void test_parseCheckInfo_38();
     void test_parseCheckInfo_39();
     void test_parseCheckInfo_40();
+    void test_basic_data_host_check2();
 protected:
 
 };

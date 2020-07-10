@@ -1,0 +1,68 @@
+.TH hm_remote 1 "01 October 2019" "version 1.2"
+.SH NAME
+hm_remote - Tool to fetch results from remote NetCHASM daemon or set remote NetCHASM host up/down
+.SH SYNOPSIS
+.B hm_remote [OPTIONS] COMMAND
+.SH DESCRIPTION
+This tool interacts with the remote NetCHASM daemon to fetch Health Check results. The tool also sets the remote host's reply state to up/down.
+.SH OPTIONS
+.BI "		-i" 
+REMOTE-IP-ADDRESS
+.PP
+			Override the ip of the remote NetCHASM daemon to interact. The default ip is 127.0.0.1
+
+.BI "		-p"
+REMOTE_SERVER_PORT
+.PP
+			Override the port of the remote NetCHASM daemon to interact. The default port is 10053
+
+.BI "		-o"
+tcp|tcps
+.PP
+			Override the protocol used to communicate to the remote host. The default is tcp
+
+.BI "		-k"
+KEY-FILE-PATH
+.PP
+			Path to the private key file
+
+.BI "		-c"
+CERT-FILE-PATH
+.PP
+			Path to the certificate file
+
+.BI "		-a"
+CA-CERT-PATH
+.PP
+			Path to the CA certificate file
+
+.BI "		-d"
+delimiter
+.PP
+			Show the health check results inbare delimited format
+
+.BI "		-L"
+.PP
+			Show the load feedback information for the health checks
+
+.BI "		-s"
+.PP
+			Show per-host state summary
+
+.SH COMMAND
+
+.BI "		getremotequery" 
+HOST
+.PP 
+			Get the remote query enable status of remote daemon
+
+.BI "		setremotequery"
+on|off
+.PP 
+			Enable/Disable the remote query state of the remote daemon
+
+.BI "           hostresults"
+HOSTGROUP
+.PP
+			Get the heath check result for the HOSTGROUP from remote deamon
+

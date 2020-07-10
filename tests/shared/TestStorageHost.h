@@ -7,8 +7,8 @@
 #include "HMStorageHost.h"
 class TestStorageHost: public HMStorageHost {
 public:
-    TestStorageHost(HMDataHostGroupMap *groupMap) :
-            HMStorageHost(groupMap)
+    TestStorageHost(HMDataHostGroupMap *groupMap, HMDNSCache* dnsCache) :
+            HMStorageHost(groupMap, m_dnsCache)
     {
     }
 

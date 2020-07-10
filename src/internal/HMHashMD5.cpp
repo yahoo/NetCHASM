@@ -4,13 +4,43 @@
 
 #include "HMHashMD5.h"
 #include "HMLogBase.h"
+#include "HMStorage.h"
 
 using namespace std;
+
+
+bool HMHash::operator ==(const HMHash& k) const
+{
+    if(m_hashSize == 0 || k.m_hashSize == 0)
+    {
+        return true;
+    }
+    if(m_hashSize != k.m_hashSize)
+    {
+        return false;
+    }
+    if(memcmp(m_hashValue, k.m_hashValue, m_hashSize) != 0)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool HMHash::operator !=(const HMHash& k) const
+{
+    return !(*this == k);
+}
+
+
 
 HMHashMD5::HMHashMD5() :
                 finalized(false)
 {
+     #if OPENSSL_VERSION_NUMBER < 0x10100000L
+     ctx = EVP_MD_CTX_create();
+     #else 
      ctx = EVP_MD_CTX_new();
+     #endif 
 }
 
 bool 
@@ -63,5 +93,9 @@ HMHashMD5::size() const
 HMHashMD5::~HMHashMD5()
 {
     finalized = false;
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
+    EVP_MD_CTX_destroy(ctx);
+    #else 
     EVP_MD_CTX_free(ctx);
+    #endif 
 }

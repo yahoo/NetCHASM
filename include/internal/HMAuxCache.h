@@ -10,16 +10,23 @@
 #include <shared_mutex>
 #include <memory>
 
-#include "rapidxml.h"
-
 #include "HMIPAddress.h"
 #include "HMTimeStamp.h"
+#include "HMConstants.h"
 
 /*! Stores the supported aux info types. */
 enum HM_AUX_TYPE : uint8_t
 {
     HM_LOAD_FILE,
     HM_OOB_FILE
+};
+
+/*! OOB xml values for forcedown. */
+enum HM_OOB_FORCEDOWN : uint8_t
+{
+    HM_OOB_FORCEDOWN_FALSE = 0,
+    HM_OOB_FORCEDOWN_TRUE = 1,
+    HM_OOB_FORCEDOWN_NONE = 2
 };
 
 class HMAuxLoadFB;
@@ -162,6 +169,10 @@ protected:
 class HMAuxOOB : public HMAuxBase
 {
 public:
+    //! Aux Info OOB forcedown values false = 0 , true = 1 , not defined =2
+    HMAuxOOB() :
+        m_forceDown(HM_OOB_FORCEDOWN_NONE),
+        m_shed(0) {};
     //! Function to clone the current Aux Info.
     /*!
          The clone function creates the correct copy from the derived class.
@@ -191,7 +202,7 @@ public:
     //! Return a OOB type or nullptr if this is not an OOB type.
     HMAuxOOB* getOOB();
 
-    bool m_forceDown;
+    HM_OOB_FORCEDOWN m_forceDown;
     uint32_t m_shed;
 
 protected:
@@ -212,7 +223,7 @@ protected:
         uint32_t m_resourceSize;
         HMIPAddress m_ip;
         uint64_t m_ts;
-        bool m_forceDown;
+        uint8_t m_forceDown;
         uint32_t m_shed;
 
     };
@@ -231,7 +242,7 @@ public:
     HMIPAddress m_address;
 };
 
-//! Class to store the aux info internally. Supports a vector of Aux ino and the update timestamp.
+//! Class to store the aux info internally. Supports a vector of Aux info and the update timestamp.
 class HMAuxInfo
 {
 public:
@@ -264,13 +275,30 @@ public:
      \param hostname the hostname of the source of the aux info string.
      \param sourceURL the URL used to retrieve the aux info string
      \param address the ip address of the host that provided the aux info string.
-     \param auxInfo the actual aux info string to parse.
+     \param actual aux info string to parse.
+     \param aux info string format
      \return bool true if the parsing resulted in an aditional aux info entry added to the cache.
      */
     bool storeAuxInfo(const std::string& hostname,
             const std::string& sourceURL,
             const HMIPAddress& address,
-            std::string& auxInfo);
+            std::string& auxInfo,
+            HM_AUX_DATA_TYPE auxDataType);
+
+    //! Store the aux info read from an xml string
+    /*
+         Store aux info
+         \param hostname the hostname of the source of the aux info string.
+         \param sourceURL the URL used to retrieve the aux info string
+         \param address the ip address of the host that provided the aux info string.
+         \param auxInfo the actual aux info.
+         \return bool true if successful.
+     */
+
+    bool storeAuxInfo(const std::string& hostname,
+            const std::string& sourceURL,
+            const HMIPAddress& address,
+            HMAuxInfo& auxInfo);
 
     //! Update a current aux info entry
     /*
@@ -303,16 +331,18 @@ public:
     //! Generate an xml representation of the stored aux info.
     /*
           Generate an xml representation of the aux info.
-          /param the auxInfo to convert to xml.
-          /param the HM_AUX_TYPE of the given aux info.
-          /param the hostGroup to use in naming the xml.
-          /param the string to store the xml.
-          /return bool true if the xml was stored into the string.
+          \param the auxInfo to convert to xml.
+          \param the HM_AUX_TYPE of the given aux info.
+          \param the hostGroup to use in naming the xml.
+          \param the string to store the xml.
+          \param format to generate the aux info to
+          \return bool true if the xml was stored into the string.
      */
-    bool genAuxXML(HMAuxInfo& auxInfo,
+    bool genAuxData(HMAuxInfo& auxInfo,
             const HM_AUX_TYPE type,
             const std::string& hostGroup,
-            std::string& xmlOutput);
+            std::string& output,
+            HM_AUX_DATA_TYPE auxDataType);
 
 private:
 
@@ -322,41 +352,18 @@ private:
          \param hostname the hostname to use in the key.
          \param sourceURL the url to use in the key.
          \param address the address to use in the key.
-         \param auxInfo the string containing the xml to parse.
+         \param string containing the xml to parse.
+         \param auxInfo to store the xml.
+         \param format to parse the aux info from
          \return bool true if the xml resulted in a new cache entry,
      */
-    bool parseXML(const std::string& hostname,
+    bool parseAuxData(const std::string& hostname,
             const std::string& sourceURL,
             const HMIPAddress& address,
-            std::string& auxInfo);
+            std::string& auxStr,
+            HMAuxInfo& auxInfo,
+            HM_AUX_DATA_TYPE auxDataType);
 
-    //! Internal function to parse the xml into a new LFB entry in the cache
-    /*!
-        Parse the given string into a new LFB cache entry.
-        \param hostname the hostname to use in the key.
-        \param sourceURL the url to use in the key.
-        \param address the address to use in the key.
-        \param auxInfo the string containing the xml to parse.
-        \return bool true if the xml resulted in a new LFB cache entry,
-     */
-    bool parseNewLFB(const std::string& hostname,
-            const std::string& sourceURL,
-            const HMIPAddress& address,
-            rapidxml::xml_document<char>& doc);
-
-    //! Internal function to parse the xml into an OOB entry in the cache
-        /*!
-            Parse the given string into an OOB cache entry.
-            \param hostname the hostname to use in the key.
-            \param sourceURL the url to use in the key.
-            \param address the address to use in the key.
-            \param auxInfo the string containing the xml to parse.
-            \return bool true if the xml resulted in an OOB cache entry,
-         */
-    bool parseOOB(const std::string& hostname,
-            const std::string& sourceURL,
-            const HMIPAddress& address,
-            rapidxml::xml_document<char>& doc);
     //! Internal function to lock the structure and replace a key-value pair.
     void commitEntry(HMAuxKey& key,
             HMAuxInfo& base);

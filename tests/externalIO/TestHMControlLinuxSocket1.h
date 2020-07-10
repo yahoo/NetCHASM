@@ -1,7 +1,7 @@
 // Copyright 2019, Oath Inc.
 // Licensed under the terms of the Apache 2.0 license. See LICENSE file in the root of the distribution for licensing details.
-#ifndef TESTS_STORETESTS_TESTHMSTORAGE_H_
-#define TESTS_STORETESTS_TESTHMSTORAGE_H_
+#ifndef TESTS_HMCONTROLLINUXSOCKET1_H_
+#define TESTS_HMCONTROLLINUXSOCKET1_H_
 
 #include <cppunit/Test.h>
 #include <cppunit/TestFixture.h>
@@ -19,7 +19,6 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_cmdlstnr7);
     CPPUNIT_TEST(test_cmdlstnr8);
     CPPUNIT_TEST(test_cmdlstnr9);
-    CPPUNIT_TEST(test_cmdlstnr10);
     CPPUNIT_TEST(test_cmdlstnr10);
     CPPUNIT_TEST(test_cmdlstnr11);
     CPPUNIT_TEST(test_cmdlstnr12);
@@ -42,6 +41,5 @@ protected:
     void test_cmdlstnr13();
     HMStateManager *sm;
     std::thread sm_thr;
-    int sock_fd;
 };
-#endif /* TESTS_STORETESTS_TESTHMSTORAGE_H_ */
+#endif /* TESTS_HMCONTROLLINUXSOCKET1_H_ */

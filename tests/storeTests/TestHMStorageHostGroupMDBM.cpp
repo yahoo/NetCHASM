@@ -53,6 +53,8 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_Construction()
     hostGroup.setPort(80);
     hostGroup.setNumCheckRetries(3);
     hostGroup.setSlowThreshold(30);
+    string childhostgroup = "sample.hostgroup";
+    hostGroup.addHostGroup(childhostgroup);
     uint32_t size = hostGroup.serialize(nullptr, 0);
     data = "";
     data.resize(size);
@@ -72,6 +74,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_Construction()
     CPPUNIT_ASSERT(testHostGroup.getSmoothingWindow() == hostGroup.getSmoothingWindow());
     CPPUNIT_ASSERT(testHostGroup.getCheckPort() == hostGroup.getCheckPort());
     CPPUNIT_ASSERT(testHostGroup.getSlowThreshold() == hostGroup.getSlowThreshold());
+    CPPUNIT_ASSERT(testHostGroup.getHostGroupList()->size() == hostGroup.getHostGroupList()->size());
 
     HMIPAddress address;
     HMTimeStamp timeStamp;
@@ -164,6 +167,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_TestRT()
     hostGroup.setMaxFlaps(3);
     hostGroup.setFlapThreshold(10);
     hostGroup.setGroupThreshold(10);
+    hostGroup.setDualStack(HM_DUALSTACK_BOTH);
     hostGroup.addHost(host1);
     hostGroup.addHost(host2);
     hostGroup.addHost(host3);
@@ -236,8 +240,46 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_TestRT()
     string filename = "";
     filename  = "mdbm_yfor";
     remove(filename.c_str());
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_1_2);
+    dnsCache.insertDNSEntry(host1, dnsHostCheckv6, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheckv6, addresses);
 
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    addresses.clear();
+    addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_2_2);
+    dnsCache.insertDNSEntry(host2, dnsHostCheckv6, 10000, 10000);
+    dnsCache.updateDNSEntry(host2, dnsHostCheckv6, addresses);
+
+    addresses.clear();
+    addresses.insert(address_3_1);
+    dnsCache.insertDNSEntry(host3, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host3, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_3_2);
+    dnsCache.insertDNSEntry(host3, dnsHostCheckv6, 10000, 10000);
+    dnsCache.updateDNSEntry(host3, dnsHostCheckv6, addresses);
+
+    addresses.clear();
+    addresses.insert(address_4_1);
+    dnsCache.insertDNSEntry(host4, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host4, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_4_2);
+    dnsCache.insertDNSEntry(host4, dnsHostCheckv6, 10000, 10000);
+    dnsCache.updateDNSEntry(host4, dnsHostCheckv6, addresses);
+
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
 
@@ -452,8 +494,29 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_BackendTest()
     string filename = "";
     filename  = "mdbm_yfor";
     remove(filename.c_str());
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
 
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    addresses.clear();
+    addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
+
+    addresses.clear();
+    addresses.insert(address_3_1);
+    dnsCache.insertDNSEntry(host3, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host3, dnsHostCheck, addresses);
+
+    addresses.clear();
+    addresses.insert(address_4_1);
+    dnsCache.insertDNSEntry(host4, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host4, dnsHostCheck, addresses);
+
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
@@ -523,7 +586,8 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_ConfigStoreRetrieve()
     remove(filename.c_str());
 
     HMDataHostGroupMap groupMap;
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     HMConfigInfo configInfo;
     HMConfigInfo testInfo;
     HMTimeStamp now;
@@ -545,7 +609,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_ConfigStoreRetrieve()
     CPPUNIT_ASSERT(configInfo.m_configLoadTime == testInfo.m_configLoadTime);
     delete store;
 
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore(true));
     CPPUNIT_ASSERT(!store->storeConfigInfo(configInfo));
     CPPUNIT_ASSERT(store->getConfigInfo(testInfo));
@@ -607,7 +671,14 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadFile_StoreRetrieve()
 
     auxInfo.m_auxData.push_back(std::move(r1));
     //Tests HM_LOAD_FILE, host stores only 1 of data
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
     CPPUNIT_ASSERT(
@@ -652,7 +723,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadFile_StoreRetrieve()
 
     auxInfo.m_auxData.push_back(std::move(r2));
 
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     //Tests HM_LOAD_FILE, host stores more than 1  data  can be used if
     //we want multiple type values
     CPPUNIT_ASSERT(store->openStore());
@@ -734,11 +805,18 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     r1->m_ip = address_1;
     r1->m_resource ="resource";
     r1->m_ts = ts;
-    r1->m_forceDown = false;
+    r1->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
 
     auxInfo.m_auxData.push_back(std::move(r1));
     //Tests HM_OOB_FILE, host stores only 1 of data
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
     CPPUNIT_ASSERT(store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -767,7 +845,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     r2->m_ip = address_1;
     r2->m_resource ="resource2";
     r2->m_ts = ts;
-    r2->m_forceDown = false;
+    r2->m_forceDown = HM_OOB_FORCEDOWN_FALSE;
     r2->m_shed = 30;
 
     auxInfo.m_auxData.clear();
@@ -775,7 +853,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     auxInfo.m_auxData.push_back(std::move(r2));
 
     //Tests HM_OOB_FILE, host stores only 1 of data
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
 
     CPPUNIT_ASSERT(store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -805,7 +883,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     auxInfo.m_auxData.push_back(std::move(r3));
 
     //Tests HM_OOB_FILE, host stores only 1 of data
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
 
     CPPUNIT_ASSERT(store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -821,7 +899,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMAuxOOB_StoreRetrieve()
     CPPUNIT_ASSERT((oob->m_ip.toString()).empty());
     CPPUNIT_ASSERT(oob->m_resource.empty());
     CPPUNIT_ASSERT(oob->m_ts == ts1);
-    CPPUNIT_ASSERT(!oob->m_forceDown);
+    CPPUNIT_ASSERT(oob->m_forceDown == 2);
     CPPUNIT_ASSERT(oob->m_shed == 0);
     store->closeStore();
 
@@ -863,7 +941,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     r1->m_target =20;
 
     auxInfo.m_auxData.push_back(std::move(r1));
-    //Tests HM_LOAD_OBJECT, host stores only 1 of data
+    //Tests HM_LOAD_FILE, host stores only 1 of data
 
     HMDataHostGroup hostGroup1(hostGroupName1);
     hostGroup1.setPassthroughInfo(0);
@@ -880,7 +958,14 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     checkState.m_hostGroups.insert(make_pair(hostGroupName1, hostGroup1));
     groupMap.insert(make_pair(hostGroupName1, hostGroup1));
     dataCheckParams.addHostGroup(hostGroupName1);
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
     CPPUNIT_ASSERT(store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -913,7 +998,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     auxInfo.m_auxData.push_back(std::move(r2));
 
     //Tests HM_OOB_FILE, host stores only 1 of data
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
 
     CPPUNIT_ASSERT(store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -941,7 +1026,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
     delete store;
     
     //neg tests
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore(true));
 
     CPPUNIT_ASSERT(!store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -952,7 +1037,7 @@ TESTNAME::test_HMStorageHostGroupYForMDBM_HMLoadObject_StoreRetrieve()
 
     delete store;
     HMDataCheckParams params;
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore(true));
 
     CPPUNIT_ASSERT(!store->storeAuxInfo(host1, address_1, dataHostCheck, dataCheckParams, auxInfo));
@@ -987,6 +1072,7 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ZeroIp()
     hostGroup.setMaxFlaps(3);
     hostGroup.setFlapThreshold(10);
     hostGroup.setGroupThreshold(10);
+    hostGroup.setDualStack(HM_DUALSTACK_BOTH);
     hostGroup.addHost(host1);
     groupMap.insert(make_pair(hostGroupName, hostGroup));
 
@@ -1021,8 +1107,21 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ZeroIp()
     filename = "mdbm_yfor";
     remove(filename.c_str());
 
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    HMDNSLookup dnsHostCheckv6(HM_DNS_TYPE_LOOKUP, true);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1_1);
+    addresses.insert(address_1_3);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_1_2);
+    dnsCache.insertDNSEntry(host1, dnsHostCheckv6, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheckv6, addresses);
+
     HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename,
-            &groupMap);
+            &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
 
@@ -1154,7 +1253,17 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_VersionChange()
     filename  = "mdbm_yfor";
     remove(filename.c_str());
 
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
 
@@ -1182,7 +1291,7 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_VersionChange()
     store->closeStore();
     delete store;
 
-    store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(!store->getConfigInfo(testConfigInfo));
     CPPUNIT_ASSERT(!store->getCheckResult(host1, address_1_1, hostCheck, checkParams1, testResult));
@@ -1293,7 +1402,17 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
     HMState checkState;
     checkState.m_hostGroups.insert(make_pair(hostGroupName1, hostGroup1));
     checkState.m_hostGroups.insert(make_pair(hostGroupName2, hostGroup2));
-    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap);
+    HMDNSCache dnsCache;
+    HMDNSLookup dnsHostCheck(HM_DNS_TYPE_LOOKUP, false);
+    set<HMIPAddress> addresses;
+    addresses.insert(address_1_1);
+    dnsCache.insertDNSEntry(host1, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host1, dnsHostCheck, addresses);
+    addresses.clear();
+    addresses.insert(address_2_1);
+    dnsCache.insertDNSEntry(host2, dnsHostCheck, 10000, 10000);
+    dnsCache.updateDNSEntry(host2, dnsHostCheck, addresses);
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &groupMap, &dnsCache);
 
     CPPUNIT_ASSERT(store->openStore());
     CPPUNIT_ASSERT(store->storeConfigs(checkState));
@@ -1351,4 +1470,102 @@ void TESTNAME::test_HMStorageHostGroupYForMDBM_ClearBackend()
 
 
 }
+
+void
+TESTNAME::test_HMStorageHostGroup_StoreHostGroup()
+{
+    HMDataHostGroupMap hostGroupMap;
+
+    string hostGroup1 = "hostgroup1";
+    string hostGroup2 = "hostgroup2";
+
+    HMDataHostGroup dataHostGroup1(hostGroup1);
+    HMDataHostGroup dataHostGroup2(hostGroup2);
+
+    hostGroupMap.insert(make_pair(hostGroup1, dataHostGroup1));
+    hostGroupMap.insert(make_pair(hostGroup2, dataHostGroup2));
+
+    string hostname1 = "test1.hm.com";
+    string hostname2 = "test2.hm.com";
+
+    HMIPAddress address1_1;
+    HMIPAddress address1_2;
+    HMIPAddress address2_1;
+    HMIPAddress address2_2;
+
+    HMIPAddress testAddress;
+
+    address1_1.set("192.168.0.1");
+    address1_2.set("fad0::1");
+    address2_1.set("192.168.0.3");
+    address2_2.set("fad0::3");
+
+    HMDataCheckResult result1_1;
+    HMDataCheckResult result1_2;
+    HMDataCheckResult result2_1;
+    HMDataCheckResult result2_2;
+
+    result1_1.m_numChecks = 1;
+    result1_2.m_numChecks = 2;
+    result2_1.m_numChecks = 5;
+    result2_2.m_numChecks = 6;
+
+    string filename = "";
+    filename  = "mdbm_yfor";
+    remove(filename.c_str());
+
+    HMDataCheckResult testresult;
+    HMDNSCache dnsCache;
+    HMStorageHostGroupMDBM* store = new HMStorageHostGroupMDBM(filename, &hostGroupMap, &dnsCache);
+
+    std::vector<HMGroupCheckResult> resultshg1;
+    HMGroupCheckResult hgresult1_1;
+    hgresult1_1.m_address = address1_1;
+    hgresult1_1.m_hostName = hostname1;
+    hgresult1_1.m_result = result1_1;
+    HMGroupCheckResult hgresult1_2;
+    hgresult1_2.m_address = address1_2;
+    hgresult1_2.m_hostName = hostname1;
+    hgresult1_2.m_result = result1_2;
+    resultshg1.push_back(hgresult1_1);
+    resultshg1.push_back(hgresult1_2);
+    std::vector<HMGroupCheckResult> resultshg2;
+    HMGroupCheckResult hgresult2_1;
+    hgresult2_1.m_address = address2_1;
+    hgresult2_1.m_hostName = hostname2;
+    hgresult2_1.m_result = result2_1;
+    HMGroupCheckResult hgresult2_2;
+    hgresult2_2.m_address = address2_2;
+    hgresult2_2.m_hostName = hostname2;
+    hgresult2_2.m_result = result2_2;
+    resultshg2.push_back(hgresult2_1);
+    resultshg2.push_back(hgresult2_2);
+
+    CPPUNIT_ASSERT(store->storeHostGroupCheckResult(hostGroup1, resultshg1));
+    CPPUNIT_ASSERT(store->storeHostGroupCheckResult(hostGroup2, resultshg2));
+
+    std::vector<HMGroupCheckResult> results_temp;
+    CPPUNIT_ASSERT(store->getGroupCheckResults(hostGroup1, results_temp));
+    CPPUNIT_ASSERT_EQUAL(2, (int)results_temp.size());
+    CPPUNIT_ASSERT(results_temp[0].m_address == address1_1);
+    CPPUNIT_ASSERT(results_temp[0].m_hostName == hostname1);
+    CPPUNIT_ASSERT(results_temp[0].m_result == result1_1);
+    CPPUNIT_ASSERT(results_temp[1].m_address == address1_2);
+    CPPUNIT_ASSERT(results_temp[1].m_hostName == hostname1);
+    CPPUNIT_ASSERT(results_temp[1].m_result == result1_2);
+
+    results_temp.clear();
+    CPPUNIT_ASSERT(store->getGroupCheckResults(hostGroup2, results_temp));
+    CPPUNIT_ASSERT_EQUAL(2, (int)results_temp.size());
+    CPPUNIT_ASSERT(results_temp[0].m_address == address2_1);
+    CPPUNIT_ASSERT(results_temp[0].m_hostName == hostname2);
+    CPPUNIT_ASSERT(results_temp[0].m_result == result2_1);
+    CPPUNIT_ASSERT(results_temp[1].m_address == address2_2);
+    CPPUNIT_ASSERT(results_temp[1].m_hostName == hostname2);
+    CPPUNIT_ASSERT(results_temp[1].m_result == result2_2);
+
+
+    delete store;
+}
+
 

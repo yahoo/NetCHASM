@@ -18,10 +18,12 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_basic_healthPlugins_tcp);
     CPPUNIT_TEST(test_basic_healthPlugins_ftp);
     CPPUNIT_TEST(test_basic_healthPlugins_dns);
-    CPPUNIT_TEST(test_basic_healthPlugins_dnsvc);
     CPPUNIT_TEST(test_basic_healthPlugins_none);
     CPPUNIT_TEST(test_add_hostgroup);
     CPPUNIT_TEST(test_ip_dns_failed);
+    CPPUNIT_TEST(test_basic_healthPlugins_mtls);
+    CPPUNIT_TEST(test_hostgroup_distributed_fallback);
+    CPPUNIT_TEST(test_basic_healthPlugins_checkIpAddress);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -33,10 +35,12 @@ public:
     void test_basic_healthPlugins_tcp();
     void test_basic_healthPlugins_ftp();
     void test_basic_healthPlugins_dns();
-    void test_basic_healthPlugins_dnsvc();
     void test_basic_healthPlugins_none();
     void test_add_hostgroup();
+    void test_hostgroup_distributed_fallback();
+    void test_basic_healthPlugins_checkIpAddress();
     void test_ip_dns_failed();
+    void test_basic_healthPlugins_mtls();
 protected:
 
 };

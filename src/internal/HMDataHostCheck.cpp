@@ -3,26 +3,70 @@
 #include <cstring>
 
 #include "HMDataHostCheck.h"
+#include "HMDataHostGroup.h"
 #include "HMLogBase.h"
 
 using namespace std;
 
+HMDataHostCheck::HMDataHostCheck(const HMAPIDataHostCheck& apiDataHostCheck)
+{
+    m_port = apiDataHostCheck.m_port;
+    m_checkType = HM_CHECK_TYPE(apiDataHostCheck.m_checkType);
+    m_checkInfo = apiDataHostCheck.m_checkInfo;
+    m_dualstack = HM_DUALSTACK_UNDEFINED;
+    if (apiDataHostCheck.m_ipv4)
+    {
+        m_dualstack = (HM_DUALSTACK) (m_dualstack | HM_DUALSTACK_IPV4_ONLY);
+    }
+    if (apiDataHostCheck.m_ipv6)
+    {
+        m_dualstack = (HM_DUALSTACK) (m_dualstack | HM_DUALSTACK_IPV6_ONLY);
+    }
+    m_checkPlugin = HM_CHECK_PLUGIN_DEFAULT;
+    m_DNSType = (HM_DNS_TYPE)apiDataHostCheck.m_dnsCheckType;
+    m_remoteCheckType = HM_REMOTE_CHECK_NONE;
+    m_distributedFallback = HM_DISTRIBUTED_FALLBACK_NONE;
+    m_sourceAddress.set(apiDataHostCheck.m_sourceAddress);
+    m_remoteCheck = false;
+    m_TOSValue = apiDataHostCheck.m_TOSValue;
+}
+
 bool
 HMDataHostCheck::operator<(const HMDataHostCheck& k) const
 {
-	if(m_checkType == k.m_checkType)
-	{
-		if(m_port == k.m_port)
-		{
-			if(m_dualstack == k.m_dualstack)
-			{
-				return m_checkInfo < k.m_checkInfo;
-			}
-			return m_dualstack < k.m_dualstack;
-		}
-		return m_port < k.m_port;
-	}
-	return m_checkType < k.m_checkType;
+    if (m_checkType == k.m_checkType)
+    {
+        if (m_port == k.m_port)
+        {
+            if (m_dualstack == k.m_dualstack)
+            {
+                if (m_checkInfo == k.m_checkInfo)
+                {
+                    if (m_remoteCheck == k.m_remoteCheck)
+                    {
+                        if (m_sourceAddress == k.m_sourceAddress)
+                        {
+                            if (m_TOSValue == k.m_TOSValue)
+                            {
+                                if (m_distributedFallback == k.m_distributedFallback)
+                                {
+                                    return m_flowType < k.m_flowType;
+                                }
+                                return m_distributedFallback < k.m_distributedFallback;
+                            }
+                            return m_TOSValue < k.m_TOSValue;
+                        }
+                        return m_sourceAddress < k.m_sourceAddress;
+                    }
+                    return m_remoteCheck < k.m_remoteCheck;
+                }
+                return m_checkInfo < k.m_checkInfo;
+            }
+            return m_dualstack < k.m_dualstack;
+        }
+        return m_port < k.m_port;
+    }
+    return m_checkType < k.m_checkType;
 }
 
 bool
@@ -37,7 +81,12 @@ HMDataHostCheck::operator==(const HMDataHostCheck& k) const
     if(m_checkType == k.m_checkType
             && m_port == k.m_port
             && m_dualstack == k.m_dualstack
-            && m_checkInfo == k.m_checkInfo)
+            && m_checkInfo == k.m_checkInfo
+            && m_remoteCheck == k.m_remoteCheck
+            && m_sourceAddress == k.m_sourceAddress
+            && m_TOSValue == k.m_TOSValue
+            && m_distributedFallback == k.m_distributedFallback
+            && m_flowType == k.m_flowType)
     {
         return true;
     }
@@ -45,23 +94,32 @@ HMDataHostCheck::operator==(const HMDataHostCheck& k) const
 }
 
 void
-HMDataHostCheck::setCheckParams(HM_CHECK_TYPE checkType,
-                                HM_CHECK_PLUGIN_CLASS checkPlugin,
-                                uint16_t port,
-                                HM_DUALSTACK dualstack,
-                                const string& checkInfo)
+HMDataHostCheck::setCheckParams(const HMDataHostGroup& dataHostGroup)
 {
-    m_checkType = checkType;
-    m_port = port;
-    m_dualstack = dualstack;
-    m_checkInfo = checkInfo;
-    m_checkPlugin = checkPlugin;
+    m_checkType = dataHostGroup.getCheckType();
+    m_port = dataHostGroup.getCheckPort();
+    m_dualstack = dataHostGroup.getDualstack();
+    m_checkInfo = dataHostGroup.getCheckInfo();
+    m_remoteCheck = dataHostGroup.getRemoteCheck();
+    m_checkPlugin = dataHostGroup.getCheckPlugin();
+    m_remoteCheckType = dataHostGroup.getRemoteCheckType();
+    m_distributedFallback = dataHostGroup.getDistributedFallback();
+    m_sourceAddress = dataHostGroup.getSourceAddress();
+    m_TOSValue = dataHostGroup.getTOSValue();
+    m_DNSType = dataHostGroup.getDNSType();
+    m_flowType = dataHostGroup.getFlowType();
 }
 
 HM_CHECK_TYPE
 HMDataHostCheck::getCheckType() const
 {
     return m_checkType;
+}
+
+HM_REMOTE_CHECK_TYPE
+HMDataHostCheck::getRemoteCheckType() const
+{
+    return m_remoteCheckType;
 }
 
 uint16_t
@@ -80,6 +138,12 @@ string
 HMDataHostCheck::getCheckInfo() const
 {
     return m_checkInfo;
+}
+
+HM_DISTRIBUTED_FALLBACK
+HMDataHostCheck::getDistributedFallBack() const
+{
+    return m_distributedFallback;
 }
 
 HM_CHECK_PLUGIN_CLASS
@@ -121,7 +185,8 @@ HMDataHostCheck::parseCheckInfo(const string& host, uint32_t& port, string& chec
         if (((portindex = checkInfoHost.find(":")) == string::npos)
                 && (port != 443)
                 && (m_checkType != HM_CHECK_HTTP)
-                && (m_checkType != (HM_CHECK_AUX_HTTP)))
+                && (m_checkType != (HM_CHECK_AUX_HTTP))
+                && (m_checkType != (HM_CHECK_MARK_HTTP)))
         {
             // checkInfo //host/yyy
             hostname = "Host: " + checkInfoHost + ":" + to_string((uint64_t)port);
@@ -130,7 +195,9 @@ HMDataHostCheck::parseCheckInfo(const string& host, uint32_t& port, string& chec
         {
             // checkInfo //host:port/yyy
             hostname = "Host: " + checkInfoHost;
-            if ((m_checkType != HM_CHECK_HTTP) && (m_checkType != HM_CHECK_AUX_HTTP))
+            if ((m_checkType != HM_CHECK_HTTP) 
+                && (m_checkType != HM_CHECK_AUX_HTTP) 
+                && (m_checkType != HM_CHECK_MARK_HTTP))
             {
                 //if checkinfo port is different than check port
                 if ((portindex != string::npos) && checkInfoHost.substr(portindex + 1) != to_string(port))
@@ -149,50 +216,6 @@ HMDataHostCheck::parseCheckInfo(const string& host, uint32_t& port, string& chec
         }
     }
     return hostname;
-}
-
-uint32_t
-HMDataHostCheck::serialize(char* buf, uint32_t size) const
-{
-    if(buf == nullptr || size < (sizeof(SerStruct) + m_checkInfo.size()))
-    {
-        return sizeof(SerStruct) + m_checkInfo.size();
-    }
-
-    SerStruct* ptr = (SerStruct*)buf;
-
-    ptr->m_checkType = m_checkType;
-    ptr->m_port = m_port;
-    ptr->m_dualStack = m_dualstack;
-    ptr->m_stringSize = m_checkInfo.size();
-    strncpy(buf + sizeof(SerStruct), &m_checkInfo.at(0), m_checkInfo.size());
-
-    return sizeof(SerStruct) + m_checkInfo.size();
-}
-
-bool
-HMDataHostCheck::deserialize(char* buf, uint32_t size)
-{
-    if(buf == nullptr || size < sizeof(SerStruct))
-    {
-        return false;
-    }
-
-    SerStruct* ptr = (SerStruct*)buf;
-    m_checkType = HM_CHECK_TYPE(ptr->m_checkType);
-    m_port = ptr->m_port;
-    m_dualstack = (HM_DUALSTACK)ptr->m_dualStack;
-    uint32_t stringsize = ptr->m_stringSize;
-
-    if(size < sizeof(SerStruct) + stringsize)
-    {
-        return false;
-    }
-
-    m_checkInfo.resize(stringsize);
-    strncpy(&m_checkInfo.at(0), buf + sizeof(SerStruct), stringsize);
-
-    return true;
 }
 
 string
@@ -230,4 +253,39 @@ HMDataHostCheck::printEntry(char delim, bool label) const
     }
 
 	return mstream.str();
+}
+
+const std::string& HMDataHostCheck::getRemoteCheck() const
+{
+    return m_remoteCheck;
+}
+
+void HMDataHostCheck::setRemoteCheck(const std::string& remoteCheck)
+{
+    m_remoteCheck = remoteCheck;
+}
+
+const HMIPAddress& HMDataHostCheck::getSourceAddress() const
+{
+    return m_sourceAddress;
+}
+
+uint8_t HMDataHostCheck::getTOSValue() const
+{
+    return m_TOSValue;
+}
+
+HM_DNS_TYPE HMDataHostCheck::getDnsType() const
+{
+    return m_DNSType;
+}
+
+HM_FLOW_TYPE HMDataHostCheck::getFlowType() const
+{
+    return m_flowType;
+}
+
+void HMDataHostCheck::setDNSType(HM_DNS_TYPE dnstype)
+{
+    m_DNSType = dnstype;
 }

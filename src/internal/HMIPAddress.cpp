@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 
 #include "HMIPAddress.h"
+#include "HMAPI.h"
 
 using namespace std;
 
@@ -159,6 +160,20 @@ HMIPAddress::set(addrinfo &addr)
     }
     m_type = AF_UNSPEC;
     return false;
+}
+
+void
+HMIPAddress::set(const HMAPIIPAddress &k)
+{
+    m_type = k.m_type;
+    if (k.m_type == AF_INET)
+    {
+        m_ip.addr = k.m_ip.addr;
+    }
+    else if (k.m_type == AF_INET6)
+    {
+        m_ip.addr6 = k.m_ip.addr6;
+    }
 }
 
 bool

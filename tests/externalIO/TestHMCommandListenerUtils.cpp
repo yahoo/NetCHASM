@@ -23,13 +23,13 @@ void TESTNAME::tearDown()
 
 void dummy_function(HMControlLinuxSocket *comm){
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::lock_guard<std::mutex> lg(comm->m_handlerMutex);
+    std::lock_guard<std::shared_timed_mutex> lg(comm->m_handlerMutex);
     comm->m_handlerThreadsStatus[std::this_thread::get_id()] = true;
 }
 
 void dummy_function1(HMControlLinuxSocket *comm){
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    std::lock_guard<std::mutex> lg(comm->m_handlerMutex);
+    std::lock_guard<std::shared_timed_mutex> lg(comm->m_handlerMutex);
     comm->m_handlerThreadsStatus[std::this_thread::get_id()] = true;
 }
 

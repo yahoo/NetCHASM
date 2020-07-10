@@ -202,6 +202,14 @@ public:
      */
     bool getCheckResult(const HMIPAddress& address, HMDataCheckResult& result);
 
+    //! Get the addresses from checkparams results
+    /*! Get the addresses from the checkparam addresses
+         \param Dual stack option.
+         \param result data structure to fill the addresses.
+         \return bool true if the check was copied into the check result.
+     */
+    bool getAddresses(HM_DUALSTACK dualstack, std::set<HMIPAddress>& addresses);
+
     //! Get the time this check was last completed.
     /*!
          Get the time this check was last completed.
@@ -215,7 +223,7 @@ public:
          Get the configured number of check retries.
          \return the number of check retries.
      */
-    uint8_t getNumCheckRetries();
+    uint8_t getNumCheckRetries() const;
 
     //! Get the configured check retry delay.
     /*
@@ -223,70 +231,70 @@ public:
          \return the check retry delay.
      */
 
-    uint32_t getCheckRetryDelay();
+    uint32_t getCheckRetryDelay() const;
 
     //! Get the current configured measurement options.
     /*
          Get the current configured measurement options.
          \return the measurement options.
      */
-    uint16_t getMeasurementOptions();
+    uint16_t getMeasurementOptions() const;
 
     //! Get the configured smoothing window.
     /*
          Get the configured smoothing window.
          \return the smoothing window.
      */
-    uint32_t getSmoothingWindow();
+    uint32_t getSmoothingWindow() const;
 
     //! Get the configured group threshold.
     /*
          Get the configured group threshold.
          \return the group threshold.
      */
-    uint32_t getGroupThreshold();
+    uint32_t getGroupThreshold() const;
 
     //! Get the configured slow threshold.
     /*
          Get the configured slow threshold.
          \return the slow threshold.
      */
-    uint32_t getSlowThreshold();
+    uint32_t getSlowThreshold() const;
 
     //! Get the configured max flaps.
     /*
          Get the configured max flaps.
          \return the max flaps.
      */
-    uint32_t getMaxFlaps();
+    uint32_t getMaxFlaps() const;
 
     //! Get the configured check connection timeout.
     /*
          Get the configured check connection timeout.
          \return the check connection timeout.
      */
-    uint64_t getTimeout();
+    uint64_t getTimeout() const;
 
     //! Get the configured check time-to-live.
     /*
          Get the configured check time-to-live.
          \return the check time-to-live.
      */
-    uint64_t getTTL();
+    uint64_t getTTL() const;
 
     //! Get the configured flap threshold.
     /*
          Get the configured flap threshold.
          \return the flap threshold.
      */
-    uint32_t getFlapTheshold();
+    uint32_t getFlapThreshold() const;
 
     //! Get the configured passthrough information.
     /*
          Get the configured passthrough information.
          \return the passthrough information.
      */
-    uint32_t getPassthroughInfo();
+    uint32_t getPassthroughInfo() const;
 
     //! Print the check params entry.
     /*
@@ -309,6 +317,14 @@ public:
          \return true if the vector contains the host groups associates with this params structure.
      */
     bool getHostGroups(std::vector<std::string>& hostGroups) const;
+
+    //! Get the host groups which are associated with this check params structure.
+    /*
+         Get the host groups which are associated with this check params structure.
+         \param a set of strings to store the host group list.
+         \return true if the set contains the host groups associates with this params structure.
+     */
+    bool getHostGroups(std::set<std::string>& hostGroups) const;
 
     //! Add a host group to be associated with this check params structure.
     /*
@@ -356,7 +372,6 @@ private:
 
     std::map<HMIPAddress,HMDataCheckResult> m_checkData;
     std::vector<std::string> m_hostGroups;
-
 };
 
 #endif /* HMDataCheckParams_H_ */

@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-        auto monitor = std::make_unique<HMStateManager>();
-        monitor->healthCheck(masterConfig, HM_LOG_ERROR);
+        HMGuardian guardian;
+        guardian.startNetCHASM(masterConfig, HM_LOG_ERROR);
     }
 }
 

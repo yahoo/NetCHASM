@@ -38,6 +38,8 @@ TESTNAME::setUp()
     check-type: tcp\n\
     check-port: 123\n\
     check-info: hm-hello\n\
+    source-address: 127.0.0.5\n\
+    tos-value: 01\n\
     check-retries:  2\n\
     check-retry-delay:  3\r\n\
     timeout: 2000\n\
@@ -56,6 +58,7 @@ TESTNAME::setUp()
 -   name: config.parse2.netchasm.net\n\
     allow-hosts: any\n\
     check-info: //hm/checkinfo\n\
+    source-address: ::2\n\
     check-port:  80\n\
     check-type: http\n\
     dual-stack-mode: ipv4-only\n\
@@ -105,16 +108,24 @@ TESTNAME::setUp()
     \n\
 -   name: config.parse7.netchasm.net\n\
     failure-response:  dns\n\
+    dns-type: static\n\
+    flow-type: remote-hostgroup\n\
     dual-stack-mode: both\n\
     check-type: https\n\
     \n\
 -   name: config.parse8.netchasm.net\n\
+    flow-type: remote-hostgroup\n\
+    dns-type: static\n\
     check-type: dns\n\
     \n\
 -   name: config.parse9.netchasm.net\n\
+    flow-type: remote-host\n\
+    dns-type: static\n\
     check-type: ftps\n\
     \n\
 -   name: config.parse10.netchasm.net\n\
+    dns-type: static\n\
+    flow-type: remote-host\n\
     check-type: ftps-explicit-no-peer-check\n\
     \n\
 -   name: config.parse11.netchasm.net\n\
@@ -134,7 +145,65 @@ TESTNAME::setUp()
 -   name: config.parse15.netchasm.net\n\
     check-type: https-no-peer-check-auxfetch\n\
     host:\n\
-        - lfb.hm.com" << endl;
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse16.netchasm.net\n\
+    check-info: config.parse15.netchasm.net\n\
+    check-type: indirect-host\n\
+    host:\n\
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse17.netchasm.net\n\
+    check-type: indirect-host\n\
+    check-info: config.parse15.netchasm.net\n\
+    host:\n\
+        - lfb.hm.com\n\
+    \n\
+-   name:    config.parse18.netchasm.net \n\
+    check-info: config.parse15.netchasm.net\n\
+    check-type: indirect-host\n\
+    host:\n\
+        - lfb.hm.com\n\
+    \n\
+-   name:    config.parse19.netchasm.net \n\
+    check-info: config.parse15.netchasm.net \n\
+    check-type: indirect-host\n\
+    host:\n\ 
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse24.netchasm.net\n\
+    check-type: https-mtls-no-peer-check\n\
+    host:\n\
+        - lfb.hm.com\n\
+    \n\
+-   name: config.parse25.netchasm.net\n\
+    check-type: https-mtls\n\
+    host:\n\
+        - lfb.hm.com\n\
+-   master-check-domain: hm.net\n\
+    master-check-host: hm.ref.com\n\
+-   master-check-domain: hm1.net\n\
+    master-check-host: hm1.ref.com\n\
+-   master-check-mode: slave\n\
+    \n\
+-   name: config.parse20.netchasm.net\n\
+    check-type: tcp\n\
+    check-info: hm-hello\n\
+    host:\n\
+        - lfb.hm2.com\n\
+    host-group:\n\
+        - config.parse19.netchasm.net\n\
+        - config.parse17.netchasm.net\n\
+    \n\
+-   name: config.parse21.netchasm.net\n\
+    check-type: http-mark\n\
+    \n\
+-   name: config.parse22.netchasm.net\n\
+    check-port: 47\n\
+    check-type: https-mark\n\
+    \n\
+-   name: config.parse23.netchasm.net\n\
+    check-type: https-mark-no-peer-check\n" << endl;
 
     fout2 << "-   rt-mode total\n\
 -   name: fail.netchasm.com\n\
@@ -187,6 +256,9 @@ fout7<<"-   name: config.parse2.netchasm.net\n\
     failure-response:  none\n\
     ttl:   60000\n\
     timeout: 10000\n\
+    host-group:\n\
+        - testrouter.hm1.com\n\
+        - testrouter.hm2.com\n\
     host:\n\
         - media-router.hm1.com\n\
         - media-router.hm2.com\n";
@@ -198,7 +270,6 @@ fout7<<"-   name: config.parse2.netchasm.net\n\
     fout5.close();
     fout6.close();
     fout7.close();
-
 }
 void
 TESTNAME::tearDown()
@@ -207,13 +278,12 @@ TESTNAME::tearDown()
     remove(fileLocation.c_str());
     remove(folderLocation.c_str());
     remove(garbageConfig.c_str());
+    remove(wrongConfig.c_str());
     remove(garbageLocation.c_str());
     remove(fileLocation1.c_str());
     remove(fileLocation2.c_str());
-    remove(wrongConfig.c_str());
     remove(fileLocation3.c_str());
     remove(fileLocation4.c_str());
-
 }
 
 void
@@ -225,7 +295,7 @@ TESTNAME::test_config1_tests()
     string host1 = "loadfb3.hm2.com";
     HMConfigParserYAML parse;
     HMDataCheckParams k, t;
-
+    HMConfigParams configParams;
     uint8_t numCheckRetries = 2;
     uint8_t checkRetryDelay = 3;
     uint16_t flags = HM_RT_TOTAL;
@@ -242,8 +312,14 @@ TESTNAME::test_config1_tests()
             flags, smoothingWindow, groupThreshold, slowThreshold, maxFlaps,
             checkTimeout, checkTTL, flapThreshold, passThrough);
 
-    CPPUNIT_ASSERT(parse.parseConfig(fileLocation,currentState) == 0);
-
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation,currentState, configParams) == 0);
+    auto remoteCheck = configParams.m_remoteChecks.find("hm.net");
+    CPPUNIT_ASSERT(remoteCheck != configParams.m_remoteChecks.end());
+    CPPUNIT_ASSERT("hm.ref.com" == remoteCheck->second);
+    remoteCheck = configParams.m_remoteChecks.find("hm1.net");
+    CPPUNIT_ASSERT(remoteCheck != configParams.m_remoteChecks.end());
+    CPPUNIT_ASSERT("hm1.ref.com" == remoteCheck->second);
+    CPPUNIT_ASSERT(!configParams.m_masterMode);
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
     
@@ -254,6 +330,8 @@ TESTNAME::test_config1_tests()
     CPPUNIT_ASSERT_EQUAL(60000, (int)hi.getCheckTTL());
     CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_TCP, (int)hi.getCheckType());
     CPPUNIT_ASSERT_EQUAL(123, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(1, (int)hi.getTOSValue());
+    CPPUNIT_ASSERT("127.0.0.5" == hi.getSourceAddress().toString());
     CPPUNIT_ASSERT_EQUAL((unsigned int)HM_RT_TOTAL,
             (unsigned int)(hi.getMeasurementOptions() & HM_RT_TOTAL));
     CPPUNIT_ASSERT_EQUAL(2000, (int)hi.getCheckTimeout());
@@ -277,8 +355,9 @@ TESTNAME::test_config2_tests()
    string name = "config.parse2.netchasm.net";
     string info = "//hm/checkinfo";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -288,6 +367,8 @@ TESTNAME::test_config2_tests()
     CPPUNIT_ASSERT_EQUAL(60000, (int)hi.getCheckTTL());
     CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_HTTP, (int)hi.getCheckType());
     CPPUNIT_ASSERT_EQUAL(80, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT("::2" == hi.getSourceAddress().toString());
+    CPPUNIT_ASSERT_EQUAL(0 , (int)hi.getTOSValue());
     CPPUNIT_ASSERT_EQUAL((unsigned int)HM_RT_CONNECT,
             (unsigned int)(hi.getMeasurementOptions() & HM_RT_CONNECT));
     CPPUNIT_ASSERT_EQUAL(10000, (int)hi.getCheckTimeout());
@@ -305,8 +386,9 @@ TESTNAME::test_config3_tests()
     string name = "config.parse3.netchasm.net";
     string info = "//hm/checkinfo-ssl";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -332,8 +414,9 @@ TESTNAME::test_config4_tests()
    string name = "config.parse4.netchasm.net";
     HMConfigParserYAML parse;
     HMDataHostGroupMap hostGroups;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -355,8 +438,9 @@ TESTNAME::test_config5_tests()
     string name = "config.parse5.netchasm.net";
     string info = "netchasm:y\\treexrzindaaR3zuqhnjpcqqtwM8xq@/";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -378,8 +462,9 @@ TESTNAME::test_config6_tests()
     string name = "config.parse6.netchasm.net";
     string info = "/a00.netchasm.net.xml";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -399,8 +484,9 @@ TESTNAME::test_config7_tests()
 {
     string name = "config.parse7.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -411,6 +497,7 @@ TESTNAME::test_config7_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL((int)HM_DUALSTACK_BOTH, (int)hi.getDualstack());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, hi.getFlowType());
 }
 
 void
@@ -418,8 +505,9 @@ TESTNAME::test_config8_tests()
 {
     string name = "config.parse8.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -430,6 +518,7 @@ TESTNAME::test_config8_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(53, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOSTGROUP_TYPE, hi.getFlowType());
 }
 
 void
@@ -437,8 +526,9 @@ TESTNAME::test_config9_tests()
 {
     string name = "config.parse9.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -449,6 +539,7 @@ TESTNAME::test_config9_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(21, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, hi.getFlowType());
 }
 
 void
@@ -456,8 +547,9 @@ TESTNAME::test_config10_tests()
 {
     string name = "config.parse10.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -468,6 +560,7 @@ TESTNAME::test_config10_tests()
     CPPUNIT_ASSERT_EQUAL((unsigned int)0,
             (unsigned int)hi.getPassthroughInfo());
     CPPUNIT_ASSERT_EQUAL(21, (int)hi.getCheckPort());
+    CPPUNIT_ASSERT_EQUAL(HM_FLOW_REMOTE_HOST_TYPE, hi.getFlowType());
 }
 
 void
@@ -475,8 +568,9 @@ TESTNAME::test_config11_tests()
 {
     string name = "config.parse11.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -494,8 +588,9 @@ TESTNAME::test_config12_tests()
 {
     string name = "config.parse12.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -511,8 +606,9 @@ TESTNAME::test_config13_tests()
 {
    string name = "config.parse13.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -530,8 +626,9 @@ TESTNAME::test_config14_tests()
 {
    string name = "config.parse14.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -549,8 +646,9 @@ TESTNAME::test_config15_tests()
 {
    string name = "config.parse15.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -568,8 +666,9 @@ TESTNAME::test_config_http_tests()
 {
    string name = "config.parse.http.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(parse.parseConfig(fileLocation1, currentState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation1, currentState, configParams) == 0);
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -588,8 +687,9 @@ TESTNAME::test_config_https_tests()
 {
    string name = "config.parse.https.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(parse.parseConfig(fileLocation2, currentState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation2, currentState, configParams) == 0);
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
@@ -604,10 +704,11 @@ TESTNAME::test_config_https_tests()
 
 void TESTNAME::test_config_neg_tests()
 {
-    string name = "config.parse20.netchasm.net";
+    string name = "config.parse30.netchasm.net";
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState));
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
 
     auto it = currentState.m_hostGroups.find(name);
     CPPUNIT_ASSERT(it == currentState.m_hostGroups.end());
@@ -618,29 +719,147 @@ void
 TESTNAME::test_config_garbage_tests()
 {
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(garbageLocation, currentState));
+    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(garbageLocation, currentState, configParams));
 
+}
+
+void
+TESTNAME::test_indirect_hosts()
+{
+    string name = "config.parse16.netchasm.net";
+    string ih_name = "config.parse15.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_DEFAULT, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(4, (int) configParams.m_indirectHost.size());
+    auto iit = configParams.m_indirectHost.find(name);
+    CPPUNIT_ASSERT(iit != configParams.m_indirectHost.end());
+    CPPUNIT_ASSERT(name == iit->first);
+    CPPUNIT_ASSERT(ih_name == iit->second);
+}
+
+void
+TESTNAME::test_indirect_hosts1()
+{
+    string name = "config.parse17.netchasm.net";
+    string ih_name = "config.parse15.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_DEFAULT, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(4, (int) configParams.m_indirectHost.size());
+    auto iit = configParams.m_indirectHost.find(name);
+    CPPUNIT_ASSERT(iit != configParams.m_indirectHost.end());
+    CPPUNIT_ASSERT(name == iit->first);
+    CPPUNIT_ASSERT(ih_name == iit->second);
+}
+
+void
+TESTNAME::test_config18_tests()
+{
+    string name = "config.parse18.netchasm.net";
+    string info = "config.parse15.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    
+    HMDataHostGroup hi = it->second;    
+    CPPUNIT_ASSERT_EQUAL(info, hi.getCheckInfo());
+}
+
+void
+TESTNAME::test_config19_tests()
+{
+    string name = "config.parse19.netchasm.net";
+    string info = "config.parse15.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    
+    HMDataHostGroup hi = it->second;
+    CPPUNIT_ASSERT_EQUAL(info, hi.getCheckInfo());
+}
+
+void
+TESTNAME::test_config21_tests()
+{  
+    string name = "config.parse24.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+    
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+    
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    
+    HMDataHostGroup hi = it->second;
+    
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MTLS_HTTPS_NO_PEER_CHECK, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(443, (int)hi.getCheckPort());
+}
+
+void
+TESTNAME::test_config22_tests()
+{
+    string name = "config.parse25.netchasm.net";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MTLS_HTTPS, (int)hi.getCheckType());
 }
 
 void
 TESTNAME::test_neg_configs()
 {
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
 
-    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(garbageLocation, currentState));
-    CPPUNIT_ASSERT(parse.parseConfig(wrongConfig, currentState) == 0);
+    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(garbageLocation, currentState, configParams));
+    CPPUNIT_ASSERT(parse.parseConfig(wrongConfig, currentState, configParams) == 0);
 }
 
 void
 TESTNAME::test_write_configs()
 {
     HMConfigParserYAML parse;
+    HMConfigParams configParams;
     string configOutputFile = "test.yaml";
-    CPPUNIT_ASSERT(parse.parseConfig(fileLocation3, currentState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation3, currentState, configParams) == 0);
     CPPUNIT_ASSERT(parse.writeConfigs(currentState, configOutputFile));
     HMState newState;
-    CPPUNIT_ASSERT(parse.parseConfig(configOutputFile, newState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(configOutputFile, newState, configParams) == 0);
     for (auto it = currentState.m_hostGroups.begin();
             it != currentState.m_hostGroups.end(); ++it)
     {
@@ -662,19 +881,38 @@ TESTNAME::test_write_configs()
 void
 TESTNAME::test_write_configs1()
 {
+    HMConfigParams configParams;
     HMConfigParserYAML parse;
     string configOutputFile = "test.yaml";
-    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(folderLocation, currentState) == 0);
-
+    CPPUNIT_ASSERT(HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams) == 0);
+    for (auto res = configParams.m_indirectHost.begin(); res != configParams.m_indirectHost.end(); ++res)
+    {
+        auto indirectHost = currentState.m_hostGroups.find(res->first);
+        auto mappedHost = currentState.m_hostGroups.find(res->second);
+        if (mappedHost != currentState.m_hostGroups.end()
+                && indirectHost != currentState.m_hostGroups.end())
+        {
+            indirectHost->second.setHostGroupParameters(mappedHost->second);
+        } else
+        {
+            if (mappedHost == currentState.m_hostGroups.end())
+            {
+                HMLog(HM_LOG_WARNING,
+                        "[CORE] Missing Rotation(%s) mentioned in indirect-host checktype for %s file %s",
+                        res->second.c_str(), res->first.c_str());
+                currentState.m_hostGroups.erase(indirectHost);
+            }
+        }
+    }
     CPPUNIT_ASSERT(parse.writeConfigs(currentState, configOutputFile));
     HMState newState;
-    CPPUNIT_ASSERT(parse.parseConfig(configOutputFile, newState) == 0);
+    CPPUNIT_ASSERT(parse.parseConfig(configOutputFile, newState, configParams) == 0);
     for (auto it = currentState.m_hostGroups.begin();
             it != currentState.m_hostGroups.end(); ++it)
     {
         auto iit = newState.m_hostGroups.find(it->first);
         CPPUNIT_ASSERT(iit != newState.m_hostGroups.end());
-        CPPUNIT_ASSERT(iit->second == it->second);
+        //CPPUNIT_ASSERT(iit->second == it->second);
         const vector<string> *hosts = it->second.getHostList();
         const vector<string> *hosts1 = iit->second.getHostList();
         CPPUNIT_ASSERT_EQUAL(hosts->size(), hosts1->size());
@@ -685,3 +923,120 @@ TESTNAME::test_write_configs1()
     }
     remove(configOutputFile.c_str());
 }
+
+
+void
+TESTNAME::test_config20_tests()
+{
+    map<string, string> indirectHost;
+    string name = "config.parse20.netchasm.net";
+    string info = "hm-hello";
+    string hostgroup0 = "config.parse19.netchasm.net";
+    string hostgroup1 = "config.parse17.netchasm.net";
+    string host1 = "lfb.hm2.com";
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation, currentState, configParams) == 0);
+
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+    HMDataHostGroup hi = it->second;   
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_TCP, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL(info, hi.getCheckInfo());
+    const std::vector<std::string>* hostgroupslist = hi.getHostGroupList();
+    CPPUNIT_ASSERT_EQUAL(hostgroupslist->at(0), hostgroup0);
+    CPPUNIT_ASSERT_EQUAL(hostgroupslist->at(1), hostgroup1);
+
+    const std::vector<std::string>* hostslist = hi.getHostList();
+    CPPUNIT_ASSERT_EQUAL(hostslist->at(0), host1);
+}
+
+void
+TESTNAME::test_write_configs2()
+{
+    HMConfigParams configParams;
+    HMConfigParserYAML parse;
+    string configOutputFile = "testnw.yaml";
+    CPPUNIT_ASSERT(parse.parseConfig(fileLocation4, currentState, configParams) == 0);
+    CPPUNIT_ASSERT(parse.writeConfigs(currentState, configOutputFile));
+    HMState newState;
+    CPPUNIT_ASSERT(parse.parseConfig(configOutputFile, newState, configParams) == 0);
+    for(auto it = currentState.m_hostGroups.begin(); it != currentState.m_hostGroups.end(); ++it)
+    {
+        auto iit = newState.m_hostGroups.find(it->first);
+        CPPUNIT_ASSERT(iit != newState.m_hostGroups.end());
+        CPPUNIT_ASSERT(iit->second == it->second);
+        const vector<string> *hosts = it->second.getHostList();
+        const vector<string> *hosts1 = iit->second.getHostList();
+        //no hosts present
+        CPPUNIT_ASSERT_EQUAL(hosts->size(), hosts1->size());
+
+        const vector<string> *hostgroups = it->second.getHostGroupList();
+        const vector<string> *hostgroups1 = iit->second.getHostGroupList();
+        CPPUNIT_ASSERT_EQUAL(hostgroups->size(), hostgroups1->size());
+        for (uint64_t i = 0; i < hosts->size(); i++)
+        {
+            CPPUNIT_ASSERT((*hostgroups)[i] == (*hostgroups1)[i]);
+        }
+    }
+    remove(configOutputFile.c_str());
+}
+
+void
+TESTNAME::test_config_mark_http_tests()
+{   
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+    
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+    
+    string name= "config.parse21.netchasm.net";
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+     
+    HMDataHostGroup hi = it->second;
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTP, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL(80, (int)hi.getCheckPort());
+}
+
+void
+TESTNAME::test_config_mark_https_tests()
+{
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+
+    string name= "config.parse22.netchasm.net";
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTPS, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL(47, (int)hi.getCheckPort());
+}
+
+void
+TESTNAME::test_config_mark_https_no_peer_tests()
+{
+    HMConfigParserYAML parse;
+    HMConfigParams configParams;
+
+    CPPUNIT_ASSERT(!HMConfigParserBase::parseDirectory(folderLocation, currentState, configParams));
+
+    string name= "config.parse23.netchasm.net";
+    auto it = currentState.m_hostGroups.find(name);
+    CPPUNIT_ASSERT(it != currentState.m_hostGroups.end());
+
+    HMDataHostGroup hi = it->second;
+    CPPUNIT_ASSERT_EQUAL((int)HM_CHECK_MARK_HTTPS_NO_PEER_CHECK, (int)hi.getCheckType());
+    CPPUNIT_ASSERT_EQUAL((unsigned int)0,
+            (unsigned int)hi.getPassthroughInfo());
+    CPPUNIT_ASSERT_EQUAL(443, (int)hi.getCheckPort());
+}
+

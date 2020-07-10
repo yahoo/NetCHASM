@@ -22,9 +22,10 @@ public:
         The function used to parse a config file.
         \param fileName the file to parse.
         \param state the state data structure to fill from the config information.
+        \param class to fill info of config outside of Host-Groups
         \return the number of config parsing errors. Zero means a successful load.
      */
-    uint32_t parseConfig(const std::string& fileName, HMState& state);
+    uint32_t parseConfig(const std::string& fileName, HMState& state, HMConfigParams& configParams);
 
     //! Write the internal config state back to disk.
     /*!

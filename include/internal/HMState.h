@@ -5,14 +5,33 @@
 
 #include <memory>
 #include <vector>
-
+#include <openssl/ossl_typ.h>
+#include <openssl/ssl.h>
+#include "HMPublisherBase.h"
+#include "HMResultPublisher.h"
 #include "HMConstants.h"
-#include "HMStorage.h"
 #include "HMDataCheckList.h"
 #include "HMLogBase.h"
 #include "HMAuxCache.h"
-#include "HMControlLinuxSocket.h"
 #include "HMHashMD5.h"
+#include "HMControlLinuxSocket.h"
+#include "HMConnectionHandler.h"
+#include "HMRemoteHostGroupCache.h"
+#include "HMRemoteHostCache.h"
+
+//! The SSL context class for HealthMon.
+/*!
+     This class is to handle construction and destruction of SSL context.
+ */
+class HMSSLCtx
+{
+public:
+    HMSSLCtx();
+    SSL_CTX* getCtx() const;
+    ~HMSSLCtx();
+private:
+    SSL_CTX* m_ctx;
+};
 
 //! The core state class for NetCHASM.
 /*!
@@ -21,10 +40,12 @@
      This class also contains all check information, the DNS cache and host group information.
      All configuration parsing and reload logic is inside this class.
  */
+class HMStorageHostGroupMDBM;
 class HMState
 {
 public:
     HMState() :
+        m_ctx(NULL),
         m_useBackendConfigs(false),
         m_masterConfigLoaded(false),
         m_configsLoaded(false),
@@ -34,10 +55,11 @@ public:
         m_httpDefaultCheckClass(HM_CHECK_PLUGIN_HTTP_CURL),
         m_ftpDefaultCheckClass(HM_CHECK_PLUGIN_FTP_CURL),
         m_tcpDefaultCheckClass(HM_CHECK_PLUGIN_TCP_RAW),
+        m_tcpsDefaultCheckClass(HM_CHECK_PLUGIN_TCPS_RAW),
         m_dnsDefaultCheckClass(HM_CHECK_PLUGIN_DNS_ARES),
         m_noneDefaultCheckClass(HM_CHECK_PLUGIN_DEFAULT),
         m_auxDefaultCheckClass(HM_CHECK_PLUGIN_AUX_CURL),
-        m_dnsLookupClass(HM_DNS_PLUGIN_ARES),
+        m_markDefaultCheckClass(HM_CHECK_PLUGIN_MARK_CURL),
         m_dnsLookupTimeout(HM_DEFAULT_DNS_RESOLUTION_TIMEOUT),
         m_dnsRetries(HM_DEFAULT_DNS_RETRIES),
         m_nMaxThreads(1),
@@ -50,11 +72,30 @@ public:
         m_maxLogQueue(0),
         m_auxPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_healthCheckPolicy(HM_STORAGE_COMMIT_ALWAYS),
-        m_storageLockPolicy(HM_STORAGE_RW_LOCKS){}
+        m_storageLockPolicy(HM_STORAGE_RW_LOCKS),
+        m_controlSocketCheckPortv4(HM_CONTROL_SOCKET_DEFAULT_PORTV4),
+        m_controlSocketCheckPortv6(HM_CONTROL_SOCKET_DEFAULT_PORTV6),
+        m_enableSecureRemote(false),
+        m_enableMutualAuth(true),
+        m_enableSharedConnection(false),
+        m_maxConnections(HM_DEFAULT_REMOTE_CONNECTIONS),
+        m_libEventEnabled(false),
+        m_flowType(HM_FLOW_REMOTE_HOST_TYPE),
+        m_dnsLookDefaultPlugin(HM_DNS_PLUGIN_ARES),
+        m_dnsStaticDefaultPlugin(HM_DNS_PLUGIN_STATIC)
+    {
+        m_control_socket.push_back(HM_CONTROL_SOCKET_LINUX);
+    }
+    HMState(HMState&);
 
-    HMState(HMState&) = delete;
+    ~HMState() {}
 
-    ~HMState() { closeBackend(); m_datastore.reset();  };
+    //! Copy master config parameters between states.
+    /*!
+         Copy master config parameters between states. This does not copy other internal structures.
+         \param source state to copy the parameters from.
+     */
+    void copyMasterParams(HMState&);
 
     //! Check the configurations to make sure they are valid.
     /*!
@@ -71,6 +112,13 @@ public:
          \return true if the master config loaded correctly.
      */
     bool parseMasterConfig(const std::string& masterConfig);
+
+
+    //! Generate Host and DNS checkList.
+    void generateCheckList();
+
+    //! Generates hash for individual host groups and entire config and store the configs and hashes to backend.
+    bool hashStoreConfig();
 
     //! Parse the health check configs and setup the Daemon state.
     /*
@@ -107,13 +155,6 @@ public:
      */
     HM_LOG_PLUGIN_CLASS  getDefaultLogType() const;
 
-    //! Get the current DNS resolution class.
-    /*!
-        Get the current DNS resolution class.
-        \return the current DNS resolution class.
-     */
-    HM_DNS_PLUGIN_CLASS getDefaultDNSLookupType() const;
-
     //! Get the current event loop class.
     /*!
         Get the current event loop class.
@@ -141,6 +182,14 @@ public:
         \return the current TCP check class.
      */
     HM_CHECK_PLUGIN_CLASS getDefaultTCPCheckype() const;
+
+    //! Get the current TCPS check class.
+    /*!
+        Get the current TCPS check class.
+        \return the current TCPS check class.
+     */
+    HM_CHECK_PLUGIN_CLASS getDefaultTCPSCheckype() const;
+
 
     //! Get the current DNS check class.
     /*!
@@ -275,11 +324,19 @@ public:
      */
     bool loadAllConfigs();
 
+    //! Load all the pub-sub configuration.
+    /*!
+         Load all the pub-sub configuration.
+         \return true if the configs loaded successfully.
+     */
+    bool loadPubSubConfig();
+
     //! Generate the host check list based on the loaded configs.
     /*!
          Generate the host list based on the loaded configs. Call after filling in the host groups and individual host checks to complete the initial set of health checks required.
          Also fills in the callback host groups in the check params data structure.
      */
+
     void generateHostCheckList();
 
     //! Generate the DNS checks required in the DNS check list.
@@ -287,6 +344,17 @@ public:
          Generate the DNS checks required in the DNS check list. Populates the DNS cache with empty entries. Populates the DNS call back to reschedule the needed health checks when a DNS entry is updated.
      */
     void generateDNSCheckList();
+
+    /*
+         Generate the Remote host checks required in the Remote host check list. Populates the Remtoe host cache with empty entries.
+     */
+
+    void generateRemoteHostCheckList();
+
+    /*
+         Generate the Remote host-group checks required in the Remote check list. Populates the Remote cache with empty entries.
+     */
+    void generateRemoteCheckList();
 
     //! Force a health check for all hosts within a specific host group.
     /*!
@@ -321,6 +389,17 @@ public:
          \param the work queue to schedule the check.
      */
     void forceDNSCheck(const std::string& hostGroup, const std::string& hostName, HMWorkQueue& workQueue);
+
+    //! Force a DNS resolution for a specific host.
+    /*!
+         Force a DNS resolution for a specific host.
+         \param the host to force DNS resolutions now.
+         \param the DNS type.
+         \param set of addresses added
+         \param the work queue to schedule the check.
+     */
+    void forceDNSCheck(const std::string &hostName,  HM_DNS_TYPE dnsType, const std::set<HMIPAddress>& addresses, HMWorkQueue& workQueue);
+
 
     //! Open the backend storage.
     /*!
@@ -370,13 +449,15 @@ public:
      */
     void restoreStoredCheckState();
 
-    //! Hash the host group map.
+    //! Hash every host group and store in the internal structure.
+    void  hashHostGroupMap ();
+
+    //! Hash the entire config
     /*
-         Hash the host group map.
-         \param the hash to update with the hash of the host group map.
-         \param the variable to store the hash.
+        Hash the entire config
+        \return true on success
      */
-    void  HashHostGroupMap (HMHashMD5& hash, HMHash& hashValue);
+    bool hashConfigs();
 
     //! Dump the configs from backend to file.
     /*
@@ -396,8 +477,69 @@ public:
      */
     void setHash(const HMHash& hash);
 
+    //! Get the health check CA certificate file
+    const std::string& getHealthCheckCAFile() const;
+
+    //! Get the key file contents used for health checks
+    const std::string& getHealthCheckKey() const;
+
+    //! Get the health check CA certificate file contents
+    const std::string& getHealthCheckCert() const;
+    
+    //! Get the current mode of Master-Slave.
+    bool isMasterMode() const;
+
+    //! Get the current check-domain of Master-Slave.
+    const std::string& getMasterSlaveCheckDomain() const;
+
+    //! Get the current check-host of Master-Slave.
+    const std::string& getMasterSlaveCheckHost() const;
+
+    //! Get the current(v4) check-port of control-socket.
+    uint16_t getControlSocketCheckPortv4() const;
+
+    //! Get the current(v6) check-port of control-socket.
+    uint16_t getControlSocketCheckPortv6() const;
+
+    //! Get all the control sockets enabled
+    const std::vector<HM_CONTROL_SOCKET>& getControlSocket() const;
+
+    //! Get the host certificate file
+    const std::string& getCertFile() const;
+
+    //! Get the host key file
+    const std::string& getKeyFile() const;
+
+    //! Get the CA certificate file
+    const std::string& getCaFile() const;
+
+    //! Enable encrypted data transfer
+    bool isEnableSecureRemote() const;
+
+    //! Enable tls mutual authentication
+    bool isEnableMutualAuth() const;
+
+    //! Enable shared connection for remote checks
+    bool isEnableSharedConnection() const;
+
+    //! Get the max number of remote connection per connection type
+    uint8_t getMaxConnections() const;
+
+    //! check if lib-event type check used in DNS checks
+    bool isLibEventEnabled() const;
+
+    //! Enable/Disbale lib-event type DNS check
+    void setLibEventEnabled(bool libEventEnabled);
+
+    //! get the DNS plugin for the set DNS type
+    HM_DNS_PLUGIN_CLASS getDNSPlugin(HM_DNS_TYPE dnstype);
+
     //! The main DNS cache.
     HMDNSCache m_dnsCache;
+    //! The main remote hostgroup cache.
+    HMRemoteHostGroupCache m_remoteCache;
+    //! The main remote host cache.
+    HMRemoteHostCache m_remoteHostCache;
     //! Master Structure of health check information
     HMDataCheckList m_checkList;
     //! Host Group information
@@ -408,8 +550,13 @@ public:
     HMAuxCache m_auxCache;
     //! Back end data store class
     std::unique_ptr<HMStorage> m_datastore;
+    //! SSL context
+    std::shared_ptr<HMSSLCtx> m_ctx;
+    //! Shared Connection Handler
+    std::shared_ptr<HMConnectionHandler> m_connectionHandler;
+    //! Result publisher handling
+    std::shared_ptr<HMResultPublisher> m_resultPublisher;
 
-    
 private:
 
     //! Parse the master config in the YAML format.
@@ -435,11 +582,12 @@ private:
     HM_CHECK_PLUGIN_CLASS m_httpDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_ftpDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_tcpDefaultCheckClass;
+    HM_CHECK_PLUGIN_CLASS m_tcpsDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_dnsDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_noneDefaultCheckClass;
     HM_CHECK_PLUGIN_CLASS m_auxDefaultCheckClass;
+    HM_CHECK_PLUGIN_CLASS m_markDefaultCheckClass;
 
-    HM_DNS_PLUGIN_CLASS m_dnsLookupClass;
     uint32_t m_dnsLookupTimeout;
     uint32_t m_dnsRetries;
 
@@ -459,8 +607,26 @@ private:
     HM_STORAGE_COMMIT_POLICY m_auxPolicy;
     HM_STORAGE_COMMIT_POLICY m_healthCheckPolicy;
     HM_STORAGE_LOCK_POLICY m_storageLockPolicy;
+    uint16_t m_controlSocketCheckPortv4;
+    uint16_t m_controlSocketCheckPortv6;
     HMHash m_hash;
     std::string m_masterConfig;
+    std::string m_healthCheckCAFile;
+    std::string m_healthCheckKey;
+    std::string m_healthCheckCert;
+    std::vector<HM_CONTROL_SOCKET> m_control_socket;
+    bool m_enableSecureRemote;
+    std::string m_certFile;
+    std::string m_keyFile;
+    std::string m_caFile;
+    std::string m_PubSubConfigFile;
+    bool m_enableMutualAuth;
+    bool m_enableSharedConnection;
+    uint8_t m_maxConnections;
+    bool m_libEventEnabled;
+    HM_FLOW_TYPE m_flowType;
+    HM_DNS_PLUGIN_CLASS m_dnsLookDefaultPlugin;
+    HM_DNS_PLUGIN_CLASS m_dnsStaticDefaultPlugin;
 };
 
 #endif /* INCLUDE_HMSTATE_H_ */

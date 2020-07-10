@@ -181,8 +181,8 @@ private:
 class HMStorageHostGroupMDBM : public HMStorageHostGroup
 {
 public:
-    HMStorageHostGroupMDBM(std::string filename, HMDataHostGroupMap* hostGroupMap) :
-        HMStorageHostGroup(hostGroupMap),
+    HMStorageHostGroupMDBM(std::string filename, HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
+        HMStorageHostGroup(hostGroupMap, dnsCache),
         m_mdbmPath(filename),
         m_openFlags(MDBM_OPEN_FLAGS) {}
 

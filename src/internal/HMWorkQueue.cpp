@@ -19,15 +19,24 @@ HMWorkQueue::cycleThreads()
 void
 HMWorkQueue::insertWork(unique_ptr<HMWork>& work)
 {
-    HMLog(HM_LOG_DEBUG, "[CORE] Pushing Task to Queue checktype %s \"%s\" "
-        "ds=%s port=%d host=%s at %s",
-        printCheckType(work->m_hostCheck.getCheckType()).c_str(),
-        work->m_hostCheck.getCheckInfo().c_str(),
-        printDualStack(work->m_hostCheck.getDualStack()).c_str(),
-        (uint32_t)work->m_hostCheck.getPort(),
-        work->m_hostname.c_str(),
-        work->m_ipAddress.toString().c_str());
-
+    HM_WORK_TYPE workType = work->getWorkType();
+    if (workType == HM_WORK_DNSLOOKUP)
+    {
+        HMLog(HM_LOG_DEBUG, "[CORE] Pushing DNS(%s) Task to Queue iptype=%s host=%s",
+                printDnsType(work->m_hostCheck.getDnsType()).c_str(),
+                work->m_ipAddress.getType() == AF_INET6? "IPv6": "IPv4",
+                work->m_hostname.c_str());
+    }
+    else if(workType == HM_WORK_HEALTHCHECK)
+    {
+        HMLog(HM_LOG_DEBUG, "[CORE] Pushing health-check Task to Queue checktype %s \"%s\" "
+                "ds=%s port=%d host=%s at %s",
+                printCheckType(work->m_hostCheck.getCheckType()).c_str(),
+                work->m_hostCheck.getCheckInfo().c_str(),
+                printDualStack(work->m_hostCheck.getDualStack()).c_str(),
+                (uint32_t) work->m_hostCheck.getPort(),
+                work->m_hostname.c_str(), work->m_ipAddress.toString().c_str());
+    }
     unique_lock<mutex> lock(m_queueMutex);
     m_queue.push(move(work));
     lock.unlock();
@@ -98,7 +107,21 @@ HMWorkQueue::getWork(unique_ptr<HMWork>& work, bool& threadShutdown)
                     HM_WORK_TYPE workType = work->getWorkType();
                     if(workType == HM_WORK_DNSLOOKUP)
                     {
-                        HMLog(HM_LOG_WARNING, "[CORE] DNS Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                        HMLog(HM_LOG_INFO, "[CORE] DNS Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                                work->m_hostname.c_str(),
+                                totalTime,
+                                ttl);
+                    }
+                    else if(workType == HM_WORK_REMOTECHECK)
+                    {
+                        HMLog(HM_LOG_INFO, "[CORE] Remote Host Group Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
+                                work->m_hostname.c_str(),
+                                totalTime,
+                                ttl);
+                    }
+                    else if(workType == HM_WORK_REMOTEHOSTCHECK)
+                    {
+                        HMLog(HM_LOG_INFO, "[CORE] Remote Host Lookup Work order for %s in the queue for %" PRIu64" ms with a ttl of %" PRIu64,
                                 work->m_hostname.c_str(),
                                 totalTime,
                                 ttl);

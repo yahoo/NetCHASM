@@ -15,6 +15,7 @@ class TESTNAME : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_timestamp1);
     CPPUNIT_TEST(test_timestamp2);
+    CPPUNIT_TEST(test_timestamp3);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -25,6 +26,7 @@ public:
 protected:
     void test_timestamp1();
     void test_timestamp2();
+    void test_timestamp3();
 };
 
 #endif /* TESTTIMESTAMP_H_ */

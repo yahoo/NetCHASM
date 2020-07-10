@@ -85,7 +85,7 @@ HMThreadPool::monitorThreads()
     {
         m_stateManager->updateState(currentState);
         exp+=1;
-        uint64_t offSchedule = m_stateManager->m_workQueue.getNumOffSchedule();
+        uint64_t offSchedule = m_stateManager->m_workQueue.getNumOffSchedule() + m_stateManager->m_workQueue.queueSize();
         uint64_t idle = countIdle();
         uint32_t stride = (m_stridePercent * m_nThreads)/ 100;
         if(offSchedule > 0)

@@ -1,9 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
-
 include(ExternalProject)
-project(bkln_netchasm)
+project(netchasm)
 
-file(GLOB SOURCES "./*.cpp")
+list(APPEND SOURCES "TestHMWork.cpp" "TestHMWorkAuxFetch.cpp" "TestHMWorkDNSLookup.cpp" "TestHMWorkHealthCheck.cpp" "TestHMWorkRemoteCheck.cpp" "TestHMWorkRemoteHostCheck.cpp")
+if(NOT SKIP-ARES)
+	list(APPEND SOURCES "TestHMWorkAresTest.cpp")
+endif()
+
 add_executable(worktests ${SOURCES} ../shared/common.cpp ../shared/TestStorage.cpp ../CppUnitTestRunner.cc)
 set_property(TARGET worktests PROPERTY CXX_STANDARD 14)
 

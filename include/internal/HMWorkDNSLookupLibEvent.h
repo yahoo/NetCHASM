@@ -16,8 +16,8 @@ class HMWorkDNSLookupLibEvent : public HMWorkDNSLookup
 
 public:
 
-    HMWorkDNSLookupLibEvent(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
-        HMWorkDNSLookup(hostname, ip, hostcheck) {};
+    HMWorkDNSLookupLibEvent(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck, const HMDNSLookup& dnsHostCheck) :
+        HMWorkDNSLookup(hostname, ip, hostcheck, dnsHostCheck) {};
 
     //! Called to init and setup the work order.
     /*!

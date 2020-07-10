@@ -34,7 +34,8 @@ TESTNAME::setUp()
     setupCommon();
     HMDataHostGroupMap hostGroupMap;
     m_currentState = make_shared<HMState>();
-    m_currentState->m_datastore = make_unique<TestStorage>(&hostGroupMap);
+    HMDNSCache dnsCache;
+    m_currentState->m_datastore = make_unique<TestStorage>(&hostGroupMap, &dnsCache);
 
     m_state.setState(m_currentState);
     m_eventQueue = new HMEventLoopQueue(&m_state);
@@ -63,11 +64,18 @@ TESTNAME::test_HMWorkAuxFetch_Process_Success()
     HMDataHostCheck check1;
     HMDataCheckParams params;
     string checkParams = "/check.html";
-    check1.setCheckParams(HM_CHECK_AUX_HTTP,
-            HM_CHECK_PLUGIN_AUX_CURL,
-            80,
-            HM_DUALSTACK_UNDEFINED,
-            checkParams);
+    string remoteHost = "";
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_AUX_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_AUX_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_UNDEFINED);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck(remoteHost);
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     params.setCheckParameters(3, 700, 0, 0, 0, 0, 0, 10000, 800, 0, 0);
 
@@ -144,21 +152,32 @@ TESTNAME::test_HMWorkAuxFetch_Process_Timeout()
 
     HMDataHostCheck check1;
     HMDataCheckParams params;
+    string remoteHost = "";
     string checkParams = "/check.html";
-    check1.setCheckParams(HM_CHECK_AUX_HTTP,
-            HM_CHECK_PLUGIN_AUX_CURL,
-            80,
-            HM_DUALSTACK_IPV4_ONLY,
-            checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_AUX_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_AUX_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_IPV4_ONLY);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck(remoteHost);
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     params.setCheckParameters(3, 10000, 0, 0, 0, 0, 0, 1000, 10000, 0, 0);
 
 
-    check1.setCheckParams(HM_CHECK_AUX_HTTP,
-            HM_CHECK_PLUGIN_AUX_CURL,
-            443,
-            HM_DUALSTACK_UNDEFINED,
-            checkParams);
+	hostGroup.setCheckType(HM_CHECK_AUX_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_AUX_CURL);
+	hostGroup.setPort(443);
+	hostGroup.setDualStack(HM_DUALSTACK_UNDEFINED);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck(remoteHost);
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     string timedout = "ipv4.timedout.hm.com";
     string timedoutv6 = "ipv6.timedout.hm.com";
@@ -229,12 +248,19 @@ TESTNAME::test_HMWorkAuxFetch_Process_Failure()
 
     HMDataHostCheck check1;
     HMDataCheckParams params;
+    string remoteHost = "";
     string checkParams = "/check.html";
-    check1.setCheckParams(HM_CHECK_HTTP,
-            HM_CHECK_PLUGIN_AUX_CURL,
-            80,
-            HM_DUALSTACK_UNDEFINED,
-            checkParams);
+    string host_group = "dummy";
+    HMDataHostGroup hostGroup(host_group);
+	hostGroup.setCheckType(HM_CHECK_HTTP);
+	hostGroup.setCheckPlugin(HM_CHECK_PLUGIN_AUX_CURL);
+	hostGroup.setPort(80);
+	hostGroup.setDualStack(HM_DUALSTACK_UNDEFINED);
+	hostGroup.setCheckInfo(checkParams);
+	hostGroup.setRemoteCheck(remoteHost);
+	hostGroup.setRemoteCheckType(HM_REMOTE_CHECK_NONE);
+	hostGroup.setDistributedFallback(HM_DISTRIBUTED_FALLBACK_NONE);
+	check1.setCheckParams(hostGroup);
 
     params.setCheckParameters(3, 1000, 0, 0, 0, 0, 0, 1000, 1000, 0, 0);
 

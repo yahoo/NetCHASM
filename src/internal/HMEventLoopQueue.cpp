@@ -6,10 +6,10 @@
 using namespace std;
 
 void
-HMEventLoopQueue::addDNSTimeout(const string& hostname, bool ipv6, HMTimeStamp timeStamp)
+HMEventLoopQueue::addDNSTimeout(const string& hostname, const HMDNSLookup& dnslookup, HMTimeStamp timeStamp)
 {
     auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
-    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS timeout %llu", timeStamp.getTimeSinceEpoch());
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding DNS scheduler timeout %llu", timeStamp.getTimeSinceEpoch());
 
     bool preempt = false;
     queueLock.lock();
@@ -17,7 +17,7 @@ HMEventLoopQueue::addDNSTimeout(const string& hostname, bool ipv6, HMTimeStamp t
     {
         preempt = true;
     }
-    m_timeouts.push(Timeout(hostname, ipv6, timeStamp));
+    m_timeouts.push(Timeout(hostname, dnslookup, timeStamp));
     queueLock.unlock();
 
     // if the Timeout we are inserting is before the next timeout, kick the tracker
@@ -28,12 +28,57 @@ HMEventLoopQueue::addDNSTimeout(const string& hostname, bool ipv6, HMTimeStamp t
 }
 
 void
+HMEventLoopQueue::addRemoteTimeout(const string& hostname, HMTimeStamp timeStamp)
+{
+    auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding Remote scheduler timeout %llu", timeStamp.getTimeSinceEpoch());
+
+    bool preempt = false;
+    queueLock.lock();
+    if(m_timeouts.empty() || timeStamp < m_timeouts.top().m_timeout)
+    {
+        preempt = true;
+    }
+    m_timeouts.push(Timeout(hostname, timeStamp));
+    queueLock.unlock();
+
+    // if the Timeout we are inserting is before the next timeout, kick the tracker
+    if(preempt)
+    {
+        wakeupTracker();
+    }
+}
+
+void
+HMEventLoopQueue::addRemoteHostTimeout(const std::string& hostname, const HMDataHostCheck& dataHostCheck,HMTimeStamp timeStamp)
+{
+    auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding Remote host scheduler timeout %llu", timeStamp.getTimeSinceEpoch());
+
+    bool preempt = false;
+    queueLock.lock();
+    if(m_timeouts.empty() || timeStamp < m_timeouts.top().m_timeout)
+    {
+        preempt = true;
+    }
+    m_timeouts.push(Timeout(hostname, dataHostCheck, timeStamp));
+    queueLock.unlock();
+
+    // if the Timeout we are inserting is before the next timeout, kick the tracker
+    if(preempt)
+    {
+        wakeupTracker();
+    }
+}
+
+
+void
 HMEventLoopQueue::addHealthCheckTimeout(const string& hostname, const HMIPAddress& address, const HMDataHostCheck check, HMTimeStamp timeStamp)
 {
     auto queueLock = unique_lock<mutex> (m_queueMutex, defer_lock);
     bool preempt = false;
 
-    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding HealthCheck timeout %llu for %s", timeStamp.getTimeSinceEpoch(),hostname.c_str());
+    HMLog(HM_LOG_DEBUG3, "[EVENT] Adding HealthCheck Scheduler timeout %llu for %s", timeStamp.getTimeSinceEpoch(),hostname.c_str());
 
     queueLock.lock();
     if(m_timeouts.empty() || timeStamp < m_timeouts.top().m_timeout)
@@ -146,7 +191,7 @@ HMEventLoopQueue::run()
         switch(timeout.m_type)
         {
         case HEALTHCHECK_TIMEOUT:
-            HMLog(HM_LOG_DEBUG, "[EVENT] Health Check Timeout for %s", timeout.m_hostname.c_str());
+            HMLog(HM_LOG_DEBUG, "[EVENT] Health Check Scheduler Timeout for %s", timeout.m_hostname.c_str());
 
             check_state = currentState->m_checkList.checkNeeded(timeout.m_hostname, timeout.m_address, timeout.m_hostCheck);
             if (check_state == HM_SCHEDULE_WORK)
@@ -161,22 +206,53 @@ HMEventLoopQueue::run()
                 addHealthCheckTimeout(timeout.m_hostname, timeout.m_address, timeout.m_hostCheck, nextCheckTimeOut);
             }
             break;
+        case REMOTECHECK_TIMEOUT:
+            HMLog(HM_LOG_DEBUG, "[EVENT] Remote Scheduler host group Check Timeout for %s", timeout.m_hostname.c_str());
+
+            check_state = currentState->m_remoteCache.checkNeeded(timeout.m_hostname);
+            if (check_state == HM_SCHEDULE_WORK)
+            {
+                HMLog(HM_LOG_DEBUG3, "[DEBUG] Remote Check Schedule work for %s", timeout.m_hostname.c_str());
+                currentState->m_remoteCache.queueRemoteCheck(timeout.m_hostname, m_stateManager->m_workQueue, currentState->m_hostGroups);
+            }
+            else if (check_state == HM_SCHEDULE_EVENT)
+            {
+                HMLog(HM_LOG_DEBUG3, "[DEBUG] Remote Check Schedule event for %s", timeout.m_hostname.c_str());
+                HMTimeStamp nextCheckTimeOut = currentState->m_remoteCache.nextCheckTime(timeout.m_hostname);
+                addRemoteTimeout(timeout.m_hostname, nextCheckTimeOut);
+            }
+            break;
+        case REMOTEHOSTCHECK_TIMEOUT:
+            HMLog(HM_LOG_DEBUG, "[EVENT] Remote Scheduler host Check Timeout for %s", timeout.m_hostname.c_str());
+
+            check_state = currentState->m_remoteHostCache.checkNeeded(timeout.m_hostname, timeout.m_hostCheck);
+            if (check_state == HM_SCHEDULE_WORK)
+            {
+                HMLog(HM_LOG_DEBUG3, "[DEBUG] Remote host Check Schedule work for %s", timeout.m_hostname.c_str());
+                currentState->m_remoteHostCache.queueRemoteCheck(timeout.m_hostname, timeout.m_hostCheck, m_stateManager->m_workQueue);
+            }
+            else if (check_state == HM_SCHEDULE_EVENT)
+            {
+                HMLog(HM_LOG_DEBUG3, "[DEBUG] Remote host Check Schedule event for %s", timeout.m_hostname.c_str());
+                HMTimeStamp nextCheckTimeOut = currentState->m_remoteHostCache.nextCheckTime(timeout.m_hostname, timeout.m_hostCheck);
+                addRemoteTimeout(timeout.m_hostname, nextCheckTimeOut);
+            }
+            break;
         case DNS_TIMEOUT:
         case DNSV6_TIMEOUT:
-            HMLog(HM_LOG_DEBUG, "[EVENT] DNS Entry Timeout for %s",  timeout.m_hostname.c_str());
+            HMLog(HM_LOG_DEBUG, "[EVENT] DNS Scheduler Entry Timeout for %s",  timeout.m_hostname.c_str());
 
-            bool ipv6 = timeout.m_type == DNSV6_TIMEOUT ? true : false;
-            check_state = currentState->m_dnsCache.queryNeeded(timeout.m_hostname, ipv6);
+            check_state = currentState->m_dnsCache.queryNeeded(timeout.m_hostname, timeout.m_dnsLookup);
             if (check_state == HM_SCHEDULE_WORK)
             {
                 HMLog(HM_LOG_DEBUG3, "[DEBUG] DNS Health Check Schedule work for %s", timeout.m_hostname.c_str());
-                currentState->m_dnsCache.queueDNSQuery(timeout.m_hostname, (timeout.m_type == DNSV6_TIMEOUT), m_stateManager->m_workQueue);
+                currentState->m_dnsCache.queueDNSQuery(timeout.m_hostname, timeout.m_dnsLookup, m_stateManager->m_workQueue);
             }
             else if (check_state == HM_SCHEDULE_EVENT)
             {
                 HMLog(HM_LOG_DEBUG3, "[DEBUG] DNS Health Check Schedule event for %s", timeout.m_hostname.c_str());
                 HMTimeStamp nextCheckTimeOut = currentState->m_checkList.nextCheckTime(timeout.m_hostname, timeout.m_address, timeout.m_hostCheck);
-                addDNSTimeout(timeout.m_hostname, ipv6, nextCheckTimeOut);
+                addDNSTimeout(timeout.m_hostname, timeout.m_dnsLookup, nextCheckTimeOut);
             }
             else
             {
@@ -184,6 +260,7 @@ HMEventLoopQueue::run()
                 HMLog(HM_LOG_DEBUG3, "%s DNS Check dropped for %s, already in schedule", ip_version.c_str(), timeout.m_hostname.c_str());
             }
             break;
+
         }
         queueLock.lock();
         nextTimeout = (m_timeouts.empty() ? (HMTimeStamp::now() + m_emptyTimeout) : (m_timeouts.top().m_timeout));

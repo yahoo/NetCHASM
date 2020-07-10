@@ -6,13 +6,30 @@
 #include <string>
 #include <openssl/evp.h>
 
-#include "HMStorage.h"
+//! Default size for MD5 hash
+#define HASH_MAX_SIZE 64 //Max MD5 length EVP_MAX_MD_SIZE
+
+//! Class to hold the hash value
+/*!
+     Class to hold the hash value
+     HMHash stores the hash of configs loaded.
+ */
+class HMHash
+{
+public:
+    HMHash(): m_hashSize(0) { }
+    unsigned char m_hashValue[HASH_MAX_SIZE];
+    uint32_t m_hashSize;
+    bool operator==(const HMHash& k) const;
+    bool operator!=(const HMHash& k) const;
+};
+
+
 
 //! The class computes MD5 hash NetCHASM.
 /*!
     Computed hash is stored in md_value.
  */
-class HMHash;
 class HMHashMD5
 {
 public:

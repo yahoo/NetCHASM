@@ -3,10 +3,6 @@
 #ifndef HMSTORAGE_H_
 #define HMSTORAGE_H_
 
-//! Default size for MD5 hash
-#define HASH_MAX_SIZE 64 //Max MD5 length EVP_MAX_MD_SIZE
-
-
 #include <string>
 #include <openssl/evp.h>
 
@@ -19,11 +15,13 @@
 #include "HMDNSCache.h"
 #include "HMUtilitySpinLock.h"
 #include "HMAuxCache.h"
+#include "HMHashMD5.h"
+#include "HMRemoteHostGroupCache.h"
+#include "HMRemoteHostCache.h"
 
 class HMDataCheckList;
 class HMStorageHostGroup;
 class HMState;
-
 //! Convenience class to pass an entire host group check result.
 /*!
       Convenience class to pass an entire host group check result.
@@ -198,20 +196,6 @@ public:
     HMDataCheckParams m_checkParams;
 };
 
-//! Class to hold the hash value
-/*!
-     Class to hold the hash value
-     HMHash stores the hash of configs loaded.
- */
-class HMHash {
-public:
-    HMHash(): m_hashSize(0) { }
-    unsigned char m_hashValue[HASH_MAX_SIZE];
-    uint32_t m_hashSize;
-    bool operator==(const HMHash& k) const;
-    bool operator!=(const HMHash& k) const;
-};
-
 //! Class to hold the config Info
 /*!
      Class to hold the config Info
@@ -283,13 +267,14 @@ class HMStorage
 {
 public:
 
-    HMStorage(HMDataHostGroupMap* hostGroupMap) :
+    HMStorage(HMDataHostGroupMap* hostGroupMap, HMDNSCache* dnsCache) :
         m_shutdown(true),
         m_readonly(false),
         m_auxCommitPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_healthCheckCommitPolicy(HM_STORAGE_COMMIT_ALWAYS),
         m_lockPolicy(HM_STORAGE_RW_LOCKS),
-        m_hostGroupMap(hostGroupMap) {}
+        m_hostGroupMap(hostGroupMap),
+        m_dnsCache(dnsCache){}
 
     virtual ~HMStorage() {};
 
@@ -327,8 +312,10 @@ public:
           \param the checkList restore.
           \param the DNS cache to restore.
           \param the Aux Cached to restore.
+          \param the Remote Host-groupCached to restore.
+          \param the Remote Host Cached to restore.
     */
-    virtual void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache) = 0;
+    virtual void initResultsFromBackend(HMDataCheckList& checkList, HMDNSCache& dnsCache, HMAuxCache& auxCache, HMRemoteHostGroupCache& remoteCache, HMRemoteHostCache& remoteHostCache) = 0;
 
     //! Clear the backend datastore.
     /*!
@@ -496,6 +483,26 @@ public:
      */
     virtual void updateHostGroups(std::set<std::string>& hostGroups) = 0;
 
+    //! Store the health check results for a given host group.
+    /*!
+         Store the health check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the check results (HMGroupCheckResult)
+         \return true if the results stored successfully.
+     */
+    virtual bool storeHostGroupCheckResult(const std::string& hostgroupname,
+            std::vector<HMGroupCheckResult>& checkResult) = 0;
+
+    //! Store the aux check results for a given host group.
+    /*!
+         Store the aux check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the aux results (HMGroupCheckResult)
+         \return true if the results stored successfully.
+     */
+    virtual bool storeHostGroupAuxResult(const std::string& hostgroupname,
+            std::vector<HMGroupAuxResult>& auxResult) = 0;
+
     //! Get the health check results for a given host group.
     /*!
          Get the health check results for a given host group.
@@ -508,6 +515,16 @@ public:
     virtual bool getGroupCheckResults(const std::string& groupName,
                 bool noCache,
                 bool onlyResolved,
+                std::vector<HMGroupCheckResult>& results) = 0;
+
+    //! Get the health check results for a given host group.
+    /*!
+         Get the health check results for a given host group.
+         \param the group name to get the results.
+         \param results vector to store the check results (HMGroupCheckResult)
+         \return true if the results vector contains the results.
+     */
+    virtual bool getGroupCheckResults(const std::string& groupName,
                 std::vector<HMGroupCheckResult>& results) = 0;
 
     //! Get the aux info for a given host group.
@@ -597,6 +614,7 @@ protected:
     HM_STORAGE_LOCK_POLICY m_lockPolicy;
 
     HMDataHostGroupMap* m_hostGroupMap;
+    HMDNSCache* m_dnsCache;
 };
 
 #endif /* HMSTORAGEBASE_H_ */

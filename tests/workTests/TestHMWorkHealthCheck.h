@@ -29,7 +29,7 @@ class TESTNAME : public CppUnit::TestFixture
 {
     CPPUNIT_TEST_SUITE(TESTNAME);
     CPPUNIT_TEST(test_HMWorkHealthCheck_IPV4);
-//    CPPUNIT_TEST(test_HMWorkHealthCheck_IPV6);
+    CPPUNIT_TEST(test_HMWorkHealthCheck_IPV6);
     CPPUNIT_TEST_SUITE_END();
 
 public:

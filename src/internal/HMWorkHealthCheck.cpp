@@ -16,8 +16,10 @@ HMWorkHealthCheck::processWork()
 
     if(m_workStatus == HM_WORK_IDLE)
     {
+        string isRemote = m_hostCheck.getRemoteCheck().empty() ? "" : "remote";
         // tell the code we are starting a check
-        HMLog(HM_LOG_DEBUG3, "[WORKER] Starting %s Health Check %s for %s at %s",
+        HMLog(HM_LOG_DEBUG3, "[WORKER] Starting %s %s Health Check %s for %s at %s",
+                isRemote.c_str(),
                 printCheckType(m_hostCheck.getCheckType()).c_str(),
                 m_hostCheck.getCheckInfo().c_str(),
                 m_hostname.c_str(),
@@ -33,7 +35,7 @@ HMWorkHealthCheck::processWork()
         m_workStatus = healthCheck();
     }
 
-    if(m_workStatus == HM_WORK_COMPLETE)
+    if (m_workStatus)
     {
         // process the results
         // Update the smart pointer if necessary
@@ -41,19 +43,30 @@ HMWorkHealthCheck::processWork()
 
         // check to see if this check is complete
         currentState->m_checkList.updateCheck(this, this->m_hostCheck);
-        currentState->m_checkList.storeCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_datastore.get());
 
-        HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
-        bool isValidAddress = currentState->m_dnsCache.isValidAddress(m_hostname,m_hostCheck.getDualStack(),m_ipAddress);
-        if (isValidAddress)
+        if (m_publish)
         {
-            if (checkTime <= HMTimeStamp::now())
+            currentState->m_checkList.publishCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_resultPublisher);
+        }
+        if (m_storeResults)
+        {
+            currentState->m_checkList.storeCheck(this, this->m_hostCheck, this->m_ipAddress, currentState->m_datastore.get());
+        }
+        if (m_reschedule)
+        {
+            HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
+            HMDNSLookup dnsHostCheck(m_hostCheck.getDnsType(), m_ipAddress.getType() == AF_INET6, m_hostCheck.getRemoteCheck());
+            bool isValidAddress = currentState->m_dnsCache.isValidAddress(m_hostname, m_hostCheck.getDualStack(), dnsHostCheck, m_ipAddress);
+            if (isValidAddress)
             {
-                currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
-            }
-            else
-            {
-                m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+                if (checkTime <= HMTimeStamp::now())
+                {
+                    currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
+                }
+                else
+                {
+                    m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+                }
             }
         }
     }

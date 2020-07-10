@@ -54,7 +54,7 @@ void TESTNAME::test_HMAuxInfo_MalformedXML()
     HMIPAddress address;
     address.set("192.168.2.1");
 
-    CPPUNIT_ASSERT(!auxInfo.storeAuxInfo(hostName, sourceURL, address, testXML));
+    CPPUNIT_ASSERT(!auxInfo.storeAuxInfo(hostName, sourceURL, address, testXML, HM_AUX_DATA_XML));
 }
 
 
@@ -92,8 +92,8 @@ void TESTNAME::test_HMAuxInfo_NewLFB()
     std::vector<std::unique_ptr<HMAuxBase>> singleResult;
     HMAuxLoadFB* lfb;
     HMTimeStamp ts,ts1;
-    ts.setTime(1518198900);
-    ts1.setTime(1436935860);
+    ts.setTime(1518198900000);
+    ts1.setTime(1436935860000);
 
     string hostName = "test.hm.com";
     string sourceURL = "lfb.html";
@@ -101,7 +101,7 @@ void TESTNAME::test_HMAuxInfo_NewLFB()
     address.set("192.168.2.1");
     string xmlOut;
 
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML, HM_AUX_DATA_XML));
 
     CPPUNIT_ASSERT(
             auxCache.getAuxInfo(hostName, sourceURL, address, auxInfo));
@@ -139,8 +139,8 @@ void TESTNAME::test_HMAuxInfo_NewLFB()
     CPPUNIT_ASSERT(lfb->m_max == 150);
 
     CPPUNIT_ASSERT(
-            auxCache.genAuxXML(auxInfo, HM_LOAD_FILE, "test.hm.com",
-                    xmlOut));
+            auxCache.genAuxData(auxInfo, HM_LOAD_FILE, "test.hm.com",
+                    xmlOut, HM_AUX_DATA_XML));
 }
 
 void TESTNAME::test_parse_HMAuxInfo_NewLFB()
@@ -209,14 +209,14 @@ void TESTNAME::test_parse_HMAuxInfo_NewLFB()
     HMIPAddress address;
     address.set("192.168.2.1");
     string xmlOut;
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTime));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoLoad));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostNameAttr));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResources));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResourceNameAttr));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostName));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoMax));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTarget));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTime, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoLoad, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostNameAttr, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResources, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResourceNameAttr, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostName, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoMax, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTarget, HM_AUX_DATA_XML));
 }
 
 void TESTNAME::test_HMAuxInfo_OOB()
@@ -255,16 +255,16 @@ void TESTNAME::test_HMAuxInfo_OOB()
     std::vector<std::unique_ptr<HMAuxBase>> singleResult;
     HMAuxOOB* lfb;
     HMTimeStamp ts,ts1,ts2;
-    ts.setTime(1506496234);
-    ts1.setTime(1508927205);
-    ts2.setTime(1506400318);
+    ts.setTime(1506496234000);
+    ts1.setTime(1508927205000);
+    ts2.setTime(1506400318000);
     string hostName = "test.hm.com";
     string sourceURL = "lfb.html";
     HMIPAddress address;
     address.set("192.168.2.1");
     string xmlOut;
 
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML, HM_AUX_DATA_XML));
 
     CPPUNIT_ASSERT(
             auxCache.getAuxInfo(hostName, sourceURL, address, auxInfo));
@@ -404,20 +404,20 @@ void TESTNAME::test_parse_HMAuxInfo_OOB()
     HMIPAddress address;
     address.set("192.168.2.1");
     string xmlOut;
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTime));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostNameAttr));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResources));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResourceNameAttr));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostName));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoTime, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostNameAttr, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResources, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoResourceNameAttr, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWoHostName, HM_AUX_DATA_XML));
     
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWofile));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWomaxXML));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWoloadXML));
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWotargetXML));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWofile));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWofile, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWomaxXML, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWoloadXML, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWotargetXML, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testXMLWofile, HM_AUX_DATA_XML));
 
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWoshedXML));
-    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testWonameXML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testWoshedXML, HM_AUX_DATA_XML));
+    CPPUNIT_ASSERT(!auxCache.storeAuxInfo(hostName, sourceURL, address, testWonameXML, HM_AUX_DATA_XML));
     
 }
 
@@ -449,12 +449,12 @@ void TESTNAME::test_neg_HMAuxInfo_OOB()
     address.set("192.168.2.1");
     string xmlOut;
 
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML, HM_AUX_DATA_XML));
     CPPUNIT_ASSERT(auxCache.getAuxInfo(hostName, sourceURL, address, auxInfo));
 
     CPPUNIT_ASSERT(
-            auxCache.genAuxXML(auxInfo, HM_OOB_FILE, "test.hm.com",
-                    xmlOut));
+            auxCache.genAuxData(auxInfo, HM_OOB_FILE, "test.hm.com",
+                    xmlOut, HM_AUX_DATA_XML));
 }
 
 void TESTNAME::test_neg_HMAuxInfo_NewLFB()
@@ -488,11 +488,11 @@ void TESTNAME::test_neg_HMAuxInfo_NewLFB()
     address.set("192.168.2.1");
     string xmlOut;
 
-    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML));
+    CPPUNIT_ASSERT(auxCache.storeAuxInfo(hostName, sourceURL, address, testXML, HM_AUX_DATA_XML));
 
     CPPUNIT_ASSERT(auxCache.getAuxInfo(hostName, sourceURL, address, auxInfo));
 
     CPPUNIT_ASSERT(
-            auxCache.genAuxXML(auxInfo, HM_LOAD_FILE, "test.hm.com",
-                    xmlOut));
+            auxCache.genAuxData(auxInfo, HM_LOAD_FILE, "test.hm.com",
+                    xmlOut, HM_AUX_DATA_XML));
 }

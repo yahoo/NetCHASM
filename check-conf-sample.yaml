@@ -188,3 +188,23 @@
 # "ipv6-only" queries each hostname for only AAAA records even if the host has both
 # A and AAAA records.  There is no mode which health-checks both IPv4 and IPv6
 # and selects between them.
+
+# source-address: <ipadddress>
+#
+# Specifies the source address to choose while making a connection over the socket.
+
+# tos-value: <num(8-bit)>
+# default: 0
+#
+# Specifies the type of service value in the socket. Currently implemented for TCP and HTTP types only.
+
+# dns-type: <type>
+# values: lookup, static
+# default: lookup
+
+# flow-type: <type>
+# values: dns-health,remote-hostgroup,remote-host
+# default: dns-health
+
+# Specifies the type of DNS resolution. Ares uses the C-Ares library. 
+# Static is you can provide IP address manually throught the hm_staticdns utility 

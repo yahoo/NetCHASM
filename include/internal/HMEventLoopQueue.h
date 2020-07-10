@@ -34,7 +34,25 @@ public:
          \param true to resolve an IPv6 address.
          \param the time Stamp of when the DNS resolution should take place.
      */
-    void addDNSTimeout(const std::string& hostname, bool ipv6, HMTimeStamp timeStamp);
+    void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp);
+
+    //! Add a new Remote timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostgroupname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    void addRemoteTimeout(const std::string& hostname, HMTimeStamp timeStamp);
+
+
+    //! Add a new Remote host timeout.
+    /*!
+         Add a new Remote timeout to the event loop.
+         \param the hostname to remote check.
+         \param the time Stamp of when the Remote check should take place.
+     */
+    void addRemoteHostTimeout(const std::string& hostname, const HMDataHostCheck& dataHostCheck,HMTimeStamp timeStamp);
+
 
     //! Add a new health check timeout.
     /*!
@@ -91,7 +109,9 @@ private:
     {
         HEALTHCHECK_TIMEOUT,
         DNS_TIMEOUT,
-        DNSV6_TIMEOUT
+        DNSV6_TIMEOUT,
+        REMOTECHECK_TIMEOUT,
+        REMOTEHOSTCHECK_TIMEOUT
     };
 
     //! The class to hold parameters about the timeout that occurred.
@@ -106,13 +126,30 @@ private:
         HMDataHostCheck m_hostCheck;
         HMTimeStamp m_timeout;
         TimeoutType m_type;
+        HMDNSLookup m_dnsLookup;
         HMIPAddress m_address;
 
-        Timeout(const std::string& host, bool ipv6, const HMTimeStamp expiration)
+        Timeout(const std::string& host, HMDNSLookup lookup, const HMTimeStamp expiration)
         {
             m_hostname = host;
             m_timeout = expiration;
-            m_type = ipv6?DNSV6_TIMEOUT:DNS_TIMEOUT;
+            m_type = lookup.isIpv6()?DNSV6_TIMEOUT:DNS_TIMEOUT;
+            m_dnsLookup = lookup;
+        }
+
+        Timeout(const std::string& host, const HMTimeStamp expiration)
+        {
+            m_hostname = host;
+            m_timeout = expiration;
+            m_type = REMOTECHECK_TIMEOUT;
+        }
+
+        Timeout(const std::string& host, const HMDataHostCheck& dataHostCheck, const HMTimeStamp expiration)
+        {
+            m_hostname = host;
+            m_timeout = expiration;
+            m_type = REMOTEHOSTCHECK_TIMEOUT;
+            m_hostCheck = dataHostCheck;
         }
 
         Timeout(const std::string& host, const HMIPAddress& address, const HMDataHostCheck check, const HMTimeStamp expiration)

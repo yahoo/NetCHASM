@@ -35,9 +35,20 @@ class TESTNAME : public CppUnit::TestFixture
     CPPUNIT_TEST(test_config_https_tests);
     CPPUNIT_TEST(test_config_neg_tests);
     CPPUNIT_TEST(test_config_garbage_tests);
+    CPPUNIT_TEST(test_indirect_hosts);
+    CPPUNIT_TEST(test_indirect_hosts1);
+    CPPUNIT_TEST(test_config18_tests);
+    CPPUNIT_TEST(test_config19_tests);
+    CPPUNIT_TEST(test_config21_tests);
+    CPPUNIT_TEST(test_config22_tests);
     CPPUNIT_TEST(test_neg_configs);
     CPPUNIT_TEST(test_write_configs);
     CPPUNIT_TEST(test_write_configs1);
+    CPPUNIT_TEST(test_config20_tests);
+    CPPUNIT_TEST(test_write_configs2);    
+    CPPUNIT_TEST(test_config_mark_http_tests);
+    CPPUNIT_TEST(test_config_mark_https_tests);
+    CPPUNIT_TEST(test_config_mark_https_no_peer_tests);
     CPPUNIT_TEST_SUITE_END();
 
 
@@ -65,9 +76,20 @@ protected:
     void test_config_https_tests();
     void test_config_neg_tests();
     void test_config_garbage_tests();
+    void test_indirect_hosts();
+    void test_indirect_hosts1();
+    void test_config18_tests();
+    void test_config19_tests();
+    void test_config21_tests();
+    void test_config22_tests();
     void test_neg_configs();
     void test_write_configs();
     void test_write_configs1();
+    void test_config20_tests();
+    void test_write_configs2();
+    void test_config_mark_http_tests();
+    void test_config_mark_https_tests();
+    void test_config_mark_https_no_peer_tests();
     const std::string folderLocation = "./yamlconfig";
     const std::string folderLocation1 = "./yamlconfig1";
     const std::string fileLocation = "./yamlconfig/testconf.yaml";

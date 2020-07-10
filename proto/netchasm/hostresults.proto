@@ -1,0 +1,26 @@
+syntax = "proto3";
+import "netchasm/datacheckresult.proto";
+
+package netchasm;
+message DataCheckParam {
+    uint32 numCheckRetries = 1;
+    uint32 checkRetryDelay = 2;
+    uint32 measurementOptions = 3;
+    uint32 smoothingWindow = 4;
+    uint32 groupThreshold = 5;
+    uint32 slowThreshold = 6;
+    uint32 maxFlaps = 7;
+    uint64 checkTimeout = 8;
+    uint64 checkTTL = 9;
+    uint32 flapThreshold = 10;
+    uint32 passthroughInfo = 11;
+}
+
+message CheckParamsCheckResult {
+    DataCheckParam checkParam = 1;
+    DataCheckResult checkResult = 2;
+}
+
+message HostResult {
+    repeated CheckParamsCheckResult hostResults = 1;
+}

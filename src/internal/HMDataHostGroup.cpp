@@ -5,6 +5,7 @@
 #include "HMConstants.h"
 #include "HMDataHostGroup.h"
 #include "HMLogBase.h"
+#include "HMHashMD5.h"
 
 using namespace std;
 
@@ -26,7 +27,9 @@ bool HMDataHostGroup::operator<(const HMDataHostGroup& k) const
             || m_checkTTL < k.m_checkTTL
             || m_flapThreshold < k.m_flapThreshold
             || m_passthroughInfo < k.m_passthroughInfo
-            || m_checkPlugin < k.m_checkPlugin)
+            || m_checkPlugin < k.m_checkPlugin
+            || m_TOSValue < k.m_TOSValue
+            || m_flowType < k.m_flowType )
     {
         return true;
     }
@@ -51,7 +54,9 @@ HMDataHostGroup::operator==(const HMDataHostGroup& k) const
     && (m_checkTimeout == k.m_checkTimeout)
     && (m_checkTTL == k.m_checkTTL)
     && (m_flapThreshold == k.m_flapThreshold)
-    && (m_passthroughInfo == k.m_passthroughInfo))
+    && (m_passthroughInfo == k.m_passthroughInfo)
+    && (m_TOSValue == k.m_TOSValue)
+    && (m_flowType == k.m_flowType))
     {
         return true;
     }
@@ -64,12 +69,50 @@ HMDataHostGroup::operator!=(const HMDataHostGroup& k) const
     return !(*this == k);
 }
 
+HMDataHostGroup::HMDataHostGroup(const std::string& groupName, HMAPICheckInfo& checkInfo)
+{
+    m_groupName = groupName;
+    m_measurementOptions = checkInfo.m_measurementOptions;
+    if (checkInfo.m_ipv4 && checkInfo.m_ipv6)
+        m_dualstack = HM_DUALSTACK_BOTH;
+    else if (checkInfo.m_ipv4)
+        m_dualstack = HM_DUALSTACK_IPV4_ONLY;
+    else if (checkInfo.m_ipv6)
+        m_dualstack = HM_DUALSTACK_IPV6_ONLY;
+    m_checkType = (HM_CHECK_TYPE)checkInfo.m_checkType;
+    m_port = checkInfo.m_port;
+    m_numCheckRetries = checkInfo.m_numCheckRetries;
+    m_checkRetryDelay = checkInfo.m_checkRetryDelay;
+    m_smoothingWindow = checkInfo.m_smoothingWindow;
+    m_groupThreshold = checkInfo.m_groupThreshold;
+    m_slowThreshold = checkInfo.m_slowThreshold;
+    m_maxFlaps = checkInfo.m_maxFlaps;
+    m_checkTimeout = checkInfo.m_checkTimeout;
+    m_checkTTL = checkInfo.m_checkTTL;
+    m_flapThreshold = checkInfo.m_flapThreshold;
+    m_passthroughInfo = checkInfo.m_passthroughInfo;
+    m_checkInfo = checkInfo.m_checkInfo;
+    m_remoteCheck = checkInfo.m_remoteCheck;
+    m_distributedFallback = (HM_DISTRIBUTED_FALLBACK)checkInfo.m_distributedFallback;
+    m_remoteCheckType = (HM_REMOTE_CHECK_TYPE)checkInfo.m_remoteCheckType;
+    m_TOSValue = checkInfo.m_TOSValue;
+    m_flowType = (HM_FLOW_TYPE)checkInfo.m_flowType;
+    for(string& host: checkInfo.m_hosts)
+    {
+        m_hosts.push_back(host);
+    }
+    for (string& hostGrp : checkInfo.m_hostGroups)
+    {
+        m_hostGroups.push_back(hostGrp);
+    }
+}
+
 bool
 HMDataHostGroup::getHostCheck(HMDataHostCheck& check) const
 {
-    if(m_checkType <= HM_CHECK_AUX_HTTPS_NO_PEER_CHECK)
+    if(m_checkType < HM_CHECK_INVALID)
     {
-        check.setCheckParams(m_checkType, m_checkPlugin, m_port, m_dualstack, m_checkInfo);
+        check.setCheckParams(*this);
         return true;
     }
     return false;
@@ -148,7 +191,7 @@ HMDataHostGroup::setPort(uint16_t port)
 }
 
 void
-HMDataHostGroup::setCheckInfo(string& checkInfo)
+HMDataHostGroup::setCheckInfo(const string& checkInfo)
 {
     m_checkInfo = checkInfo;
 }
@@ -214,9 +257,27 @@ HMDataHostGroup::setPassthroughInfo(uint32_t passthroughInfo)
 }
 
 void
+HMDataHostGroup::setDistributedFallback(HM_DISTRIBUTED_FALLBACK distributedFallback)
+{
+    m_distributedFallback = (HM_DISTRIBUTED_FALLBACK)(m_distributedFallback | distributedFallback);
+}
+
+void
+HMDataHostGroup::unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK distributedFallback)
+{
+    m_distributedFallback = (HM_DISTRIBUTED_FALLBACK)(m_distributedFallback & ~distributedFallback);
+}
+
+void
 HMDataHostGroup::setCheckPlugin(HM_CHECK_PLUGIN_CLASS checkPlugin)
 {
     m_checkPlugin = checkPlugin;
+}
+
+void
+HMDataHostGroup::setRemoteCheckType(HM_REMOTE_CHECK_TYPE checkType)
+{
+    m_remoteCheckType = checkType;
 }
 
 string
@@ -238,6 +299,11 @@ HMDataHostGroup::getCheckType() const
     return m_checkType;
 }
 
+HM_REMOTE_CHECK_TYPE
+HMDataHostGroup::getRemoteCheckType() const
+{
+    return m_remoteCheckType;
+}
 uint16_t
 HMDataHostGroup::getCheckPort() const
 {
@@ -331,13 +397,24 @@ HMDataHostGroup::isValidHost(string& host) const
 uint32_t
 HMDataHostGroup::serialize(char* buf, uint32_t size) const
 {
-    uint32_t totalSize = sizeof(SerStruct) + m_groupName.size() + m_checkInfo.size();
+    HMLog(HM_LOG_DEBUG3, "Hostgroup  %s serialsation called ", m_groupName.c_str());
+    uint32_t totalSize = sizeof(SerStruct) + m_groupName.size() + m_checkInfo.size() + m_remoteCheck.size();
+    uint32_t hostGroupsSize = 0;
     uint32_t hostsSize = 0;
     for(auto it = m_hosts.begin(); it != m_hosts.end(); ++it)
     {
         hostsSize += (sizeof(uint32_t) + it->size());
     }
     totalSize += hostsSize;
+
+    //add hostgroups
+    for(auto it = m_hostGroups.begin(); it != m_hostGroups.end(); ++it)
+    {
+        hostGroupsSize += (sizeof(uint32_t) + it->size());
+    }
+    HMLog(HM_LOG_DEBUG3, "Hostgroup  %s has totalsize %d childhostgroupsize %d", m_groupName.c_str(),totalSize,hostGroupsSize);
+
+    totalSize += hostGroupsSize;
 
     if(buf == nullptr || size < totalSize)
     {
@@ -360,31 +437,53 @@ HMDataHostGroup::serialize(char* buf, uint32_t size) const
     ptr->m_checkTTL = m_checkTTL;
     ptr->m_flapThreshold = m_flapThreshold;
     ptr->m_passthroughInfo = m_passthroughInfo;
-
+    ptr->m_distributedFallback = m_distributedFallback;
+    ptr->m_sourceAddress = m_sourceAddress;
+    ptr->m_TOSValue = m_TOSValue;
+    ptr->m_flowType = m_flowType;
     ptr->m_groupNameSize = m_groupName.size();
     ptr->m_checkInfoSize = m_checkInfo.size();
     ptr->m_numHosts = m_hosts.size();
+    ptr->m_remoteCheckSize = m_remoteCheck.size();
     ptr->m_totalHostSize = hostsSize;
+    ptr->m_numHostGroups = m_hostGroups.size();
+    ptr->m_totalHostGroupSize = hostGroupsSize;
 
     // now we serialize the strings
     char* target = buf + sizeof(SerStruct);
-    strncpy(target, &m_groupName.at(0), m_groupName.size());
+    strncpy(target, m_groupName.c_str(), m_groupName.size());
     target += m_groupName.size();
 
     if(ptr->m_checkInfoSize)
     {
-        strncpy(target, &m_checkInfo.at(0), m_checkInfo.size());
+        strncpy(target, m_checkInfo.c_str(), m_checkInfo.size());
         target += m_checkInfo.size();
+    }
+
+    if (ptr->m_remoteCheckSize)
+    {
+        strncpy(target, m_remoteCheck.c_str(), m_remoteCheck.size());
+        target += m_remoteCheck.size();
     }
 
     // now add the hosts
     for(auto it = m_hosts.begin(); it != m_hosts.end(); ++it)
     {
-        *(uint32_t *)target = (uint32_t)it->size();
-        strncpy((target + sizeof(uint32_t)) , &(it->at(0)), it->size());
+        *(uint32_t*)target = (uint32_t)it->size();
+        strncpy((target + sizeof(uint32_t)) , it->c_str(), it->size());
         target += (sizeof(uint32_t) + it->size());
     }
 
+    //now add hostgroups
+    for(auto it = m_hostGroups.begin(); it != m_hostGroups.end(); ++it)
+    {
+        HMLog(HM_LOG_DEBUG3, "Host group %s  serializing %s", m_groupName.c_str(), it->c_str());
+        *(uint32_t*)target = (uint32_t)it->size();
+        strncpy((target + sizeof(uint32_t)) , it->c_str(), it->size());
+        target += (sizeof(uint32_t) + it->size());
+    }
+
+    HMLog(HM_LOG_DEBUG3, "%s on serialising returns total size %d", m_groupName.c_str(),totalSize);
     return totalSize;
 }
 
@@ -412,8 +511,11 @@ HMDataHostGroup::deserialize(char* buf, uint32_t size)
     m_checkTTL = ptr->m_checkTTL;
     m_flapThreshold = ptr->m_flapThreshold;
     m_passthroughInfo = ptr->m_passthroughInfo;
-
-    if(size < sizeof(SerStruct) + ptr->m_groupNameSize + ptr->m_checkInfoSize + ptr->m_totalHostSize)
+    m_sourceAddress = ptr->m_sourceAddress;
+    m_TOSValue = ptr->m_TOSValue;
+    m_flowType = (HM_FLOW_TYPE)ptr->m_flowType;
+    m_distributedFallback = HM_DISTRIBUTED_FALLBACK(ptr->m_distributedFallback);
+    if(size < sizeof(SerStruct) + ptr->m_groupNameSize + ptr->m_checkInfoSize + ptr->m_totalHostSize + ptr->m_totalHostGroupSize)
     {
         return false;
     }
@@ -430,12 +532,29 @@ HMDataHostGroup::deserialize(char* buf, uint32_t size)
         strncpy(&m_checkInfo.at(0), src, ptr->m_checkInfoSize);
         src += ptr->m_checkInfoSize;
     }
+
+    if (ptr->m_remoteCheckSize > 0)
+    {
+        m_remoteCheck.resize(ptr->m_remoteCheckSize);
+        strncpy(&m_remoteCheck.at(0), src, ptr->m_remoteCheckSize);
+        src += ptr->m_remoteCheckSize;
+    }
+
     m_hosts.resize(ptr->m_numHosts);
     for(uint32_t i = 0; i < ptr->m_numHosts; ++i)
     {
         uint32_t size = *(uint32_t*)src;
         m_hosts[i].resize(size);
         strncpy(&m_hosts[i].at(0), src + sizeof(uint32_t), size);
+        src += (size + sizeof(uint32_t));
+    }
+
+    m_hostGroups.resize(ptr->m_numHostGroups);
+    for(uint32_t i = 0; i < ptr->m_numHostGroups; ++i)
+    {
+        uint32_t size = *(uint32_t*)src;
+        m_hostGroups[i].resize(size);
+        strncpy(&m_hostGroups[i].at(0), src + sizeof(uint32_t), size);
         src += (size + sizeof(uint32_t));
     }
 
@@ -462,8 +581,125 @@ HMDataHostGroup::getHash(HMHashMD5& hash)
     hash.update(&m_checkTTL, (uint64_t) (sizeof(m_checkTTL)));
     hash.update(&m_flapThreshold, (uint64_t) (sizeof(m_flapThreshold)));
     hash.update(&m_passthroughInfo, (uint64_t) (sizeof(m_passthroughInfo)));
+
+    //source Address
+    uint8_t type = m_sourceAddress.getType();
+    hash.update(&type, (sizeof(type)));
+    if(type == AF_INET)
+    {
+        in_addr_t addr = m_sourceAddress.addr4();
+        hash.update(&addr, (sizeof(addr)));
+    }
+    else if(m_sourceAddress.getType() == AF_INET6)
+    {
+        in6_addr addr = m_sourceAddress.addr6();
+        hash.update(&addr, (sizeof(addr)));
+    }
+
+    hash.update(&m_TOSValue, (uint8_t)(sizeof(m_TOSValue)));
     for (string host: m_hosts)
     {
         hash.update(host.c_str(), (uint64_t) (host.length()));
     }
+
+    for (string hostgroup: m_hostGroups)
+    {
+        hash.update(hostgroup.c_str(), (uint64_t) (hostgroup.length()));
+    }
+}
+
+const
+std::string& HMDataHostGroup::getRemoteCheck() const
+{
+    return m_remoteCheck;
+}
+
+void
+HMDataHostGroup::setRemoteCheck(const std::string& remoteCheck)
+{
+    m_remoteCheck = remoteCheck;
+}
+
+void
+HMDataHostGroup::addHostGroup(std::string& hostGroup)
+{
+    if(find(m_hostGroups.begin(),m_hostGroups.end(), hostGroup) == m_hostGroups.end())
+    {
+        m_hostGroups.push_back(hostGroup);
+    }
+}
+
+const vector<string>*
+HMDataHostGroup::getHostGroupList() const
+{
+    return &m_hostGroups;
+}
+
+HM_DISTRIBUTED_FALLBACK
+HMDataHostGroup::getDistributedFallback() const
+{
+    return m_distributedFallback;
+}
+
+const
+HMHash& HMDataHostGroup::getHashValue() const
+{
+    return m_hashValue;
+}
+
+void
+HMDataHostGroup::setHashValue(const HMHash& hashValue)
+{
+    m_hashValue = hashValue;
+}
+
+const HMIPAddress&
+HMDataHostGroup::getSourceAddress() const
+{
+    return m_sourceAddress;
+}
+
+void
+HMDataHostGroup::setSourceAddress(HMIPAddress& sourceAddress)
+{
+    m_sourceAddress = sourceAddress;
+}
+
+
+HM_CHECK_PLUGIN_CLASS
+HMDataHostGroup::getCheckPlugin() const
+{
+    return m_checkPlugin;
+}
+
+uint8_t
+HMDataHostGroup::getTOSValue() const
+{
+    return m_TOSValue;
+}
+
+void
+HMDataHostGroup::setTOSValue(uint8_t tosValue)
+{
+    m_TOSValue = tosValue;
+}
+
+HM_DNS_TYPE HMDataHostGroup::getDNSType() const
+{
+    return m_DNSType;
+}
+
+void HMDataHostGroup::setDNSType(HM_DNS_TYPE dnstype)
+{
+    m_DNSType = dnstype;
+}
+
+HM_FLOW_TYPE HMDataHostGroup::getFlowType() const
+{
+    return m_flowType;
+}
+
+void HMDataHostGroup::setFlowType(HM_FLOW_TYPE flowType)
+{
+    m_flowType = flowType;
 }

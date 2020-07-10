@@ -36,7 +36,9 @@ void TESTNAME::test_parseDirectory()
     TestConfigParser parser;
     string path = "garbage";
     HMState state;
-    CPPUNIT_ASSERT_EQUAL(1, (int)HMConfigParserBase::parseDirectory(path,  state));
+    HMConfigParams configParams;
+    map<string,string> indirectHost;
+    CPPUNIT_ASSERT_EQUAL(1, (int)HMConfigParserBase::parseDirectory(path, state, configParams));
     
     path =
       "garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbage"
@@ -255,11 +257,11 @@ void TESTNAME::test_parseDirectory()
       "/garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbag"
       "e/garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbage/garbage"
       "/garbage/garbage/garbagegarbagegarbage";
-    CPPUNIT_ASSERT_EQUAL(1, (int)HMConfigParserBase::parseDirectory(path, state));
+    CPPUNIT_ASSERT_EQUAL(1, (int)HMConfigParserBase::parseDirectory(path, state, configParams));
       
     path = "./dir1";
-    CPPUNIT_ASSERT_EQUAL(0, (int)HMConfigParserBase::parseDirectory(path, state));
+    CPPUNIT_ASSERT_EQUAL(0, (int)HMConfigParserBase::parseDirectory(path, state, configParams));
 
     path = "./dir1/dir2";
-    CPPUNIT_ASSERT_EQUAL(0, (int)HMConfigParserBase::parseDirectory(path, state));
+    CPPUNIT_ASSERT_EQUAL(0, (int)HMConfigParserBase::parseDirectory(path, state, configParams));
 }

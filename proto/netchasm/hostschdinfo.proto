@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "netchasm/ipaddress.proto";
+
+package netchasm;
+
+message HostSchedInfo
+{
+    IPAddress address = 1;
+    uint64 lastCheckTime = 2;
+    uint64 nextCheckTime = 3;
+    uint32 state = 4;
+}
+
+message DNSSchedInfo
+{
+    bool hasv4 = 1;
+    bool hasv6 = 2;
+    uint64 v4LastCheckTime = 3;
+    uint64 v4NextCheckTime = 4;
+    uint32 v4State = 5;
+    uint64 v6LastCheckTime = 6;
+    uint64 v6NextCheckTime = 7;
+    uint32 v6State = 8;
+    repeated HostSchedInfo hostSchedInfo = 9;
+}

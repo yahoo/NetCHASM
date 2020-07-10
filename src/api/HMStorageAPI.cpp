@@ -9,145 +9,10 @@
 #include "HMLogBase.h"
 #include "HMLogAPI.h"
 #include "HMConstants.h"
-#include "HMDataHostGroup.h"
-#include "HMIPAddress.h"
 #include "HMStorage.h"
 #include "HMStateManager.h"
 
 using namespace std;
-
-HMAPICheckResult::HMAPICheckResult() :
-                m_start(0),
-                m_end(0),
-                m_responseTime(0),
-                m_totalResponseTime(0),
-                m_minResponseTime(0),
-                m_maxResponseTime(0),
-                m_smoothedResponseTime(0),
-                m_sumResponseTime(0),
-                m_numChecks(0),
-                m_numResponses(0),
-                m_numConnectFailures(0),
-                m_numFailures(0),
-                m_numTimeouts(0),
-                m_numFlaps(0),
-                m_status(0),
-                m_response(0),
-                m_reason(0),
-                m_numFailedChecks(0),
-                m_numSlowResponses(0),
-                m_port(0),
-                m_changeTime(0),
-                m_prevTime(0),
-                m_forceHostDown(false),
-                m_queueCheckTime(0),
-                m_checkTime(0) {}
-
-HMAPICheckResult::HMAPICheckResult(HMDataCheckResult& k)
-{
-    m_address.m_type = k.m_address.getType();
-    if(k.m_address.getType() == AF_INET)
-    {
-        m_address.m_ip.addr = k.m_address.addr4();
-    }
-    else if(k.m_address.getType() == AF_INET6)
-    {
-        m_address.m_ip.addr6 = k.m_address.addr6();
-    }
-    m_start = k.m_start.getTimeSinceEpoch();
-    m_end = k.m_end.getTimeSinceEpoch();
-    m_responseTime = k.m_responseTime;
-    m_totalResponseTime = k.m_totalResponseTime;
-    m_minResponseTime = k.m_minResponseTime;
-    m_maxResponseTime = k.m_maxResponseTime;
-    m_smoothedResponseTime = k.m_smoothedResponseTime;
-    m_sumResponseTime = k.m_sumResponseTime;
-    m_numChecks = k.m_numChecks;
-    m_numResponses = k.m_numResponses;
-    m_numConnectFailures = k.m_numConnectFailures;
-    m_numFailures = k.m_numFailures;
-    m_numTimeouts = k.m_numTimeouts;
-    m_numFlaps = k.m_numFlaps;
-    m_status = k.m_status;
-    m_response = k.m_response;
-    m_reason = k.m_reason;
-    m_numFailedChecks = k.m_numFailedChecks;
-    m_numSlowResponses = k.m_numSlowResponses;
-    m_port = k.m_port;
-    m_changeTime = k.m_changeTime.getTimeSinceEpoch();
-    m_prevTime = k.m_flapTime.getTimeSinceEpoch();
-    m_forceHostDown = k.m_forceHostDown;
-    m_queueCheckTime = k.m_queueCheckTime.getTimeSinceEpoch();
-    m_checkTime = k.m_checkTime.getTimeSinceEpoch();
-}
-
-HMAPIIPAddress::HMAPIIPAddress(uint8_t type)
-{
-    memset(&m_ip.addr6, 0, sizeof(in6_addr));
-    if(type == AF_INET)
-    {
-        m_type = AF_INET;
-        m_ip.addr = 0x00000000;
-    }
-    else if(type == AF_INET6)
-    {
-        m_type = AF_INET6;
-    }
-    else
-    {
-        m_type = AF_UNSPEC;
-    }
-}
-
-
-bool HMAPIIPAddress::set(string addr)
-{
-    if (inet_pton(AF_INET, addr.c_str(), &m_ip.addr) == 1)
-    {
-        m_type = AF_INET;
-        return true;
-    } else if (inet_pton(AF_INET6, addr.c_str(), &m_ip.addr6) == 1)
-    {
-        m_type = AF_INET6;
-        return true;
-    } else
-    {
-        m_type = AF_UNSPEC;
-    }
-    return false;
-}
-
-bool HMAPIIPAddress::operator ==(const HMAPIIPAddress &other) const
-{
-    if (m_type == other.m_type)
-    {
-        if (m_type == AF_INET)
-        {
-            return (memcmp(&m_ip, &other.m_ip, sizeof(in_addr_t)) == 0);
-        } else if (m_type == AF_INET6)
-        {
-            return (memcmp(&m_ip, &other.m_ip, sizeof(in6_addr)) == 0);
-        } else
-        {
-            return true;
-        }
-    } else
-    {
-        return false;
-    }
-}
-
-string
-HMAPIIPAddress::toString() const
-{
-    char buf[INET6_ADDRSTRLEN];
-    if (m_type == AF_INET || m_type == AF_INET6)
-    {
-        inet_ntop(m_type,&m_ip,buf,INET6_ADDRSTRLEN);
-        return buf;
-    }
-    return "";
-}
 
 HMStorageAPI::HMStorageAPI() :
     m_loaded(false)
@@ -196,18 +61,8 @@ HMStorageAPI::init(const string& masterConfig, bool localConfigs)
             m_currentState.reset();
             return false;
         }
-        m_currentState->generateHostCheckList();
-        m_currentState->generateDNSCheckList();
-        HMHashMD5 configHash;
-        HMConfigInfo configInfo;
-        configInfo.m_version = HM_MDBM_VERSION;
-        configInfo.m_configLoadTime = HMTimeStamp::now();
-        configInfo.m_configStatus = HM_CONFIG_STATUS_OK;
-        if (configHash.init())
-        {
-            m_currentState->HashHostGroupMap(configHash, configInfo.m_hash);
-        }
-        m_currentState->setHash(configInfo.m_hash);
+        m_currentState->generateCheckList();
+        m_currentState->hashConfigs();
     }
     else
     {
@@ -253,7 +108,11 @@ HMStorageAPI::getConfigInfo(HMAPIConfigInfo& result)
     result.m_version = configInfo.m_version;
     result.m_configError = (configInfo.m_configStatus == HM_CONFIG_STATUS_ERROR);
     result.m_timestamp = configInfo.m_configLoadTime.getTimeSinceEpoch();
-    std::memcpy(result.m_hash, configInfo.m_hash.m_hashValue, HASH_MAX_SIZE);
+    result.m_hash.m_hashSize = configInfo.m_hash.m_hashSize;
+    if(result.m_hash.m_hashSize)
+    {
+        memcpy(result.m_hash.m_hashValue, configInfo.m_hash.m_hashValue, result.m_hash.m_hashSize);
+    }
     return true;
 }
 
@@ -397,7 +256,7 @@ HMStorageAPI::getHostChecks(const std::string& host, std::vector<HMAPICheckInfo>
             info.m_measurementOptions = 0;
             info.m_ipv4 = (HM_DUALSTACK_IPV4_ONLY & it->m_hostCheck.getDualStack());
             info.m_ipv6 = (HM_DUALSTACK_IPV6_ONLY & it->m_hostCheck.getDualStack());
-            info.m_checkType = it->m_hostCheck.getCheckType();
+            info.m_checkType = (HM_API_CHECK_TYPE)it->m_hostCheck.getCheckType();
             info.m_port = it->m_hostCheck.getPort();
             info.m_checkInfo = it->m_hostCheck.getCheckInfo();
             info.m_numCheckRetries = it->m_checkParams.getNumCheckRetries();
@@ -408,7 +267,7 @@ HMStorageAPI::getHostChecks(const std::string& host, std::vector<HMAPICheckInfo>
             info.m_maxFlaps = it->m_checkParams.getMaxFlaps();
             info.m_checkTimeout = it->m_checkParams.getTimeout();
             info.m_checkTTL = it->m_checkParams.getTTL();
-            info.m_flapThreshold = it->m_checkParams.getFlapTheshold();
+            info.m_flapThreshold = it->m_checkParams.getFlapThreshold();
             info.m_passthroughInfo = it->m_checkParams.getPassthroughInfo();
 
             checks.push_back(info);
@@ -459,7 +318,7 @@ HMStorageAPI::getHostGroupInfo(const string& group, HMAPICheckInfo& info, vector
     info.m_measurementOptions = hgi->second.getMeasurementOptions();
     info.m_ipv4 = (HM_DUALSTACK_IPV4_ONLY & hgi->second.getDualstack());
     info.m_ipv6 = (HM_DUALSTACK_IPV6_ONLY & hgi->second.getDualstack());
-    info.m_checkType = hgi->second.getCheckType();
+    info.m_checkType = (HM_API_CHECK_TYPE)hgi->second.getCheckType();
     info.m_port = hgi->second.getCheckPort();
     info.m_checkInfo = hgi->second.getCheckInfo();
     info.m_numCheckRetries = hgi->second.getNumCheckRetries();
@@ -472,10 +331,15 @@ HMStorageAPI::getHostGroupInfo(const string& group, HMAPICheckInfo& info, vector
     info.m_checkTTL = hgi->second.getCheckTTL();
     info.m_flapThreshold = hgi->second.getFlapThreshold();
     info.m_passthroughInfo = hgi->second.getPassthroughInfo();
-
+    info.m_remoteCheck = hgi->second.getRemoteCheck();
     for(auto it = hgi->second.getHostList()->begin(); it != hgi->second.getHostList()->end(); ++it)
     {
         hosts.push_back(*it);
+    }
+
+    for(auto it = hgi->second.getHostGroupList()->begin(); it != hgi->second.getHostGroupList()->end(); ++it)
+    {
+        info.m_hostGroups.push_back(*it);
     }
     return true;
 }
@@ -882,7 +746,7 @@ HMStorageAPI::generateAuxXML(const std::string& name, std::vector<std::string>& 
 
         if (loadFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_LOAD_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_LOAD_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 fileContents.push_back(xml);
             }
@@ -890,7 +754,7 @@ HMStorageAPI::generateAuxXML(const std::string& name, std::vector<std::string>& 
 
         if (oobFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_OOB_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_OOB_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 fileContents.push_back(xml);
             }
@@ -948,7 +812,7 @@ HMStorageAPI::writeAuxXML(const std::string& name, std::vector<std::string>& fil
 
         if (loadFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_LOAD_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_LOAD_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 string fileName = name + "_" + auxResult->m_hostName + "_LoadFile.xml";
                 files.push_back(fileName);
@@ -958,7 +822,7 @@ HMStorageAPI::writeAuxXML(const std::string& name, std::vector<std::string>& fil
 
         if (oobFile)
         {
-            if(currentState->m_auxCache.genAuxXML(auxResult->m_info, HM_OOB_FILE, name, xml))
+            if(currentState->m_auxCache.genAuxData(auxResult->m_info, HM_OOB_FILE, name, xml, HM_AUX_DATA_XML))
             {
                 string fileName = name + "_" + auxResult->m_hostName + "_OOBFile.xml";
                 files.push_back(fileName);

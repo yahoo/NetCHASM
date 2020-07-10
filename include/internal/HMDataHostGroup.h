@@ -10,10 +10,10 @@
 #include "HMDataHostCheck.h"
 #include "HMDataCheckParams.h"
 #include "HMConstants.h"
+#include "HMStorage.h"
 #include "HMHashMD5.h"
 
 class HMHashMD5;
-
 class HMDataHostGroup
 {
 public:
@@ -22,6 +22,7 @@ public:
         m_measurementOptions(HM_RT_CONNECT),
         m_dualstack(HM_DUALSTACK_IPV4_ONLY),
         m_checkType(HM_CHECK_DEFAULT),
+        m_remoteCheckType(HM_REMOTE_CHECK_NONE),
         m_port(0),
         m_numCheckRetries(0),
         m_checkRetryDelay(0),
@@ -33,11 +34,17 @@ public:
         m_checkTTL(HM_DEFAULT_TTL),
         m_flapThreshold(HM_DEFAULT_FLAP_THRESHOLD),
         m_passthroughInfo(0),
-        m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT) {};
+        m_distributedFallback(HM_DISTRIBUTED_FALLBACK_NONE),
+        m_checkPlugin(HM_CHECK_PLUGIN_DEFAULT),
+        m_DNSType(HM_DNS_TYPE_LOOKUP),
+        m_TOSValue(0),
+        m_flowType(HM_FLOW_DNS_HEALTH_TYPE) {};
 
     bool operator<(const HMDataHostGroup& k) const;
     bool operator==(const HMDataHostGroup& k) const;
     bool operator!=(const HMDataHostGroup& k) const;
+
+    HMDataHostGroup(const std::string& groupName, HMAPICheckInfo& checkInfo);
 
     //! Fill in a host check data structure based on this host group info.
     /*!
@@ -102,7 +109,7 @@ public:
          Set the check info for this group.
          \param the check info setting.
      */
-    void setCheckInfo(std::string& checkInfo);
+    void setCheckInfo(const std::string& checkInfo);
 
     //! Set the check retries for this group.
     /*!
@@ -174,12 +181,34 @@ public:
      */
     void setPassthroughInfo(uint32_t info);
 
+    //! Set fallback mode for the remote check.
+    /*!
+         Set fallback mechanism for remote check.
+         \param remote fallback value
+     */
+    void setDistributedFallback(HM_DISTRIBUTED_FALLBACK distributedFallback);
+
+    //! Unset fallback mode for the remote check.
+    /*!
+         UnSet fallback mechanism for remote check.
+         \param remote fallback value
+     */
+    void unsetDistributedFallback(HM_DISTRIBUTED_FALLBACK distributedFallback);
+
+
     //! Set the check plugin for this group.
     /*!
          Set the check plugin for this group.
          \param the check plugin setting.
      */
     void setCheckPlugin(HM_CHECK_PLUGIN_CLASS checkPlugin);
+
+    //! Set the remote check type for this group.
+    /*!
+         Set the remote check type for this group.
+         \param the remote check type setting.
+     */
+    void setRemoteCheckType(HM_REMOTE_CHECK_TYPE checkType);
 
     //! Get the name of the group.
     /*!
@@ -201,6 +230,13 @@ public:
          \return the check type for the group.
      */
     HM_CHECK_TYPE getCheckType() const;
+
+    //! Get the remote check type for the group.
+    /*!
+         Get the remote check type for the group.
+         \return the remote check type for the group.
+     */
+    HM_REMOTE_CHECK_TYPE getRemoteCheckType() const;
 
     //! Get the check port for the group.
     /*!
@@ -334,14 +370,118 @@ public:
      */
     void getHash (HMHashMD5& hash);
 
+    //! Get the remote host used for the check.
+    /*!
+         Get the remote host used for the check.
+         \return the remote host string.
+     */
+    const std::string& getRemoteCheck() const;
+
+    //! Set the remote host used for the check.
+    /*!
+         Set the remote host used for the check.
+         \param the remote host string.
+     */
+    void setRemoteCheck(const std::string& remoteCheck);
+
+    //! Add a childhostgroup to the hostgroup list for this group.
+    /*!
+         Add a childhostgroup to the  hostgroup list for this group.
+         \param the hostgroup to add to the hostgroup list.
+     */    
+    void addHostGroup(std::string& hostGroup);
+    
+    //! Get the hostgroup list for the group.
+    /*!
+         Get the hostgroup list for the group.
+         \return a read only pointer to the hostgroup list for the group.
+     */    
+    const std::vector<std::string>* getHostGroupList() const;
+
+    //! Get the fallback for distributed check.
+    /*!
+         Get the fallback for distributed health check.
+         \return a fallback mode.
+     */
+    HM_DISTRIBUTED_FALLBACK getDistributedFallback() const;
+
+    const HMHash& getHashValue() const;
+
+    void setHashValue(const HMHash& hashValue);
+    //! Get the source ip specified for the check.
+    /*!
+         Get the source ip specified for the check.
+         \return the IP address.
+     */
+    const HMIPAddress& getSourceAddress() const;
+
+    //! Set the source ip for the check.
+    /*!
+         Set the source ip for the check.
+         \param the IP address to be used as source IP.
+     */
+    void setSourceAddress(HMIPAddress& sourceAddress);
+
+    //! Get the check plugin used for the check.
+    /*!
+         Get the check plugin used for the check.
+         \return the check plugin.
+     */
+    HM_CHECK_PLUGIN_CLASS getCheckPlugin() const;
+
+    //! Get the type of service value.
+    /*!
+         Get the type of service specified for the Host group.
+         \return the TOS value.
+     */
+    uint8_t getTOSValue() const;
+
+    //! Set the type of service value.
+    /*!
+         Set the type of service specified for the host group.
+         \param TOS value.
+     */
+    void setTOSValue(uint8_t tosValue);
+
+    //! Get the type of DNS check.
+    /*!
+         Get the type of DNS check for the host group.
+         \return the DNS check type.
+     */
+    HM_DNS_TYPE getDNSType() const;
+
+    //! Set the type of DNS check.
+    /*!
+         Set the type of DNS check for the health check.
+         \param the DNS check type.
+     */
+    void setDNSType(HM_DNS_TYPE dnstype);
+
+    //! Get the type of flow type.
+    /*!
+         Get the type of flow type for the host group.
+         \return the flow type.
+     */
+    HM_FLOW_TYPE getFlowType() const;
+
+    //! Set the type of flow type.
+    /*!
+         Set the type of flow type for the health check.
+         \param the flow type.
+     */
+    void setFlowType(HM_FLOW_TYPE flowType);
+
 private:
 
     std::string m_groupName;
     uint16_t m_measurementOptions;
     HM_DUALSTACK m_dualstack;
     HM_CHECK_TYPE m_checkType;
+    HM_REMOTE_CHECK_TYPE m_remoteCheckType;
     uint16_t m_port;
     std::string m_checkInfo;
+    std::string m_remoteCheck;
+    HMIPAddress m_sourceAddress;
     uint8_t m_numCheckRetries;
     uint32_t m_checkRetryDelay;
     uint32_t m_smoothingWindow;
@@ -352,8 +492,13 @@ private:
     uint64_t m_checkTTL;
     uint32_t m_flapThreshold;
     uint32_t m_passthroughInfo;
+    HM_DISTRIBUTED_FALLBACK m_distributedFallback;
+    HMHash m_hashValue;
     HM_CHECK_PLUGIN_CLASS m_checkPlugin;
-
+    HM_DNS_TYPE m_DNSType;
+    uint8_t m_TOSValue;
+    HM_FLOW_TYPE m_flowType;
+    std::vector<std::string> m_hostGroups;
     std::vector<std::string> m_hosts;
 
     struct SerStruct
@@ -372,11 +517,18 @@ private:
         uint64_t m_checkTTL;
         uint32_t m_flapThreshold;
         uint32_t m_passthroughInfo;
-
+        uint8_t m_distributedFallback;
         uint32_t m_groupNameSize;
         uint32_t m_checkInfoSize;
         uint32_t m_numHosts;
+        uint32_t m_remoteCheckSize;
         uint32_t m_totalHostSize;
+        uint32_t m_numHostGroups;
+        uint32_t m_totalHostGroupSize;
+        HMIPAddress m_sourceAddress;
+        uint8_t m_TOSValue;
+        uint8_t m_DNSCheckPlugin;
+        uint8_t m_flowType;
     };
 };
 

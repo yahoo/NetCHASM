@@ -12,6 +12,7 @@
 #include "HMConstants.h"
 #include "HMDNSCache.h"
 #include "HMLogBase.h"
+#include "HMHostMark.h"
 
 class HMThreadPool;
 class HMCommandListenerBase;
@@ -27,10 +28,22 @@ public:
     /*!
          Grab the latest version of the loaded state.
          Various classes in the codebase can keep a shared pointer on the state. Calling the update function at set times allows the work to finish and smoothly switch to a new state.
-         During a relaod, the reloader willl only garbage collect when the work has updated the shared pointer.
+         During a reload, the reloader will only garbage collect when the work has updated the shared pointer.
      */
     bool updateState(std::shared_ptr<HMState>& current);
 
+    //! Grab the transaction version of the loaded state.
+    /*!
+         Grab the transaction version of the loaded state.
+         During a reload, the reloader will only use this transaction state.
+     */
+    bool updateTransactionState(std::shared_ptr<HMState>& transactionState);
+
+    //! Reset transaction version of the loaded state to current state.
+    /*!
+         Reset transaction version of the loaded state to current state.
+     */
+    void resetTransactionState();
     //! Load the Daemon State and prepare the Daemon
     /*!
          Load the Daemon State and prepare the Daemon. Should only be called on initial load.
@@ -39,6 +52,29 @@ public:
          \return true on success.
      */
     bool loadDaemonState(const std::string& masterConfig, HM_LOG_LEVEL logLevel);
+
+    //! Load the certificate and key files
+    /*!
+         Load the certificate files and key files.
+         \return true on success.
+     */
+    bool loadCertificates();
+
+    //! Refresh the Daemon configs.
+    /*!
+     Trigger a commit of the configs to the Daemon. This will copy all the existing master config parameters.
+     Only the host groups added through the API will be committed.
+     \return corresponding corresponding status message.
+     */
+    HM_COMMIT_TRANSACTION_STATUS commitDaemonConfigs(HMHash& hash);
+
+    //! Refresh the Daemon configs.
+    /*!
+     Trigger a refresh of the configs in the Daemon. This will copy all the existing master config parameters.
+     Only the configs files and folders will be read again.
+     \return true on a successful reload.
+     */
+    bool refreshDaemonConfigs();
 
     //! Reaload the Daemon.
     /*!
@@ -192,8 +228,19 @@ public:
      */
     void setState(std::shared_ptr<HMState> debugState);
 
+    //! check is remote query reply is enabled
+    bool isEnableRemoteQueryReply() const;
+
+    //! set remote query reply flag
+    void setEnableRemoteQueryReply(bool enableRemoteQueryReply);
+
+    //! check if the health check scheduler is running/active
+    bool isActive() const;
+
     //! The Work Queue
     HMWorkQueue m_workQueue;
+
+    HMHostMark m_hostMark;
 
 private:
 
@@ -210,7 +257,13 @@ private:
 
     std::shared_ptr<HMState> m_currentState;
     std::shared_ptr<HMState> m_newState;
-    std::unique_ptr<HMCommandListenerBase> m_listener;
+    std::shared_ptr<HMState> m_newTransactionState;
+    std::vector<std::unique_ptr<HMCommandListenerBase>> m_listener;
+    bool m_enableRemoteQueryReply;
+    bool m_active;
+
+    //! Copy results from current state to new state. Swap states and garbage collect old state.
+    void swapStates();
 };
 
 #endif /* HMSTATEMANAGER_H_ */
