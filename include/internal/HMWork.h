@@ -85,7 +85,8 @@ public:
         m_reschedule(true),
         m_storeResults(true),
         m_publish(true),
-        m_mark(0) {};
+        m_mark(0),
+        m_stateVersion(0) {};
 
     HMWork(const std::string& hostname, const HMIPAddress& ip, const HMDataHostCheck& hostcheck) :
         m_hostname(hostname),
@@ -100,7 +101,8 @@ public:
         m_reschedule(true),
         m_storeResults(true),
         m_publish(true),
-        m_mark(0) {};
+        m_mark(0),
+        m_stateVersion(0) {};
 
     //! Called to update the state manager and event loop in case of a reload.
     /*!
@@ -169,6 +171,15 @@ public:
      */
     void setPublish(bool publish);
 
+    //! Called to set the state version .
+    /*!
+         \param value to be set.
+     */
+    void setStateVersion(uint32_t version);
+
+    //! Called to get the state version .
+    uint32_t getStateVersion();
+
     std::string m_hostname;
     HMIPAddress m_ipAddress;
     HMDataHostCheck m_hostCheck;
@@ -188,6 +199,7 @@ protected:
     bool m_storeResults;
     bool m_publish;
     int m_mark;
+    uint32_t m_stateVersion;
 };
 
 #endif /* HMWORKBASE_H_ */

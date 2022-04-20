@@ -148,7 +148,7 @@ HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
     // Note #2. This is only called at the beginning when we have no health check info saved. If we load cached DNS, this needs changed to handle existing DNS entries.
     shared_ptr<HMState> current;
     updateState(current);
-    current->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, true);
+    current->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, true, current->getStateVersion());
     current->m_remoteCache.queueRemoteLookups(m_workQueue, *m_eventLoop, current->m_hostGroups, true);
     current->m_remoteHostCache.queueRemoteLookups(m_workQueue, *m_eventLoop, true);
     const string socketPath = current->getSocketPath();
@@ -435,12 +435,13 @@ HMStateManager::loadDaemonState(const string& masterConfig, HM_LOG_LEVEL logLeve
 void
 HMStateManager::swapStates()
 {
+    m_newState->setStateVersion((m_currentState->getStateVersion()+1));
     m_newState->restoreRunningCheckState(m_currentState);
     m_newTransactionState = make_shared<HMState>(*(m_newState.get()));
     m_currentState.swap(m_newState);
     m_currentState->resheduleDNSChecks(m_newState, m_workQueue);
     m_currentState->resheduleHealthChecks(m_newState, m_workQueue);
-    m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, false);
+    m_currentState->m_dnsCache.queueDNSLookups(m_workQueue, *m_eventLoop, true, m_currentState->getStateVersion());
     m_currentState->m_remoteCache.queueRemoteLookups(m_workQueue, *m_eventLoop, m_currentState->m_hostGroups, false);
     m_currentState->m_remoteHostCache.queueRemoteLookups(m_workQueue, *m_eventLoop, false);
     m_currentState->updateBackend(m_newState);

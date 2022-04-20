@@ -732,17 +732,17 @@ HMState::forceHealthCheck(const string& hostGroup, HMWorkQueue& workQueue)
                             if(*address == HMIPAddress(AF_INET))
                             {
                                 HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), false, hostGroupInfo->second.getRemoteCheck());
-                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue, getStateVersion());
                             }
                             else if(*address == HMIPAddress(AF_INET6))
                             {
                                 HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), true, hostGroupInfo->second.getRemoteCheck());
-                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                                m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue, getStateVersion());
                             }
                         }
                         else
                         {
-                            m_checkList.queueCheck(*it, *address, dataCheck, workQueue);
+                            m_checkList.queueCheck(*it, *address, dataCheck, workQueue, getStateVersion());
                         }
                     }
                 }
@@ -772,17 +772,17 @@ HMState::forceHealthCheck(const string& hostGroup, const string& hostName, HMWor
                         if(*address == HMIPAddress(AF_INET))
                         {
                             HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), false, hostGroupInfo->second.getRemoteCheck());
-                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
                         }
                         else if(*address == HMIPAddress(AF_INET6))
                         {
                             HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), true, hostGroupInfo->second.getRemoteCheck());
-                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
                         }
                     }
                     else
                     {
-                        m_checkList.queueCheck(hostName, *address, dataCheck, workQueue);
+                        m_checkList.queueCheck(hostName, *address, dataCheck, workQueue, getStateVersion());
                     }
                 }
             }
@@ -806,13 +806,13 @@ HMState::forceDNSCheck(const string &hostGroup, HMWorkQueue& workQueue)
                 {
                     HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), false, hostGroupInfo->second.getRemoteCheck());
                     dnsHostCheck.setPlugin(getDNSPlugin(dataCheck.getDnsType()));
-                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue, getStateVersion());
                 }
                 if(dataCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
                 {
                     HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), true, hostGroupInfo->second.getRemoteCheck());
                     dnsHostCheck.setPlugin(getDNSPlugin(dataCheck.getDnsType()));
-                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue);
+                    m_dnsCache.queueDNSQuery(*it, dnsHostCheck, workQueue, getStateVersion());
                 }
             }
         }
@@ -832,13 +832,13 @@ HMState::forceDNSCheck(const string &hostGroup, const string &hostName, HMWorkQu
             {
                 HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), false, hostGroupInfo->second.getRemoteCheck());
                 dnsHostCheck.setPlugin(getDNSPlugin(dataCheck.getDnsType()));
-                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
             }
             if(dataCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
             {
                 HMDNSLookup dnsHostCheck(dataCheck.getDnsType(), true, hostGroupInfo->second.getRemoteCheck());
                 dnsHostCheck.setPlugin(getDNSPlugin(dataCheck.getDnsType()));
-                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+                m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
             }
         }
     }
@@ -864,11 +864,11 @@ HMState::forceDNSCheck(const string &hostName,  HM_DNS_TYPE dnsType, const set<H
     if (ipv4)
     {
         //TODO remote check is provided empty. Need to implement if remote feature is needed for static checks
-        HMDNSLookup dnsHostCheck(dnsType, false);
+        HMDNSLookup dnsHostCheck(dnsType, getDNSPlugin(dnsType), false);
 
         if(m_dnsCache.getDNSResult(hostName, dnsHostCheck, iter))
         {
-            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
         }
         else
         {
@@ -881,10 +881,10 @@ HMState::forceDNSCheck(const string &hostName,  HM_DNS_TYPE dnsType, const set<H
     if (ipv6)
     {
         //TODO remote check is provided empty. Need to implement if remote feature is needed for static checks
-        HMDNSLookup dnsHostCheck(dnsType, true);
+        HMDNSLookup dnsHostCheck(dnsType, getDNSPlugin(dnsType), true);
         if (m_dnsCache.getDNSResult(hostName, dnsHostCheck, iter))
         {
-            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue);
+            m_dnsCache.queueDNSQuery(hostName, dnsHostCheck, workQueue, getStateVersion());
         }
         else
         {
@@ -1050,7 +1050,7 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                     {
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
                         {
-                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue);
+                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue, getStateVersion());
                         }
                     }
                 }
@@ -1074,7 +1074,7 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                         string hostName = *hostname;
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
                         {
-                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue);
+                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue, getStateVersion());
                         }
                     }
                 }
@@ -1095,7 +1095,7 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                         string hostName = *hostname;
                         for(auto address = addresses.begin(); address != addresses.end(); ++address)
                         {
-                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue);
+                            m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue, getStateVersion());
                         }
                     }
                 }
@@ -1119,7 +1119,7 @@ HMState::resheduleHealthChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                 {
                     for(auto address = addresses.begin(); address != addresses.end(); ++address)
                     {
-                        m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue);
+                        m_checkList.queueCheck(hostName, *address, nDataCheck, workQueue, getStateVersion());
                     }
                 }
             }
@@ -1148,7 +1148,7 @@ HMState::resheduleDNSChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                 {
                     if(resultSrcDNS->second.getDNSTTL() < resultDestDNS->second.getDNSTTL())
                     {
-                       m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue);
+                       m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue, getStateVersion());
                     }
                 }
             }
@@ -1164,7 +1164,7 @@ HMState::resheduleDNSChecks(shared_ptr<HMState> src, HMWorkQueue& workQueue)
                 {
                     if(resultSrcDNS->second.getDNSTTL() < resultDestDNS->second.getDNSTTL())
                     {
-                        m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue);
+                        m_dnsCache.queueDNSQuery(it->m_hostname, dnsHostCheck, workQueue, getStateVersion());
                     }
                 }
             }
@@ -1905,4 +1905,14 @@ HM_DNS_PLUGIN_CLASS HMState::getDNSPlugin(HM_DNS_TYPE dnsType)
     }
     HMLog(HM_LOG_ERROR, "[CORE] Invalid DNS type  %s", printDnsType(dnsType));
     return HM_DNS_PLUGIN_NONE;
+}
+
+void HMState::setStateVersion(uint32_t version)
+{
+   m_stateVersion = version;
+}
+
+uint32_t HMState::getStateVersion()
+{
+   return m_stateVersion;
 }

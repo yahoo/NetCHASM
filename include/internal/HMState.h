@@ -65,6 +65,7 @@ public:
         m_nMaxThreads(1),
         m_nMinThreads(1),
         m_connectionTimeout(3000),
+        m_stateVersion(0),
         m_logClass(HM_LOG_PLUGIN_TEXT),
         m_logLevel(HM_LOG_NOTICE),
         m_logPath(HM_DEFAULT_LOG_PATH),
@@ -531,6 +532,12 @@ public:
     //! Enable/Disbale lib-event type DNS check
     void setLibEventEnabled(bool libEventEnabled);
 
+    //! Set the state version
+    void setStateVersion(uint32_t version);
+
+    //! Get the state version
+    uint32_t getStateVersion();
+
     //! get the DNS plugin for the set DNS type
     HM_DNS_PLUGIN_CLASS getDNSPlugin(HM_DNS_TYPE dnstype);
 
@@ -594,6 +601,8 @@ private:
     uint32_t m_nMaxThreads;
     uint32_t m_nMinThreads;
     uint64_t m_connectionTimeout;
+
+    uint32_t m_stateVersion;
 
     HM_LOG_PLUGIN_CLASS m_logClass;
     HM_LOG_LEVEL m_logLevel;

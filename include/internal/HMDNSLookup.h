@@ -51,6 +51,10 @@ public:
         m_type(type),
         m_ipv6(ipv6),
         m_plugin(HM_DNS_PLUGIN_NONE) {}
+    HMDNSLookup(HM_DNS_TYPE type, HM_DNS_PLUGIN_CLASS plugin, bool ipv6) :
+       m_type(type),
+       m_ipv6(ipv6),
+       m_plugin(plugin) {}
     HMDNSLookup(HM_DNS_TYPE type, bool ipv6, const std::string& remoteCheck) :
         m_type(type),
         m_ipv6(ipv6),

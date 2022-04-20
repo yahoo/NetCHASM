@@ -58,8 +58,9 @@ public:
          \param the hostname to resolve.
          \param structure holding DNS type and address type(v4 or v6).
          \param the time Stamp of when the DNS resolution should take place.
+         \param state version that issued the call.
      */
-    virtual void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp) = 0;
+    virtual void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp, uint32_t version) = 0;
 
     //! Add a new Remote timeout.
     /*!
@@ -84,11 +85,13 @@ public:
          \param the IP address to health check.
          \param the host check to conduct.
          \param the time stamp of when the health check should take place.
+         \param state version that issued the call.
      */
     virtual void addHealthCheckTimeout(const std::string& hostname,
             const HMIPAddress& address,
             const HMDataHostCheck hostCheck,
-            HMTimeStamp timeStamp) = 0;
+            HMTimeStamp timeStamp,
+            uint32_t version) = 0;
 protected:
 
     //! The internal run function.

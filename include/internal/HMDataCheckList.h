@@ -49,9 +49,10 @@ public:
         \param hostname to check.
         \param ip to check.
         \param hostCheck parameters to use for the check.
+        \param version of the current state.
         \return the schedule state. Either queue work, a timeout event or ignore.
      */
-    HM_SCHEDULE_STATE checkNeeded(std::string& hostname, HMIPAddress& ip, HMDataHostCheck& hostCheck);
+    HM_SCHEDULE_STATE checkNeeded(std::string& hostname, HMIPAddress& ip, HMDataHostCheck& hostCheck, uint32_t version=0);
 
     //! nextCheckTime determines the next timeStamp to conduct the given check.
     /*!
@@ -59,9 +60,10 @@ public:
          \param hostname to check.
          \param ip address to check.
          \param hostCheck parameters to be used for the check.
+         \param version of the current state.
          \return An HMTimeStamp of the time the next check should occur.
      */
-    HMTimeStamp nextCheckTime(std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& hostCheck);
+    HMTimeStamp nextCheckTime(std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& hostCheck, uint32_t version=0);
 
     //! Get the check timeout based on the TTL of this check.
     /*!
@@ -82,8 +84,9 @@ public:
          \param hostCheck data to be used for the check.
          \param the work queue to insert the check.
          \param enable remote check(default is false)
+         \param state version for the check
      */
-    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue);
+    void queueCheck(const std::string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue, uint32_t version);
 
     //! This function is called by the worker thread when the check is removed from the work queue and is executed.
     /*
@@ -92,9 +95,10 @@ public:
          \param hostname of the check.
          \param ip of the check.
          \param hostCheck data to use for the check.
+         \param version of the check.
          \return the timeout of the check. It can be rescheduled if this timeout elapses.
      */
-    HMTimeStamp startCheck(std::string& hostname, HMIPAddress& ip, HMDataHostCheck& check);
+    HMTimeStamp startCheck(std::string& hostname, HMIPAddress& ip, HMDataHostCheck& check, uint32_t version=0);
 
     //! This function retrieves the host groups associated with the given check and check params.
     /*

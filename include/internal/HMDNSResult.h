@@ -25,6 +25,7 @@ public:
 
     HMDNSResult() :
         m_queryState(HM_CHECK_INACTIVE),
+        m_queryVersion(0),
         m_queryTimeout(HM_DEFAULT_DNS_RESOLUTION_TIMEOUT),
         m_dnsTimeout(HM_DEFAULT_DNS_TTL) {};
 
@@ -33,12 +34,14 @@ public:
         m_dnsTimeout = k.m_dnsTimeout;
         m_queryTimeout = k.m_queryTimeout;
         m_queryState = k.m_queryState;
+        m_queryVersion = 0;
         m_queryTime = k.m_queryTime;
         m_resultTime = k.m_resultTime;
     }
 
     HMDNSResult(uint64_t ttl, uint64_t timeout) :
         m_queryState(HM_CHECK_INACTIVE),
+        m_queryVersion(0),
         m_queryTimeout(timeout),
         m_dnsTimeout(ttl) {};
 
@@ -67,30 +70,34 @@ public:
 	/*!
 	     Start the DNS resolution for this result.
 	     Sets the internal state to HM_CHECK_IN_PROGRESS.
+             \param version of the query.
 	     \return the HMTimeStamp with the check timeout value. (To determine when to reschedule in case of timeout.)
 	 */
-	HMTimeStamp startQuery();
+	HMTimeStamp startQuery(uint32_t version=0);
 
 	//! Finish the DNS resolution for this result.
 	/*!
 	     Finish the DNS resolution for this result. Set the internal state to either HM_CHECK_IDLE or HM_CHECK_FAILED.
 	     \param true if the lookup was a success.
+             \param version of the query.
 	 */
 	void finishQuery(bool success);
 
 	//! Determine if the DNS query needs to be run now.
 	/*!
 	     Determine if the DNS query needs to be run now.
+             \param version of the current state.
 	     \return true if the check is expired and needs to be run now.
 	 */
-	bool queryNeeded() const;
+	bool queryNeeded(uint32_t version=0) const;
 
 	//! Determine the time of the next required DNS resolution for this entry.
 	/*!
 	     Determine the time of the next required DNS resolution for this entry.
+             \param version of the current state.
 	     \return HMTimeStamp of the next required DNS resolution for this entry.
 	 */
-	HMTimeStamp nextQueryTime() const;
+	HMTimeStamp nextQueryTime(uint32_t version=0) const;
 
 	//! Get the TTL of this DNS resolution.
 	/*!
@@ -139,6 +146,13 @@ public:
 	 */
     HM_WORK_STATE getQueryState() const;
 
+    //! Get the version of the internal state machine.
+    /*!
+     *   Get the version of the internal state machine.
+     *   \return the version of the check.
+     */
+    uint32_t getQueryVersion() const;
+
     //! Get the last time the DNS resolution occurred.
     /*!
          Get the last time the DNS resolution occurred.
@@ -158,6 +172,7 @@ private:
 	mutable std::shared_timed_mutex m_resultLock;
 
 	HM_WORK_STATE m_queryState;
+        uint32_t m_queryVersion;
 	HMTimeStamp m_queryTime;
 	HMTimeStamp m_resultTime;
 

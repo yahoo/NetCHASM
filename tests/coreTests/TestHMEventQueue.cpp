@@ -39,7 +39,7 @@ void TESTNAME::test_basic_DNS_eventqueue()
     HMDNSLookup dnsHostCheckF(HM_DNS_TYPE_STATIC, false);
     dnsHostCheckF.setPlugin(HM_DNS_PLUGIN_STATIC);
     m_currentState->m_dnsCache.insertDNSEntry(dummy,dnsHostCheckF,300,3000);
-    m_eventQueue->addDNSTimeout(dummy, dnsHostCheckF, HMTimeStamp::now());
+    m_eventQueue->addDNSTimeout(dummy, dnsHostCheckF, HMTimeStamp::now(), 0);
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());
     unique_ptr<HMWork> work;
@@ -76,9 +76,17 @@ void TESTNAME::test_basic_HC_eventqueue()
     m_currentState->m_checkList.insertCheck("HostGroup1", dummy, check1,
             params,ips);
     m_eventQueue->addHealthCheckTimeout(dummy, ip, check1,
-            HMTimeStamp::now());
+            HMTimeStamp::now(), 0);
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());
+
+    // Now add a HC timeout with a different state version and ensure
+    // it is not added to the workqueue
+    m_eventQueue->addHealthCheckTimeout(dummy, ip, check1,
+          HMTimeStamp::now(), 1);
+    std::this_thread::sleep_for(2s);
+    CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());
+
     unique_ptr<HMWork> work;
     bool threadStatus = false;
     m_state.m_workQueue.getWork(work, threadStatus);
@@ -139,9 +147,9 @@ void TESTNAME::test_ordering_HC_eventqueue()
             params,ips1);
     m_currentState->m_checkList.insertCheck("HostGroup1", dummy3, check1,
             params,ips2);
-    m_eventQueue->addHealthCheckTimeout(dummy1, ip0, check1, t1);
-    m_eventQueue->addHealthCheckTimeout(dummy2, ip1, check1, t2);
-    m_eventQueue->addHealthCheckTimeout(dummy3, ip2, check1, t3);
+    m_eventQueue->addHealthCheckTimeout(dummy1, ip0, check1, t1, 0);
+    m_eventQueue->addHealthCheckTimeout(dummy2, ip1, check1, t2, 0);
+    m_eventQueue->addHealthCheckTimeout(dummy3, ip2, check1, t3, 0);
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(3, (int )m_state.m_workQueue.queueSize());
     unique_ptr<HMWork> work;
@@ -194,8 +202,8 @@ void TESTNAME::test_delay_HC_eventqueue()
             params,ips);
     m_currentState->m_checkList.insertCheck("HostGroup1", dummy2, check1,
             params1,ips2);
-    m_eventQueue->addHealthCheckTimeout(dummy1, ip, check1, t1);
-    m_eventQueue->addHealthCheckTimeout(dummy2, ip2, check1, t2);
+    m_eventQueue->addHealthCheckTimeout(dummy1, ip, check1, t1, 0);
+    m_eventQueue->addHealthCheckTimeout(dummy2, ip2, check1, t2, 0);
     CPPUNIT_ASSERT_EQUAL(0, (int )m_state.m_workQueue.queueSize());
     std::this_thread::sleep_for(2s);
     CPPUNIT_ASSERT_EQUAL(1, (int )m_state.m_workQueue.queueSize());

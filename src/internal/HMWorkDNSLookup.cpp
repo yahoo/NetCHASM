@@ -18,7 +18,7 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     shared_ptr<HMState> currentState;
     m_stateManager->updateState(currentState);
 
-    if(!currentState->m_dnsCache.startDNSQuery(m_hostname, m_dnsHostCheck))
+    if(!currentState->m_dnsCache.startDNSQuery(m_hostname, m_dnsHostCheck, getStateVersion()))
     {
         return HM_WORK_COMPLETE;
     }
@@ -29,17 +29,17 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
     m_stateManager->updateState(currentState);
 
     // Make sure we completed the query with success and don't need another
-    HMTimeStamp checkTime = currentState->m_dnsCache.nextQueryTime(m_hostname, m_dnsHostCheck);
-    if (m_reschedule)
+    HMTimeStamp checkTime = currentState->m_dnsCache.nextQueryTime(m_hostname, m_dnsHostCheck, currentState->getStateVersion());
+    if (m_reschedule || m_response == HM_RESPONSE_DNS_FAILED)
     {
         if (checkTime <= HMTimeStamp::now())
         {
             currentState->m_dnsCache.queueDNSQuery(m_hostname, m_dnsHostCheck,
-                    m_stateManager->m_workQueue);
+                    m_stateManager->m_workQueue, getStateVersion());
         }
         else
         {
-            m_eventLoop->addDNSTimeout(m_hostname, m_dnsHostCheck, checkTime);
+            m_eventLoop->addDNSTimeout(m_hostname, m_dnsHostCheck, checkTime, getStateVersion());
         }
     }
     if(!result)
@@ -97,14 +97,19 @@ HM_WORK_STATUS HMWorkDNSLookup::processWork()
                 continue;
             }
             HMLog(HM_LOG_DEBUG3, "[WORKER] [%llu] IP %s", m_ID, iit->toString().c_str());
-            checkTime = currentState->m_checkList.nextCheckTime(m_hostname, *iit, check);
+            checkTime = currentState->m_checkList.nextCheckTime(m_hostname, *iit, check, currentState->getStateVersion());
             HMLog(HM_LOG_DEBUG3, "[WORKER] [%llu] Next check time %llu for %s at %s", m_ID,
                     checkTime.getTimeSinceEpoch(),
                     m_hostname.c_str(),
                     iit->toString().c_str());
             if(checkTime <= HMTimeStamp::now())
             {
-                currentState->m_checkList.queueCheck(m_hostname, *iit, check, m_stateManager->m_workQueue);
+                currentState->m_checkList.queueCheck(m_hostname, *iit, check, m_stateManager->m_workQueue, getStateVersion());
+            }
+            else{
+               // We will hit this path after a reload for hosts
+               // that were already being probed if we change the probe type.
+               m_eventLoop->addHealthCheckTimeout(m_hostname, *iit, check, checkTime, getStateVersion());
             }
         }
     }
