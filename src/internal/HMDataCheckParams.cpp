@@ -132,13 +132,13 @@ HMDataCheckParams::setHostStatus(const HMIPAddress& address, bool forceHostStatu
 }
 
 bool
-HMDataCheckParams::checkNeeded(HMIPAddress& address)
+HMDataCheckParams::checkNeeded(HMIPAddress& address, uint32_t version)
 {
-    return (nextCheckTime(address) <= HMTimeStamp::now());
+    return (nextCheckTime(address, version) <= HMTimeStamp::now());
 }
 
 HMTimeStamp
-HMDataCheckParams::nextCheckTime(const HMIPAddress& address)
+HMDataCheckParams::nextCheckTime(const HMIPAddress& address, uint32_t version)
 {
     lock_guard<shared_timed_mutex> lock(m_sharedMutex);
     HMTimeStamp now = HMTimeStamp::now();
@@ -147,7 +147,10 @@ HMDataCheckParams::nextCheckTime(const HMIPAddress& address)
     {
         return now;
     }
-    
+   
+    if ( version && it->second.m_queryVersion != version ) {
+       return now;
+    }
     HMTimeStamp nextchecktime;
     nextchecktime =  now + HMTimeStamp::HOURINMS;
     if(it->second.m_queryState == HM_CHECK_INACTIVE || it->second.m_queryState == HM_CHECK_FAILED)
@@ -207,7 +210,7 @@ HMDataCheckParams::emptyQuery(const HMIPAddress& address)
 }
 
 void
-HMDataCheckParams::startQuery(HMIPAddress& address)
+HMDataCheckParams::startQuery(HMIPAddress& address, uint32_t version)
 {
     lock_guard<shared_timed_mutex> lock(m_sharedMutex);
     auto it = m_checkData.find(address);
@@ -217,6 +220,7 @@ HMDataCheckParams::startQuery(HMIPAddress& address)
     }
     it->second.m_checkTime = HMTimeStamp::now();
     it->second.m_queryState = HM_CHECK_IN_PROGRESS;
+    it->second.m_queryVersion = version;
 }
 
 bool
@@ -632,6 +636,19 @@ HMDataCheckParams::getQueryState(HMIPAddress& address)
 
     return it->second.m_queryState;
 
+}
+
+uint32_t
+HMDataCheckParams::getQueryVersion(HMIPAddress& address)
+{
+   lock_guard<shared_timed_mutex> lock(m_sharedMutex);
+
+   auto it = m_checkData.find(address);
+   if(it == m_checkData.end())
+   {
+      return 0;
+   }
+   return it->second.m_queryVersion;
 }
 
 void

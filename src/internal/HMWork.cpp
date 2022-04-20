@@ -98,3 +98,13 @@ void HMWork::setPublish(bool publish)
 {
     m_publish = publish;
 }
+
+uint32_t HMWork::getStateVersion()
+{
+   return m_stateVersion;
+}
+
+void HMWork::setStateVersion(uint32_t version)
+{
+   m_stateVersion = version;
+}

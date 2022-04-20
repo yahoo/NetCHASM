@@ -62,7 +62,7 @@ HM_WORK_STATUS HMWorkRemoteHostCheck::processWork()
                     m_hostCheck.getRemoteCheck());
             lookup.setPlugin(currentState->getDNSPlugin(m_hostCheck.getDnsType()));
             currentState->m_dnsCache.queueDNSQuery(m_hostname, lookup,
-                    m_stateManager->m_workQueue);
+                    m_stateManager->m_workQueue, currentState->getStateVersion());
         }
         if (m_hostCheck.getDualStack() & HM_DUALSTACK_IPV6_ONLY)
         {
@@ -70,7 +70,7 @@ HM_WORK_STATUS HMWorkRemoteHostCheck::processWork()
                     m_hostCheck.getRemoteCheck());
             lookup.setPlugin(currentState->getDNSPlugin(m_hostCheck.getDnsType()));
             currentState->m_dnsCache.queueDNSQuery(m_hostname, lookup,
-                    m_stateManager->m_workQueue);
+                    m_stateManager->m_workQueue, currentState->getStateVersion());
         }
     }
     return m_workStatus;

@@ -194,7 +194,7 @@ HMDNSCache::getDNSResult(const string& name, const HMDNSLookup& dnsHostCheck, ma
 }
 
 HM_SCHEDULE_STATE
-HMDNSCache::queryNeeded(const string& name, const HMDNSLookup& dnsHostCheck) const
+HMDNSCache::queryNeeded(const string& name, const HMDNSLookup& dnsHostCheck, uint32_t version) const
 {
     HM_SCHEDULE_STATE result = HM_SCHEDULE_EVENT;
     bool alreadyScheduled = true;
@@ -204,7 +204,11 @@ HMDNSCache::queryNeeded(const string& name, const HMDNSLookup& dnsHostCheck) con
     auto ret = m_cache.find(key);
     if(ret != m_cache.end())
     {
-        HMTimeStamp checkTime = ret->second.nextQueryTime();
+        if ( ret->second.getQueryVersion() != version )
+        {
+           return HM_SCHEDULE_WORK;
+        }
+        HMTimeStamp checkTime = ret->second.nextQueryTime(version);
         HM_WORK_STATE query_state = ret->second.getQueryState();
         if ((query_state == HM_CHECK_FAILED)
                 || (query_state == HM_CHECK_INACTIVE))
@@ -235,7 +239,7 @@ HMDNSCache::queryNeeded(const string& name, const HMDNSLookup& dnsHostCheck) con
 }
 
 HMTimeStamp
-HMDNSCache::nextQueryTime(const string& name, const HMDNSLookup& dnsHostCheck) const
+HMDNSCache::nextQueryTime(const string& name, const HMDNSLookup& dnsHostCheck, uint32_t version) const
 {
     auto key = make_pair(name, dnsHostCheck);
     auto it = m_cache.find(key);
@@ -246,11 +250,11 @@ HMDNSCache::nextQueryTime(const string& name, const HMDNSLookup& dnsHostCheck) c
                         name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return HMTimeStamp::now() + HMTimeStamp::HOURINMS;
     }
-    return it->second.nextQueryTime();
+    return it->second.nextQueryTime(version);
 }
 
 bool
-HMDNSCache::startDNSQuery(const string& name, HMDNSLookup& dnsHostCheck)
+HMDNSCache::startDNSQuery(const string& name, HMDNSLookup& dnsHostCheck, uint32_t version)
 {
     auto key = make_pair(name, dnsHostCheck);
     auto it = m_cache.find(key);
@@ -261,12 +265,12 @@ HMDNSCache::startDNSQuery(const string& name, HMDNSLookup& dnsHostCheck)
                 name.c_str(), printDnsType(dnsHostCheck.getType()).c_str());
         return false;
     }
-    it->second.startQuery();
+    it->second.startQuery(version);
     return true;
 }
 
 void
-HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& queue)
+HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& queue, uint32_t version)
 {
     HMLog(HM_LOG_DEBUG, "[DEBUG] DNS Health Check QueueCheck for %s",
             name.c_str());
@@ -297,6 +301,8 @@ HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& q
                                                                       AF_INET),
                             HMDataHostCheck(it->first.second.getType()),
                             it->first.second));
+            dnslookup->setReschedule(false);
+            dnslookup->setStateVersion(version);
             break;
         }
         break;
@@ -334,7 +340,7 @@ HMDNSCache::queueDNSQuery(string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& q
 }
 
 void
-HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool restart)
+HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool restart, uint32_t version)
 {
     for(auto it = m_cache.begin(); it != m_cache.end(); ++it)
     {
@@ -344,7 +350,7 @@ HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool res
         {
             continue;
         }
-        HM_SCHEDULE_STATE state = this->queryNeeded(it->first.first, it->first.second);
+        HM_SCHEDULE_STATE state = this->queryNeeded(it->first.first, it->first.second, version);
         if(state == HM_SCHEDULE_EVENT || state == HM_SCHEDULE_WORK)
         {
             // if there is no active query, then we add one
@@ -364,6 +370,8 @@ HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool res
                                                     AF_INET6 : AF_INET),
                                     HMDataHostCheck(it->first.second.getType()),
                                     it->first.second));
+                    dnslookup->setReschedule(false);
+                    dnslookup->setStateVersion(version);
                     break;
                 }
                 break;
@@ -398,8 +406,8 @@ HMDNSCache::queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool res
         }
         else if(restart && (state == HM_SCHEDULE_IGNORE))
         {
-            HMTimeStamp checkTime = nextQueryTime(it->first.first, it->first.second);
-            eventLoop.addDNSTimeout(it->first.first, it->first.second, checkTime);
+            HMTimeStamp checkTime = nextQueryTime(it->first.first, it->first.second, version);
+            eventLoop.addDNSTimeout(it->first.first, it->first.second, checkTime, version);
         }
     }
 }

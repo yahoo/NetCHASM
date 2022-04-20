@@ -271,7 +271,8 @@ HMEventLoopLibEvent::handleDNSTimeout(evutil_socket_t fd, short what, void* arg)
                 data->m_hostname.c_str());
         currentState->m_dnsCache.queueDNSQuery(data->m_hostname,
                 data->m_dnsHostCheck,
-                state->m_workQueue);
+                state->m_workQueue,
+                state->getStateVersion());
     }
     else if (check_state == HM_SCHEDULE_EVENT)
     {
@@ -409,7 +410,8 @@ HMEventLoopLibEvent::handleHealthCheckTimeout(evutil_socket_t fd, short what, vo
                 data->m_hostname.c_str());
         currentState->m_checkList.queueCheck(data->m_hostname,
                 data->m_address, data->m_hostCheck,
-                state->m_workQueue);
+                state->m_workQueue,
+                state->getStateVersion());
     }
     else if (check_state == HM_SCHEDULE_EVENT)
     {

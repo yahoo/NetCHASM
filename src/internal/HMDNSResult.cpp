@@ -35,11 +35,12 @@ HMDNSResult::queueQuery()
 }
 
 HMTimeStamp
-HMDNSResult::startQuery()
+HMDNSResult::startQuery(uint32_t version)
 {
     lock_guard<shared_timed_mutex> lock(m_resultLock);
     m_queryState = HM_CHECK_IN_PROGRESS;
     m_queryTime = HMTimeStamp::now() + m_queryTimeout;
+    m_queryVersion = version;
     return m_queryTime;
 }
 
@@ -52,16 +53,19 @@ HMDNSResult::finishQuery(bool success)
 }
 
 bool
-HMDNSResult::queryNeeded() const
+HMDNSResult::queryNeeded(uint32_t version) const
 {
-    return (nextQueryTime() <= HMTimeStamp::now());
+    return (nextQueryTime(version) <= HMTimeStamp::now());
 }
 
 HMTimeStamp
-HMDNSResult::nextQueryTime() const
+HMDNSResult::nextQueryTime(uint32_t version) const
 {
     lock_guard<shared_timed_mutex> lock(m_resultLock);
     HMTimeStamp now = HMTimeStamp::now();
+    if ( m_queryVersion != version ) {
+       return now;
+    }
     if(m_queryState == HM_CHECK_INACTIVE)
     {
         if((m_resultTime + m_dnsTimeout) < now)
@@ -145,6 +149,12 @@ HM_WORK_STATE
 HMDNSResult::getQueryState() const
 {
     return m_queryState;
+}
+
+uint32_t
+HMDNSResult::getQueryVersion() const
+{
+   return m_queryVersion;
 }
 
 const HMTimeStamp&

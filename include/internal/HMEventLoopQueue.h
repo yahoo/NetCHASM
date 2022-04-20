@@ -33,8 +33,9 @@ public:
          \param the hostname to resolve.
          \param true to resolve an IPv6 address.
          \param the time Stamp of when the DNS resolution should take place.
+         \param state version that issued the call
      */
-    void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp);
+    void addDNSTimeout(const std::string& hostname, const HMDNSLookup& dnsHostCheck, HMTimeStamp timeStamp, uint32_t version);
 
     //! Add a new Remote timeout.
     /*!
@@ -61,8 +62,9 @@ public:
          \param the IP address to health check.
          \param the host check to conduct.
          \param the time stamp of when the health check should take place.
+         \param state version that issued the call
      */
-    void addHealthCheckTimeout(const std::string& hostname, const HMIPAddress& address, const HMDataHostCheck hostCheck, HMTimeStamp timeStamp);
+    void addHealthCheckTimeout(const std::string& hostname, const HMIPAddress& address, const HMDataHostCheck hostCheck, HMTimeStamp timeStamp, uint32_t version );
 
     //! Wakeup the tracker.
     /*!
@@ -128,13 +130,15 @@ private:
         TimeoutType m_type;
         HMDNSLookup m_dnsLookup;
         HMIPAddress m_address;
+        uint32_t m_stateVersion;
 
-        Timeout(const std::string& host, HMDNSLookup lookup, const HMTimeStamp expiration)
+        Timeout(const std::string& host, HMDNSLookup lookup, const HMTimeStamp expiration, uint32_t version)
         {
             m_hostname = host;
             m_timeout = expiration;
             m_type = lookup.isIpv6()?DNSV6_TIMEOUT:DNS_TIMEOUT;
             m_dnsLookup = lookup;
+            m_stateVersion = version;
         }
 
         Timeout(const std::string& host, const HMTimeStamp expiration)
@@ -152,13 +156,14 @@ private:
             m_hostCheck = dataHostCheck;
         }
 
-        Timeout(const std::string& host, const HMIPAddress& address, const HMDataHostCheck check, const HMTimeStamp expiration)
+        Timeout(const std::string& host, const HMIPAddress& address, const HMDataHostCheck check, const HMTimeStamp expiration, uint32_t version )
         {
             m_hostname = host;
             m_hostCheck = check;
             m_timeout = expiration;
             m_type = HEALTHCHECK_TIMEOUT;
             m_address = address;
+            m_stateVersion = version;
         }
 
         bool operator< (const Timeout& t) const

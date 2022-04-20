@@ -106,27 +106,30 @@ public:
          Check to see if we should schedule a DNS resolution for the given lookup.
          \param the hostname to resolve.
          \param structure holding DNS type and address type(v4 or v6).
+         \param version of the current state.
          \return the schedule state. Either queue work, a timeout event or ignore.
      */
-    HM_SCHEDULE_STATE queryNeeded(const std::string& name, const HMDNSLookup& dnsHostCheck) const;
+    HM_SCHEDULE_STATE queryNeeded(const std::string& name, const HMDNSLookup& dnsHostCheck, uint32_t version=0) const;
 
     //! Get the next resolution time based on the timeout.
     /*!
          Get the next resolution time based on the timeout
          \param the host to resolve.
          \param structure holding DNS type and address type(v4 or v6).
+         \version of the current state.
          \return the HMTimeStamp of the next time to schedule a DNS resolution.
      */
-    HMTimeStamp nextQueryTime(const std::string& name, const HMDNSLookup& dnsHostCheck) const;
+    HMTimeStamp nextQueryTime(const std::string& name, const HMDNSLookup& dnsHostCheck, uint32_t version=0) const;
 
     //! Start aDNS query.
     /*!
          Start a DNS query. Update the internal query state to in progress.
          \param the host name to resolve.
          \param structure holding DNS type and address type(v4 or v6).
+         \param version of the query.
          \return the true if succeeds.
      */
-    bool startDNSQuery(const std::string& name, HMDNSLookup& dnsHostCheck);
+    bool startDNSQuery(const std::string& name, HMDNSLookup& dnsHostCheck, uint32_t version=0);
 
     //! Queue the DNS query.
     /*!
@@ -135,7 +138,7 @@ public:
          \param structure holding DNS type and address type(v4 or v6).
          \param the work queue to insert the DNS resolution work.
      */
-    void queueDNSQuery(std::string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& queue);
+    void queueDNSQuery(std::string name, HMDNSLookup& dnsHostCheck, HMWorkQueue& queue, uint32_t version);
 
     //! Queue all the DNS lookups.
     /*!
@@ -144,7 +147,7 @@ public:
          \param the event loop to insert any needed timeouts for DNS resolutions that were loaded from storage.
          \param true if this is a restart during a running daemon config reload.
      */
-    void queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool restart);
+    void queueDNSLookups(HMWorkQueue& queue, HMEventLoop& eventLoop, bool restart, uint32_t version );
 
     //! Check to see if the given IPAddress has been resolved for the hostname.
     /*!

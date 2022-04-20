@@ -74,7 +74,7 @@ void TESTNAME::test_basic_datachecklist()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());    
 }
 
@@ -140,7 +140,7 @@ void TESTNAME::test_basic_healthPlugins_tcp()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
     CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
     CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_TCP,
@@ -162,7 +162,7 @@ void TESTNAME::test_basic_healthPlugins_tcp()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());    
 }
 
@@ -193,7 +193,7 @@ void TESTNAME::test_basic_healthPlugins_ftp()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
     CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
     CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_FTP,
@@ -213,7 +213,7 @@ void TESTNAME::test_basic_healthPlugins_ftp()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
@@ -244,7 +244,7 @@ void TESTNAME::test_basic_healthPlugins_none()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
     CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
     CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_NONE,
@@ -265,7 +265,7 @@ void TESTNAME::test_basic_healthPlugins_none()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )0, queue.queueSize());
 }
 
@@ -295,7 +295,7 @@ void TESTNAME::test_basic_healthPlugins_dns()
 	data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
 }
 
@@ -349,7 +349,7 @@ void TESTNAME::test_basic_healthPlugins_mtls()
     data_host.setCheckParams(hostGroup);
     check_list.insertCheck(host_group, host_name, data_host, params, ips);
     check_list.startCheck(host_name, ip, data_host);
-    check_list.queueCheck(host_name, ip, data_host, queue);
+    check_list.queueCheck(host_name, ip, data_host, queue, 0);
     CPPUNIT_ASSERT_EQUAL((uint32_t )1, queue.queueSize());
     CPPUNIT_ASSERT_EQUAL(true, queue.getWork(work, threadStatus));
     CPPUNIT_ASSERT_EQUAL((uint8_t )HM_CHECK_MTLS_HTTPS,

@@ -44,11 +44,11 @@ HM_WORK_STATUS HMWorkAuxFetch::processWork()
         HMTimeStamp checkTime = currentState->m_checkList.nextCheckTime(m_hostname, m_ipAddress, m_hostCheck);
         if(checkTime <= HMTimeStamp::now())
         {
-            currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue);
+            currentState->m_checkList.queueCheck(m_hostname, m_ipAddress, m_hostCheck, m_stateManager->m_workQueue, getStateVersion());
         }
         else
         {
-            m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime);
+            m_eventLoop->addHealthCheckTimeout(m_hostname, m_ipAddress, m_hostCheck, checkTime, getStateVersion());
         }
     }
     return result;

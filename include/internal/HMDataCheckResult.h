@@ -157,6 +157,8 @@ public:
     HMTimeStamp m_checkTime;
     //! The current WORK_STATE to track the current state of the check.
     HM_WORK_STATE m_queryState;
+    //! The current query version of the check.
+    uint32_t m_queryVersion;
     //! The last time this remote host was contacted.
     HMTimeStamp m_remoteCheckTime;
     //! Status showing Host went up to down or down to up

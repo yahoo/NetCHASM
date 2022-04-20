@@ -20,7 +20,7 @@
 using namespace std;
 
 HM_SCHEDULE_STATE
-HMDataCheckList::checkNeeded(string& hostname, HMIPAddress& ip, HMDataHostCheck& hostCheck)
+HMDataCheckList::checkNeeded(string& hostname, HMIPAddress& ip, HMDataHostCheck& hostCheck, uint32_t version)
 {
     if(ip.toString() == "0.0.0.0" || ip.toString() == "::")
     {
@@ -38,8 +38,12 @@ HMDataCheckList::checkNeeded(string& hostname, HMIPAddress& ip, HMDataHostCheck&
         {
             return HM_SCHEDULE_IGNORE;
         }
-        HMTimeStamp checkTime = it->second.nextCheckTime(ip);
+        HMTimeStamp checkTime = it->second.nextCheckTime(ip, version);
         HM_WORK_STATE query_state = it->second.getQueryState(ip);
+        uint32_t query_version = it->second.getQueryVersion(ip);
+        if ( query_version != version ) {
+           return HM_SCHEDULE_WORK;
+        }
         if((query_state == HM_CHECK_FAILED) || (query_state == HM_CHECK_INACTIVE))
         {
             alreadyScheduled = false;
@@ -62,14 +66,14 @@ HMDataCheckList::checkNeeded(string& hostname, HMIPAddress& ip, HMDataHostCheck&
 }
 
 HMTimeStamp
-HMDataCheckList::nextCheckTime(string& hostname, const HMIPAddress& ip, HMDataHostCheck& hostCheck)
+HMDataCheckList::nextCheckTime(string& hostname, const HMIPAddress& ip, HMDataHostCheck& hostCheck, uint32_t version)
 {
     HMTimeStamp nextCheck = HMTimeStamp::now() + HMTimeStamp::HOURINMS;
     auto key = make_pair(hostname, hostCheck);
     auto ret = m_checklist.equal_range(key);
     for(auto it = ret.first; it != ret.second; ++it)
     {
-        HMTimeStamp checkTime = it->second.nextCheckTime(ip);
+        HMTimeStamp checkTime = it->second.nextCheckTime(ip, version);
         if(checkTime < nextCheck)
         {
             nextCheck = checkTime;
@@ -96,7 +100,7 @@ HMDataCheckList::getCheckTimeout(const string& hostname, const HMIPAddress& ip, 
 }
 
 void
-HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue)
+HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDataHostCheck& check, HMWorkQueue& queue, uint32_t version)
 {
     HMLog(HM_LOG_DEBUG, "[CORE] Health Check QueueCheck for %s(%s)",
                                         hostname.c_str(), ip.toString().c_str());
@@ -266,11 +270,12 @@ HMDataCheckList::queueCheck(const string& hostname, const HMIPAddress& ip, HMDat
     {
         healthCheck->setReschedule(false);
     }
+    healthCheck->setStateVersion(version);
     queue.insertWork(healthCheck);
 }
 
 HMTimeStamp
-HMDataCheckList::startCheck(string& hostname, HMIPAddress& ip, HMDataHostCheck& check)
+HMDataCheckList::startCheck(string& hostname, HMIPAddress& ip, HMDataHostCheck& check, uint32_t version)
 {
     uint64_t maxCheckTimeout = 0;
     auto key = make_pair(hostname, check);
@@ -279,7 +284,7 @@ HMDataCheckList::startCheck(string& hostname, HMIPAddress& ip, HMDataHostCheck& 
     {
         if(it->second.isValidIP(ip))
         {
-            it->second.startQuery(ip);
+            it->second.startQuery(ip, version);
         }
         maxCheckTimeout = (it->second.getTimeout() > maxCheckTimeout) ? it->second.getTimeout() : maxCheckTimeout;
     }

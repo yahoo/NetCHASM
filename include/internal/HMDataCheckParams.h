@@ -115,16 +115,18 @@ public:
     /*!
          Does this check need to be conducted now.
          \param address the address to check
+         \param version of the current state
          \return bool true if the check should be conducted now.
      */
-    bool checkNeeded(HMIPAddress& address);
+    bool checkNeeded(HMIPAddress& address, uint32_t version=0);
     //! Get the next check time for these check parameters
     /*!
          Get the next check time for the specified address in this check params.
          \param address the address to get the next check time.
+         \param version of the current state
          \return HMTimeStamp the timestamp to schedule the next check for this check params and address.
      */
-    HMTimeStamp nextCheckTime(const HMIPAddress& address);
+    HMTimeStamp nextCheckTime(const HMIPAddress& address, uint32_t version=0);
 
     //! Get the check timeout based on the TTL of this check params.
     /*!
@@ -152,8 +154,9 @@ public:
     /*!
         Set the state machine for this check to running.
         \param the IP address to set
+        \param version of the query
      */
-    void startQuery(HMIPAddress& address);
+    void startQuery(HMIPAddress& address, uint32_t version=0);
 
     //! Check to see if this IP address is currently active.
     /*!
@@ -340,6 +343,14 @@ public:
          \return the work state associated with the passed address.
      */
     HM_WORK_STATE getQueryState(HMIPAddress& address);
+
+    //! Get the version of the internal query state machine.
+    /*
+         Get the version of the internal query state machine.
+         \param the ip address to retrieve the version.
+         \return the work version associated with the passed address.
+    */
+    uint32_t getQueryVersion(HMIPAddress& address);
 
 private:
 
