@@ -1,0 +1,51 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  coretests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake \
+            protobuf-compiler libprotobuf-dev \
+            libyaml-cpp-dev \
+            libevent-dev \
+            libc-ares-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libcppunit-dev \
+            openssl \
+            lcov
+
+      # MDBM, Kafka, and RapidXML are Yahoo-internal/less common dependencies
+      # not packaged for stock Ubuntu, so they're skipped here. The
+      # corresponding features and their tests are compiled out via these
+      # same flags (see CMakeLists.txt SKIP-* options).
+      - name: Configure
+        run: |
+          mkdir -p build_test
+          cmake -S . -B build_test \
+            -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
+            -DCMAKE_BUILD_TYPE=Debug -DCOV=ON \
+            -DSKIP-IPV6=ON -DSKIP-MDBM=ON -DSKIP-KAFKA=ON -DSKIP-RAPIDXML=ON \
+            -DPROTOBUF_PATH=/usr
+
+      - name: Build test binaries
+        run: |
+          cmake --build build_test \
+            --target configparsertests coretests externalio logtests storetests worktests \
+            -- -j"$(nproc)"
+
+      - name: Run unit tests
+        run: ctest --test-dir build_test --output-on-failure
