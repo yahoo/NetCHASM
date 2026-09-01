@@ -3,6 +3,7 @@
 #ifndef HMNETCHASMAPI_H_
 #define HMNETCHASMAPI_H_
 
+#include <memory>
 #include <thread>
 #include <iostream>
 
