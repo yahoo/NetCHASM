@@ -102,8 +102,12 @@ HMStateManager::resetTransactionState()
 bool
 HMStateManager::healthCheck(string masterConfig, HM_LOG_LEVEL logLevel)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_default_properties_enable_fips(NULL, 0);
+#else
     // Setup the exit conditions from Ctrl-c
     FIPS_mode_set(0);
+#endif
     CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (!result)
     {
