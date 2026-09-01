@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  contents: read
+
 jobs:
-  coretests:
-    runs-on: ubuntu-latest
+  unit-tests:
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,11 +28,11 @@ jobs:
             libssl-dev \
             libcurl4-openssl-dev \
             libcppunit-dev \
-            openssl \
-            lcov
+            openssl
 
       # MDBM, Kafka, and RapidXML are Yahoo-internal/less common dependencies
-      # not packaged for stock Ubuntu, so they're skipped here. The
+      # not packaged for stock Ubuntu, and IPv6 tests need networking not
+      # available on the runner, so all four are skipped here. The
       # corresponding features and their tests are compiled out via these
       # same flags (see CMakeLists.txt SKIP-* options).
       - name: Configure
@@ -37,7 +40,7 @@ jobs:
           mkdir -p build_test
           cmake -S . -B build_test \
             -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc \
-            -DCMAKE_BUILD_TYPE=Debug -DCOV=ON \
+            -DCMAKE_BUILD_TYPE=Debug \
             -DSKIP-IPV6=ON -DSKIP-MDBM=ON -DSKIP-KAFKA=ON -DSKIP-RAPIDXML=ON \
             -DPROTOBUF_PATH=/usr
 
