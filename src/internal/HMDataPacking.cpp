@@ -1244,29 +1244,6 @@ HMDataPacking::packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize
 }
 
 bool
-HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMHash>& hashInfo)
-{
-    netchasm::HashInfo pHashInfo;
-    if(pHashInfo.ParseFromArray(data.get(), dataSize))
-    {
-        for(const netchasm::HashHGPair& pHashPair: pHashInfo.items())
-        {
-            auto it = hashInfo.insert(make_pair(pHashPair.hostgroupname(), HMHash()));
-            HMHash& hash = it.first->second;
-            if(!copyHashFromPair(pHashPair,
-                                 hash.m_hashValue,
-                                 sizeof(hash.m_hashValue),
-                                 hash.m_hashSize))
-            {
-                hashInfo.erase(it.first);
-                return false;
-            }
-        }
-    }
-    return false;
-}
-
-bool
 HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMAPIHash>& hashInfo)
 {
     netchasm::HashInfo pHashInfo;
@@ -1281,7 +1258,7 @@ HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<s
                                  sizeof(hash.m_hashValue),
                                  hash.m_hashSize))
             {
-                hashInfo.erase(it.first);
+                hashInfo.clear();
                 return false;
             }
         }
