@@ -2,9 +2,9 @@ include(ExternalProject)
 project(netchasm)
 
 list(APPEND SOURCES "TestHMDataCheckList.cpp" "TestHMDataCheckParams.cpp" "TestHMDataHostCheck.cpp" "TestHMDNSCache.cpp"
-		    "TestHMDNSResult.cpp" "TestHMEventQueue.cpp" "TestHMHash.cpp" "TestHMIPAddress.cpp" "TestHMPubSubDataPacking.cpp"
-		    "TestHMThreadPool.cpp" "TestHMTimeStamp.cpp" "TestHMWorkQueue.cpp" "TestHMRemoteCache.cpp" "TestHMRemoteResult.cpp"
-		    "TestHMRemoteHostCache.cpp" "TestHMState.cpp")
+		    "TestHMDNSResult.cpp" "TestHMDataPacking.cpp" "TestHMEventQueue.cpp" "TestHMHash.cpp" "TestHMIPAddress.cpp"
+		    "TestHMPubSubDataPacking.cpp" "TestHMThreadPool.cpp" "TestHMTimeStamp.cpp" "TestHMWorkQueue.cpp"
+		    "TestHMRemoteCache.cpp" "TestHMRemoteResult.cpp" "TestHMRemoteHostCache.cpp" "TestHMState.cpp")
 
 if(NOT SKIP-MDBM)
         list(APPEND SOURCES "TestHMStateManager.cpp")

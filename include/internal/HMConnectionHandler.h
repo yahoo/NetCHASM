@@ -3,6 +3,7 @@
 #ifndef INCLUDE_HMCONNECTIONHANDLER_H_
 #define INCLUDE_HMCONNECTIONHANDLER_H_
 #include <openssl/ssl.h>
+#include <memory>
 #include <mutex>
 #include <shared_mutex>
 

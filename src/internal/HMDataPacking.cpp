@@ -2,6 +2,38 @@
 using namespace google::protobuf::io;
 using namespace std;
 
+namespace
+{
+/*!
+    Validate and copy hash bytes from a HashHGPair.
+    \param pair protobuf input carrying size and bytes.
+    \param dest destination buffer to receive hash bytes.
+    \param destSize size of destination buffer.
+    \param hashSize output size of copied hash.
+    \return true when the copy succeeds and size is valid.
+ */
+bool copyHashFromPair(const netchasm::HashHGPair& pair, unsigned char* dest, size_t destSize, uint32_t& hashSize)
+{
+    hashSize = 0;
+    int32_t size = pair.size();
+    if (size < 0)
+    {
+        return false;
+    }
+    size_t copySize = static_cast<size_t>(size);
+    if (copySize > destSize || copySize > pair.hash().size())
+    {
+        return false;
+    }
+    hashSize = static_cast<uint32_t>(copySize);
+    if (copySize)
+    {
+        memcpy(dest, pair.hash().data(), copySize);
+    }
+    return true;
+}
+} // namespace
+
 uint64_t HMDataPacking::hton64(uint64_t x)
 {
     const uint32_t high = htonl(static_cast<uint32_t>(x >> 32));
@@ -1212,25 +1244,6 @@ HMDataPacking::packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize
 }
 
 bool
-HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMHash>& hashInfo)
-{
-    netchasm::HashInfo pHashInfo;
-    if(pHashInfo.ParseFromArray(data.get(), dataSize))
-    {
-        for(const netchasm::HashHGPair& pHashPair: pHashInfo.items())
-        {
-            auto it = hashInfo.insert(make_pair(pHashPair.hostgroupname(), HMHash()));
-            it.first->second.m_hashSize = pHashPair.size();
-            if(pHashPair.size())
-            {
-                memcpy(it.first->second.m_hashValue , pHashPair.hash().c_str(), pHashPair.size());
-            }
-        }
-    }
-    return false;
-}
-
-bool
 HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<string, HMAPIHash>& hashInfo)
 {
     netchasm::HashInfo pHashInfo;
@@ -1239,10 +1252,14 @@ HMDataPacking::unpackHashInfo(unique_ptr<char[]>& data, uint64_t dataSize, map<s
         for(const netchasm::HashHGPair& pHashPair: pHashInfo.items())
         {
             auto it = hashInfo.insert(make_pair(pHashPair.hostgroupname(), HMAPIHash()));
-            it.first->second.m_hashSize = pHashPair.size();
-            if(pHashPair.size())
+            HMAPIHash& hash = it.first->second;
+            if(!copyHashFromPair(pHashPair,
+                                 hash.m_hashValue,
+                                 sizeof(hash.m_hashValue),
+                                 hash.m_hashSize))
             {
-                memcpy(it.first->second.m_hashValue , pHashPair.hash().c_str(), pHashPair.size());
+                hashInfo.clear();
+                return false;
             }
         }
         return true;
@@ -1294,11 +1311,12 @@ bool HMDataPacking::unpackHash(unique_ptr<char[]>& data, uint64_t dataSize,
     netchasm::HashHGPair pHash;
     if (pHash.ParseFromArray(data.get(), dataSize))
     {
-
-        hash.m_hashSize = pHash.size();
-        if (pHash.size())
+        if (!copyHashFromPair(pHash,
+                              hash.m_hashValue,
+                              sizeof(hash.m_hashValue),
+                              hash.m_hashSize))
         {
-            memcpy(hash.m_hashValue, pHash.hash().c_str(), pHash.size());
+            return false;
         }
         return true;
     }
@@ -1311,11 +1329,12 @@ bool HMDataPacking::unpackHash(unique_ptr<char[]>& data, uint64_t dataSize,
     netchasm::HashHGPair pHash;
     if (pHash.ParseFromArray(data.get(), dataSize))
     {
-
-        hash.m_hashSize = pHash.size();
-        if (pHash.size())
+        if (!copyHashFromPair(pHash,
+                              hash.m_hashValue,
+                              sizeof(hash.m_hashValue),
+                              hash.m_hashSize))
         {
-            memcpy(hash.m_hashValue, pHash.hash().c_str(), pHash.size());
+            return false;
         }
         return true;
     }

@@ -3,6 +3,7 @@
 #ifndef HMSTORAGE_H_
 #define HMSTORAGE_H_
 
+#include <condition_variable>
 #include <string>
 #include <openssl/evp.h>
 

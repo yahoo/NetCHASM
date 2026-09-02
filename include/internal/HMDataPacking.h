@@ -84,7 +84,6 @@ public:
     virtual std::unique_ptr<char[]> packBool(bool x, uint64_t& dataSize);
     virtual bool unpackBool(std::unique_ptr<char[]>& data, uint64_t dataSize);
     virtual std::unique_ptr<char[]> packHashInfo(HMDataHostGroupMap& hostGroupMap, uint64_t& dataSize);
-    virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMHash>& hashInfo);
     virtual bool unpackHashInfo(std::unique_ptr<char[]>& data, uint64_t dataSize, std::map<std::string, HMAPIHash>& hashInfo);
     virtual std::unique_ptr<char[]> packHash(const std::string& name, const HMAPIHash& hash, uint64_t& dataSize);
     virtual std::unique_ptr<char[]> packHash(const std::string& name, const HMHash& hash, uint64_t& dataSize);
